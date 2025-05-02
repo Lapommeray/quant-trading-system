@@ -1,0 +1,69 @@
+//@version=5
+strategy("QMP Overrider Signal Mirror", overlay=true, pyramiding=0)
+
+// Input parameters
+qcLong = input(false, "QC BUY")
+qcShort = input(false, "QC SELL")
+showDarkPoolSignals = input(true, "Show Dark Pool Signals")
+showOrderFlowSignals = input(true, "Show Order Flow Signals")
+showStopHuntSignals = input(true, "Show Stop Hunt Signals")
+showConfidenceLabels = input(true, "Show Confidence Labels")
+
+// Plot signals
+plotshape(qcLong, style=shape.triangleup, color=color.green, size=size.large, title="QC BUY")
+plotshape(qcShort, style=shape.triangledown, color=color.red, size=size.large, title="QC SELL")
+
+// Dark Pool Signals
+darkPoolBuy = input(false, "Dark Pool BUY")
+darkPoolSell = input(false, "Dark Pool SELL")
+darkPoolConfidence = input.float(0.0, "Dark Pool Confidence", minval=0.0, maxval=1.0)
+
+if (showDarkPoolSignals)
+    plotshape(darkPoolBuy, style=shape.circle, color=color.new(color.blue, 20), size=size.normal, title="Dark Pool BUY", location=location.belowbar)
+    plotshape(darkPoolSell, style=shape.circle, color=color.new(color.purple, 20), size=size.normal, title="Dark Pool SELL", location=location.abovebar)
+    
+    if (showConfidenceLabels and (darkPoolBuy or darkPoolSell))
+        label.new(bar_index, darkPoolBuy ? low - (low * 0.001) : high + (high * 0.001), 
+                 text="DP: " + str.tostring(darkPoolConfidence, "#.##"), 
+                 color=color.new(darkPoolBuy ? color.blue : color.purple, 20),
+                 style=darkPoolBuy ? label.style_label_up : label.style_label_down,
+                 textcolor=color.white)
+
+// Order Flow Signals
+orderFlowBuy = input(false, "Order Flow BUY")
+orderFlowSell = input(false, "Order Flow SELL")
+orderFlowConfidence = input.float(0.0, "Order Flow Confidence", minval=0.0, maxval=1.0)
+
+if (showOrderFlowSignals)
+    plotshape(orderFlowBuy, style=shape.diamond, color=color.new(color.teal, 20), size=size.normal, title="Order Flow BUY", location=location.belowbar)
+    plotshape(orderFlowSell, style=shape.diamond, color=color.new(color.maroon, 20), size=size.normal, title="Order Flow SELL", location=location.abovebar)
+    
+    if (showConfidenceLabels and (orderFlowBuy or orderFlowSell))
+        label.new(bar_index, orderFlowBuy ? low - (low * 0.002) : high + (high * 0.002), 
+                 text="OF: " + str.tostring(orderFlowConfidence, "#.##"), 
+                 color=color.new(orderFlowBuy ? color.teal : color.maroon, 20),
+                 style=orderFlowBuy ? label.style_label_up : label.style_label_down,
+                 textcolor=color.white)
+
+// Stop Hunt Signals
+stopHuntBuy = input(false, "Stop Hunt BUY")
+stopHuntSell = input(false, "Stop Hunt SELL")
+stopHuntConfidence = input.float(0.0, "Stop Hunt Confidence", minval=0.0, maxval=1.0)
+
+if (showStopHuntSignals)
+    plotshape(stopHuntBuy, style=shape.square, color=color.new(color.orange, 20), size=size.normal, title="Stop Hunt BUY", location=location.belowbar)
+    plotshape(stopHuntSell, style=shape.square, color=color.new(color.yellow, 20), size=size.normal, title="Stop Hunt SELL", location=location.abovebar)
+    
+    if (showConfidenceLabels and (stopHuntBuy or stopHuntSell))
+        label.new(bar_index, stopHuntBuy ? low - (low * 0.003) : high + (high * 0.003), 
+                 text="SH: " + str.tostring(stopHuntConfidence, "#.##"), 
+                 color=color.new(stopHuntBuy ? color.orange : color.yellow, 20),
+                 style=stopHuntBuy ? label.style_label_up : label.style_label_down,
+                 textcolor=color.black)
+
+// Strategy logic
+if (qcLong)
+    strategy.entry("Long", strategy.long)
+    
+if (qcShort)
+    strategy.entry("Short", strategy.short)

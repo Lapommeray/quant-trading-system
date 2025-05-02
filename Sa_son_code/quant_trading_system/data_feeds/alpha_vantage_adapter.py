@@ -1,0 +1,1 @@
+<alpha_vantage_adapter.py content>
