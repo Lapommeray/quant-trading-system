@@ -1,9 +1,9 @@
-
 import pandas as pd
 import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
+from quantum_enhancers import CosmicRayAnalyzer, QuantumEntanglementFusion
 
 class QMPAIAgent:
     def __init__(self):
@@ -13,6 +13,8 @@ class QMPAIAgent:
         self.feature_importances = {}
         self.min_samples_for_training = 15
         self.last_prediction_confidence = 0.0
+        self.analyzer = CosmicRayAnalyzer()
+        self.fusion = QuantumEntanglementFusion()
         
     def train(self, df):
         """
@@ -66,3 +68,18 @@ class QMPAIAgent:
         
         pred = self.model.predict(X_new_scaled)
         return bool(pred[0])
+    
+    def predict(self, data):
+        """
+        Predicts market movements using quantum entanglement fusion and unconventional data analysis.
+        """
+        return self.fusion.quantum_entangle(
+            super().predict(data),
+            self.analyze_unconventional()
+        )
+    
+    def analyze_unconventional(self):
+        """
+        Analyzes unconventional data patterns using CosmicRayAnalyzer.
+        """
+        return self.analyzer.analyze()
