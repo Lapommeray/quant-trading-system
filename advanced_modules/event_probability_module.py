@@ -18,6 +18,8 @@ import pandas as pd
 from datetime import datetime, timedelta
 import logging
 import json
+from encryption.xmss_encryption import XMSSEncryption
+from typing import Dict, Union
 
 class EventProbabilityModule:
     """
@@ -25,27 +27,21 @@ class EventProbabilityModule:
     and calculating unified probability scores.
     """
     
-    def __init__(self, algorithm):
+    def __init__(self, algorithm, xmss_tree_height: int = 10):
         """
         Initialize the Event Probability Module.
         
         Parameters:
         - algorithm: The QuantConnect algorithm instance
+        - xmss_tree_height: Security parameter (2^height signatures possible)
         """
         self.algorithm = algorithm
         self.logger = logging.getLogger("EventProbabilityModule")
         self.logger.setLevel(logging.INFO)
         
-        self.indicators = {
-            "fed_meeting_volatility": 0.0,
-            "unusual_options_flow": 0.0,
-            "spoofing_clusters": 0.0,
-            "corporate_jet_activity": 0.0,
-            "satellite_thermal_signatures": 0.0,
-            "biometric_ceo_stress": 0.0,
-            "retail_swipe_surges": 0.0,
-            "btc_offchain_transfers": 0.0
-        }
+        self.indicators: Dict[str, bytes] = {}
+        self.encryption_engine = XMSSEncryption(tree_height=xmss_tree_height)
+        self._init_failover_mechanism()
         
         self.event_probabilities = {
             "flash_crash": 0.0,
@@ -123,6 +119,11 @@ class EventProbabilityModule:
         self.update_interval = timedelta(minutes=5)
         
         self.algorithm.Debug("Event Probability Module initialized")
+    
+    def _init_failover_mechanism(self):
+        """Emergency fallback for encryption failures"""
+        self.failover_encrypted = b'EMERGENCY_FAILOVER'
+        self.max_retries = 3
     
     def update_indicators(self, current_time, monitoring_results):
         """
