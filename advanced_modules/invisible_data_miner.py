@@ -12,6 +12,8 @@ from datetime import datetime, timedelta
 import logging
 from scipy import stats
 import math
+from encryption.xmss_encryption import XMSSEncryption
+import traceback
 
 class InvisibleDataMiner:
     """
@@ -22,12 +24,13 @@ class InvisibleDataMiner:
     compliant methods.
     """
     
-    def __init__(self, algorithm):
+    def __init__(self, algorithm, tree_height: int = 10):
         """
         Initialize the Invisible Data Miner module.
         
         Parameters:
         - algorithm: The QuantConnect algorithm instance
+        - tree_height: Security parameter (2^height signatures possible)
         """
         self.algorithm = algorithm
         self.logger = logging.getLogger("InvisibleDataMiner")
@@ -54,9 +57,19 @@ class InvisibleDataMiner:
         self.correlation_threshold = 0.65
         self.pattern_match_threshold = 0.80
         
+        self.encryption_engine = XMSSEncryption(tree_height=tree_height)
+        self._init_failover()
+        
         algorithm.Debug("Invisible Data Miner module initialized")
     
-    def mine(self, symbol, history_data):
+    def _init_failover(self):
+        """Emergency fallback configuration"""
+        self.failover = b"STEALTH_FAILOVER_XMSS"
+        self.max_retries = 3
+        self.failover_engaged = False
+        self.failover_count = 0
+    
+    def mine(self, symbol, history_data) -> bool:
         """
         Mine invisible patterns from market data.
         
@@ -87,7 +100,38 @@ class InvisibleDataMiner:
         
         self._update_pattern_memory(symbol_str, integrated_result)
         
-        return integrated_result
+        success = True
+        for tag, score in integrated_result.items():
+            for attempt in range(self.max_retries):
+                try:
+                    if not isinstance(score, (float, int)):
+                        raise TypeError(f"Invalid score type: {type(score)}")
+                    if not 0 <= score <= 1:
+                        raise ValueError(f"Score {score} out of bounds [0,1]")
+                    blob = f"{tag}:{score:.4f}".encode('utf-8')
+                    encrypted = self.encryption_engine.encrypt(blob)
+                    self.encrypted_blobs[tag] = encrypted
+                    break
+                except Exception as e:
+                    if attempt == self.max_retries - 1:
+                        self._handle_failure(tag, score, e)
+                        success = False
+                        self.failover_count += 1
+        return success
+    
+    def _handle_failure(self, tag: str, score: float, error: Exception):
+        self.encrypted_blobs[tag] = self.failover
+        self.logger.error(
+            "Mining Failure\n"
+            f"Signal: {tag}\n"
+            f"Score: {score}\n"
+            f"Error: {str(error)}\n"
+            f"Traceback:\n{traceback.format_exc()}",
+            extra={'tag': tag, 'score': score}
+        )
+        if not self.failover_engaged:
+            self.logger.critical("ACTIVATING DARK FAILOVER PROTOCOL")
+            self.failover_engaged = True 
     
     def _extract_patterns(self, df, timeframe, symbol_str):
         """
