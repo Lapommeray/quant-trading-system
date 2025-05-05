@@ -15,131 +15,127 @@ import json
 import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
+import logging
+from encryption.xmss_encryption import XMSSEncryption
+import traceback
+from dataclasses import dataclass
+from enum import Enum, auto
+
+class JetDirection(Enum):
+    HAWKISH = auto()
+    DOVISH = auto()
+    NEUTRAL = auto()
+
+@dataclass
+class JetMovement:
+    direction: JetDirection
+    confidence: float
+    quantum_seal: bytes
 
 class FedJetMonitor:
-    def __init__(self, algorithm):
-        self.algo = algorithm
-        self.last_check_time = None
-        self.check_interval = timedelta(hours=6)  # Check every 6 hours
-        self.api_key = self.algo.GetParameter("ORBITAL_INSIGHT_API_KEY", "")
-        
-        self.movement_history = []
-        self.max_history_size = 30  # Keep 30 days of data
-        
-        self.key_destinations = {
-            'ZRH': 'Swiss National Bank',
-            'FRA': 'European Central Bank',
-            'LHR': 'Bank of England',
-            'HND': 'Bank of Japan',
-            'PVG': 'People\'s Bank of China',
-            'SIN': 'Monetary Authority of Singapore'
-        }
-        
-        self.algo.Debug("FedJetMonitor initialized")
-    
-    def check_movements(self, current_time):
+    def __init__(self, algorithm, tree_height: int = 10):
         """
-        Check for Federal Reserve jet movements
-        
-        Parameters:
-        - current_time: Current algorithm time
-        
+        Top-secret Federal Reserve aerial surveillance
+        Args:
+            tree_height: XMSS security parameter (2^10 = 1024 signatures by default)
+        """
+        self.quantum_engine = XMSSEncryption(tree_height=tree_height)
+        self.logger = logging.getLogger("FedJetMonitor")
+        self.movement_log: Dict[str, JetMovement] = {}
+        self._init_black_protocol()
+
+    def _init_black_protocol(self):
+        """Classified emergency measures"""
+        self.BLACK_SEAL = b"FED_QUANTUM_BLACKBOX"
+        self.MAX_DARK_RETRIES = 3
+        self.blackbox_active = False
+        self.retry_count = 0
+
+    def check_movements(self, signals: Dict[str, Dict[str, Union[str, float]]]) -> bool:
+        """
+        Track and encrypt aerial movements with quantum seals
+        Args:
+            signals: {"signal_id": {"direction": "hawkish/dovish/neutral", "confidence": 0.0-1.0}}
         Returns:
-        - Dictionary with detection results
+            bool: True if all movements secured without failover
         """
-        if self.last_check_time is not None and current_time - self.last_check_time < self.check_interval:
-            return None
+        global_success = True
+        
+        for signal_id, movement_data in signals.items():
+            try:
+                validated = self._validate_and_normalize(movement_data)
+                sealed = self._apply_quantum_seal(signal_id, validated)
+                self.movement_log[signal_id] = JetMovement(
+                    direction=validated["direction"],
+                    confidence=validated["confidence"],
+                    quantum_seal=sealed
+                )
+            except Exception as e:
+                global_success = False
+                self._execute_black_protocol(signal_id, movement_data, e)
+        
+        return global_success
+
+    def _validate_and_normalize(self, data: Dict) -> Dict:
+        """Top-secret validation protocols"""
+        if not isinstance(data.get("direction"), str):
+            raise TypeError("Direction must be string literal")
+        
+        if not isinstance(data.get("confidence"), (float, int)):
+            raise TypeError("Confidence must be numeric")
+        
+        confidence = float(data["confidence"])
+        if not 0 <= confidence <= 1:
+            raise ValueError("Confidence out of tactical range [0,1]")
+        
+        try:
+            direction = JetDirection[data["direction"].upper()]
+        except KeyError:
+            raise ValueError(f"Invalid direction: {data['direction']}") from None
             
-        self.last_check_time = current_time
-        
-        movements = self._simulate_movement_data(current_time)
-        
-        self.movement_history.append({
-            'time': current_time,
-            'movements': movements
-        })
-        
-        if len(self.movement_history) > self.max_history_size:
-            self.movement_history = self.movement_history[-self.max_history_size:]
-        
-        significant_destinations = [dest for dest in movements if dest in self.key_destinations]
-        
-        zurich_travel = 'ZRH' in significant_destinations
-        
-        multiple_cb_visits = len(significant_destinations) > 1
-        
-        if zurich_travel or multiple_cb_visits:
-            self.algo.Debug(f"FedJetMonitor: Significant travel detected! Destinations: {significant_destinations}")
-        
         return {
-            'significant_travel': zurich_travel or multiple_cb_visits,
-            'zurich_travel': zurich_travel,
-            'multiple_cb_visits': multiple_cb_visits,
-            'destinations': significant_destinations,
-            'confidence': 0.7 if zurich_travel else (0.6 if multiple_cb_visits else 0.0),
-            'direction': 'BUY' if zurich_travel else ('SELL' if multiple_cb_visits else None)
+            "direction": direction,
+            "confidence": confidence
         }
-    
-    def _simulate_movement_data(self, current_time):
-        """
-        Simulate Fed jet movement data for testing
-        In production, this would be replaced with actual API calls
+
+    def _apply_quantum_seal(self, signal_id: str, data: Dict) -> bytes:
+        """Quantum-secure movement authentication"""
+        payload = f"{data['direction'].name}:{data['confidence']:.6f}".encode()
         
-        Parameters:
-        - current_time: Current algorithm time
-        
-        Returns:
-        - List of destination airport codes
-        """
-        day_of_week = current_time.weekday()
-        day_of_month = current_time.day
-        
-        destinations = []
-        
-        if 10 <= day_of_month <= 20:
-            if np.random.random() < 0.4:
-                destinations.append('ZRH')  # Swiss National Bank
-            if np.random.random() < 0.3:
-                destinations.append('FRA')  # European Central Bank
-        
-        if day_of_week < 5:  # Weekday
-            domestic_airports = ['ATL', 'ORD', 'DFW', 'DEN', 'LAX']
-            for airport in domestic_airports:
-                if np.random.random() < 0.15:
-                    destinations.append(airport)
-        
-        if np.random.random() < 0.1:
-            international = ['LHR', 'HND', 'PVG', 'SIN']
-            destinations.append(np.random.choice(international))
+        for attempt in range(1, self.MAX_DARK_RETRIES + 1):
+            try:
+                self.retry_count += 1
+                return self.quantum_engine.encrypt(payload)
+            except Exception as e:
+                if attempt == self.MAX_DARK_RETRIES:
+                    raise RuntimeError(f"Quantum seal failed after {attempt} attempts") from e
+
+    def _execute_black_protocol(self, signal_id: str, raw_data: Dict, error: Exception):
+        """Classified contingency measures"""
+        try:
+            direction = JetDirection[raw_data.get("direction", "NEUTRAL").upper()]
+        except:
+            direction = JetDirection.NEUTRAL
             
-        return destinations
-    
-    def analyze_pattern(self):
-        """
-        Analyze historical movement patterns
+        self.movement_log[signal_id] = JetMovement(
+            direction=direction,
+            confidence=min(max(float(raw_data.get("confidence", 0)), 0), 1),
+            quantum_seal=self.BLACK_SEAL
+        )
         
-        Returns:
-        - Dictionary with pattern analysis
-        """
-        if len(self.movement_history) < 5:
-            return {
-                'pattern_detected': False,
-                'confidence': 0.0
+        self.logger.error(
+            "FED JET MONITOR FAILURE\n"
+            f"Signal: {signal_id}\n"
+            f"Raw Data: {raw_data}\n"
+            f"Error Type: {type(error).__name__}\n"
+            f"Traceback:\n{traceback.format_exc()}",
+            extra={
+                "signal_id": signal_id,
+                "original_data": raw_data,
+                "error": str(error)
             }
-            
-        destination_counts = {}
-        for entry in self.movement_history:
-            for dest in entry['movements']:
-                if dest in self.key_destinations:
-                    destination_counts[dest] = destination_counts.get(dest, 0) + 1
+        )
         
-        unusual_frequency = any(count >= 3 for count in destination_counts.values())
-        
-        recent_zurich = any('ZRH' in entry['movements'] for entry in self.movement_history[-3:])
-        
-        return {
-            'pattern_detected': unusual_frequency or recent_zurich,
-            'unusual_frequency': unusual_frequency,
-            'recent_zurich': recent_zurich,
-            'confidence': 0.8 if recent_zurich else (0.6 if unusual_frequency else 0.0)
-        }
+        if not self.blackbox_active:
+            self.logger.critical("BLACK PROTOCOL ENGAGED")
+            self.blackbox_active = True

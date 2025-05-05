@@ -14,155 +14,108 @@ from AlgorithmImports import *
 import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
+import logging
+from encryption.xmss_encryption import XMSSEncryption
+import traceback
+from dataclasses import dataclass
+
+@dataclass
+class PortRiskAssessment:
+    encrypted_score: bytes
+    raw_score: float
+    used_failover: bool
 
 class PortActivityAnalyzer:
-    def __init__(self, algorithm):
-        self.algo = algorithm
-        
-        self.spectral_threshold = 11.0  # Hz
-        
-        self.monitored_ports = {
-            'SHANGHAI': {'importance': 1.0, 'threshold': 11.0},
-            'SINGAPORE': {'importance': 0.9, 'threshold': 10.5},
-            'ROTTERDAM': {'importance': 0.8, 'threshold': 10.0},
-            'LOS_ANGELES': {'importance': 0.7, 'threshold': 9.5},
-            'BUSAN': {'importance': 0.6, 'threshold': 9.0}
-        }
-        
-        self.detection_history = {}
-        self.max_history_size = 30
-        
-        self.last_check_time = {}
-        self.check_interval = timedelta(hours=12)  # Check twice daily
-        
-        self.algo.Debug("PortActivityAnalyzer initialized")
-    
-    def analyze(self, current_time=None):
+    def __init__(self, algorithm, tree_height: int = 10):
         """
-        Analyze port activity for supply chain disruption signals
-        
-        Parameters:
-        - current_time: Current algorithm time (optional)
-        
+        Quantum-secure maritime risk analysis
+        Args:
+            tree_height: XMSS security parameter (2^height signatures)
+        """
+        self.quantum_engine = XMSSEncryption(tree_height=tree_height)
+        self.logger = logging.getLogger("PortActivityAnalyzer")
+        self.assessments: Dict[str, PortRiskAssessment] = {}
+        self._init_nautical_protocol()
+
+    def _init_nautical_protocol(self):
+        """Maritime emergency procedures"""
+        self.NAUTICAL_FAILOVER = b"PORT_EMERGENCY_BLOB"
+        self.MAX_RETRIES = 3
+        self.failover_count = 0
+        self.protocol_engaged = False
+
+    def analyze(self, port_data: Dict[str, Dict[str, float]]) -> bool:
+        """
+        Process and encrypt port risk assessments
+        Args:
+            port_data: {"port_id": {"cargo_volatility": float 0-1, ...}}
         Returns:
-        - Dictionary with analysis results
+            bool: True if all ports processed securely
         """
-        if current_time is None:
-            current_time = self.algo.Time
-            
-        should_analyze = False
-        for port in self.monitored_ports:
-            if port not in self.last_check_time or current_time - self.last_check_time[port] >= self.check_interval:
-                should_analyze = True
-                self.last_check_time[port] = current_time
-                
-        if not should_analyze:
-            return None
-            
-        port_results = {}
-        overall_disruption = False
-        highest_confidence = 0.0
+        global_success = True
+        for port_id, metrics in port_data.items():
+            try:
+                validated = self._validate_metrics(metrics)
+                encrypted = self._apply_quantum_seal(port_id, validated)
+                self.assessments[port_id] = PortRiskAssessment(
+                    encrypted_score=encrypted,
+                    raw_score=validated,
+                    used_failover=False
+                )
+            except Exception as e:
+                global_success = False
+                self._execute_nautical_protocol(port_id, metrics, e)
+        return global_success
+
+    def _validate_metrics(self, metrics: Dict[str, float]) -> float:
+        """Strict maritime risk validation"""
+        if not isinstance(metrics.get("cargo_volatility"), (float, int)):
+            raise TypeError("Cargo volatility must be numeric")
         
-        for port, info in self.monitored_ports.items():
-            spectral_value = self._simulate_spectral_data(port, current_time)
+        score = metrics["cargo_volatility"] * 0.7  # Risk multiplier
+        
+        if not 0 <= score <= 1:
+            raise ValueError(f"Risk score {score} out of bounds [0,1]")
             
-            disruption_detected = spectral_value > info['threshold']
+        return round(score, 4)
+
+    def _apply_quantum_seal(self, port_id: str, score: float) -> bytes:
+        """Quantum-encrypted risk assessment"""
+        payload = f"{port_id}:{score}".encode()
+        
+        for attempt in range(1, self.MAX_RETRIES + 1):
+            try:
+                return self.quantum_engine.encrypt(payload)
+            except Exception as e:
+                if attempt == self.MAX_RETRIES:
+                    raise RuntimeError(f"Quantum seal failed after {attempt} attempts") from e
+
+    def _execute_nautical_protocol(self, port_id: str, raw_metrics: Dict, error: Exception):
+        """Emergency risk assessment procedure"""
+        try:
+            raw_score = min(max(float(raw_metrics.get("cargo_volatility", 0)) * 0.7, 1)
+        except:
+            raw_score = 0.5  # Default risk if calculation fails
             
-            if disruption_detected:
-                confidence = min(info['importance'] * (spectral_value - info['threshold']) / 5 + 0.5, 1.0)
-            else:
-                confidence = 0.0
-                
-            if disruption_detected and confidence > highest_confidence:
-                highest_confidence = confidence
-                overall_disruption = True
-                
-            if port not in self.detection_history:
-                self.detection_history[port] = []
-                
-            self.detection_history[port].append({
-                'time': current_time,
-                'spectral_value': spectral_value,
-                'disruption_detected': disruption_detected,
-                'confidence': confidence
-            })
-            
-            if len(self.detection_history[port]) > self.max_history_size:
-                self.detection_history[port] = self.detection_history[port][-self.max_history_size:]
-                
-            port_results[port] = {
-                'disruption_detected': disruption_detected,
-                'spectral_value': spectral_value,
-                'confidence': confidence
+        self.assessments[port_id] = PortRiskAssessment(
+            encrypted_score=self.NAUTICAL_FAILOVER,
+            raw_score=raw_score,
+            used_failover=True
+        )
+        self.failover_count += 1
+        
+        self.logger.error(
+            "PORT RISK ANALYSIS FAILURE\n"
+            f"Port: {port_id}\n"
+            f"Metrics: {raw_metrics}\n"
+            f"Error: {str(error)}\n"
+            f"Traceback:\n{traceback.format_exc()}",
+            extra={
+                "port_id": port_id,
+                "original_metrics": raw_metrics
             }
-            
-            if disruption_detected:
-                self.algo.Debug(f"PortActivityAnalyzer: Disruption detected at {port}! " +
-                              f"Spectral value: {spectral_value:.2f}, Confidence: {confidence:.2f}")
+        )
         
-        return {
-            'disruption_detected': overall_disruption,
-            'port_results': port_results,
-            'confidence': highest_confidence,
-            'direction': 'BUY' if overall_disruption else None  # Supply chain disruptions often lead to price increases
-        }
-    
-    def _simulate_spectral_data(self, port, current_time):
-        """
-        Simulate spectral analysis data for testing
-        In production, this would be replaced with actual audio analysis
-        
-        Parameters:
-        - port: Port name
-        - current_time: Current algorithm time
-        
-        Returns:
-        - Simulated spectral centroid value
-        """
-        port_hash = sum(ord(c) for c in port) % 100
-        day_of_month = current_time.day
-        
-        base_value = 8.0 + (port_hash / 50)  # 8.0 to 10.0
-        
-        time_factor = (day_of_month % 7) / 7 * 2  # 0 to 2
-        
-        random_factor = np.random.normal(0, 0.5)
-        
-        if np.random.random() < 0.08:  # 8% chance of spike
-            spike_factor = np.random.uniform(1.5, 3.0)
-        else:
-            spike_factor = 0.0
-            
-        value = base_value + time_factor + random_factor + spike_factor
-        
-        return value
-    
-    def get_port_status_summary(self):
-        """
-        Generate a summary of current port status
-        
-        Returns:
-        - Dictionary with port status summary
-        """
-        summary = {}
-        
-        for port in self.monitored_ports:
-            if port in self.detection_history and self.detection_history[port]:
-                latest = self.detection_history[port][-1]
-                
-                recent = self.detection_history[port][-5:]
-                if len(recent) >= 3:
-                    spectral_values = [entry['spectral_value'] for entry in recent]
-                    trend = np.polyfit(range(len(spectral_values)), spectral_values, 1)[0]
-                    trend_direction = "increasing" if trend > 0.1 else ("decreasing" if trend < -0.1 else "stable")
-                else:
-                    trend_direction = "unknown"
-                
-                summary[port] = {
-                    'current_value': latest['spectral_value'],
-                    'disruption_status': latest['disruption_detected'],
-                    'trend': trend_direction,
-                    'last_updated': latest['time']
-                }
-        
-        return summary
+        if not self.protocol_engaged and self.failover_count >= 2:
+            self.logger.critical("NAUTICAL PROTOCOL ENGAGED - MULTIPLE FAILURES")
+            self.protocol_engaged = True

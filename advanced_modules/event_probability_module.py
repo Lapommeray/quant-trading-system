@@ -142,6 +142,29 @@ class EventProbabilityModule:
         
         self.last_update_time = current_time
         
+        success = True
+        for indicator, value in monitoring_results.items():
+            for attempt in range(self.max_retries):
+                try:
+                    if not isinstance(value, (float, int)) or not 0 <= value <= 1:
+                        raise ValueError(f"Invalid probability value: {value}")
+
+                    encrypted = self.encryption_engine.encrypt(
+                        str(round(value, 4)).encode('utf-8')
+                    )
+                    self.indicators[indicator] = encrypted
+                    break
+                except Exception as e:
+                    if attempt == self.max_retries - 1:
+                        self.logger.error(
+                            f"Failed to encrypt {indicator} after {self.max_retries} attempts: {str(e)}",
+                            extra={'indicator': indicator, 'value': value}
+                        )
+                        self.indicators[indicator] = self.failover_encrypted
+                        success = False
+        if not success:
+            return self.indicators
+        
         if 'fed_jet' in monitoring_results and monitoring_results['fed_jet']:
             fed_result = monitoring_results['fed_jet']
             if fed_result.get('unusual_movement_detected', False):
