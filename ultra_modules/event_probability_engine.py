@@ -13,11 +13,19 @@ class EventProbabilityEngine:
 
     def get_event_probabilities(self):
         probabilities = {}
-        for event, branches in self.branch_data.items():
-            entropy = self._aggregate_entropy(branches)
-            score = self._normalize_entropy(entropy)
-            probabilities[event] = round(score, 4)
+        for event in self.branch_data:
+            void_level = self._scan_liquidity_void(event)
+            score = entropy_score(event) * (1 + void_level)
+            probabilities[event] = normalize(score)
         return probabilities
+
+    def _scan_liquidity_void(self, event):
+        """Quantify liquidity vacuum for probability scaling."""
+        orderflow = self.branch_data[event].get("order_flow", [])
+        if not orderflow:
+            return 0
+        spread = max(orderflow) - min(orderflow)
+        return spread / (sum(orderflow) + 1e-9)
 
     def _calculate_entropy(self, signal):
         return abs(hash(signal["value"])) % 100 / 100.0
