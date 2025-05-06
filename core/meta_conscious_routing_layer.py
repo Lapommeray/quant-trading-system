@@ -1,6 +1,6 @@
 from enum import Enum, auto
 import numpy as np
-from typing import Dict
+from typing import Dict, List
 import pandas as pd
 from scipy.stats import entropy
 

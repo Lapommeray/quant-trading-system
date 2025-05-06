@@ -1,4 +1,3 @@
-
 from AlgorithmImports import *
 import pandas as pd
 import numpy as np
@@ -25,6 +24,11 @@ from advanced_modules.spoofing_detector import SpoofingDetector
 from advanced_modules.compliance_check import ComplianceCheck
 from advanced_modules.stress_detector import StressDetector
 from advanced_modules.port_activity_analyzer import PortActivityAnalyzer
+from advanced_modules.dna_breath import DNABreath
+from advanced_modules.dna_overlord import DNAOverlord
+from advanced_modules.spectral_signal_fusion import SpectralSignalFusion
+from advanced_modules.void_trader_chart_renderer import VoidTraderChartRenderer
+from core.meta_conscious_routing_layer import MetaConsciousRoutingLayer
 
 class QMPUltraEngine:
     def __init__(self, algorithm):
@@ -56,7 +60,13 @@ class QMPUltraEngine:
             'fed_jet': FedJetMonitor(algorithm),
             'spoofing': SpoofingDetector(algorithm),
             'stress': StressDetector(algorithm),
-            'port_activity': PortActivityAnalyzer(algorithm)
+            'port_activity': PortActivityAnalyzer(algorithm),
+            
+            'dna_breath': DNABreath(),
+            'dna_overlord': DNAOverlord(),
+            'spectral_fusion': SpectralSignalFusion(),
+            'void_renderer': VoidTraderChartRenderer(),
+            'meta_routing': MetaConsciousRoutingLayer()
         }
         
         self.compliance = ComplianceCheck(algorithm)
@@ -83,7 +93,13 @@ class QMPUltraEngine:
             'fed_jet': 0.04,
             'spoofing': 0.04,
             'stress': 0.04,
-            'port_activity': 0.04
+            'port_activity': 0.04,
+            
+            'dna_breath': 0.05,
+            'dna_overlord': 0.05,
+            'spectral_fusion': 0.05,
+            'void_renderer': 0.05,
+            'meta_routing': 0.05
         }
         
         self.confidence_threshold = 0.7
@@ -154,6 +170,16 @@ class QMPUltraEngine:
                 result = module.detect(symbol, self.algo.Time)
             elif module_name == 'port_activity':
                 result = module.analyze(self.algo.Time)
+            elif module_name == 'dna_breath':
+                result = module.calculate_risk('neutral', 0.05)  # Example usage
+            elif module_name == 'dna_overlord':
+                result = module.select_hierarchy()
+            elif module_name == 'spectral_fusion':
+                result = module.fuse_signals('crypto', SpectralComponents(0.5, 0.3, 0.2))  # Example usage
+            elif module_name == 'void_renderer':
+                result = module.render_chart(symbol, history_data['1m'])
+            elif module_name == 'meta_routing':
+                result = module.route_path('crypto', 0.5, 0.8)  # Example usage
             else:
                 result = module.decode(symbol, history_bars)
                 
