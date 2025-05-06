@@ -138,7 +138,7 @@ class ConsciousIntelligenceLayer:
         return unified_perception
     
     def _integrate_perceptions(self, transcendent, predictive, emotion, tremor, 
-                              fractal, shadow, swan, thought, reality, sacred):
+                              fractal, shadow, swan, thought, reality, sacred, real_data):
         """
         Integrate all perceptions into a unified consciousness.
         
@@ -155,7 +155,8 @@ class ConsciousIntelligenceLayer:
             "black_swan_risk": swan["risk_level"],
             "thought_form": thought["dominant_thought"],
             "reality_shift": reality["shift_direction"],
-            "sacred_alignment": sacred["is_sacred_date"]
+            "sacred_alignment": sacred["is_sacred_date"],
+            "real_data_bias": real_data["bias"]
         }
         
         direction_votes = {
@@ -202,6 +203,11 @@ class ConsciousIntelligenceLayer:
         elif reality["shift_direction"] == "negative":
             direction_votes["SELL"] += reality["shift_magnitude"]
             
+        if real_data["bias"] > 0.6:
+            direction_votes["BUY"] += (real_data["bias"] - 0.5) * 2.0
+        elif real_data["bias"] < 0.4:
+            direction_votes["SELL"] += (0.5 - real_data["bias"]) * 2.0
+            
         max_vote = max(direction_votes.values())
         if max_vote < 0.5:
             unified_direction = "NEUTRAL"
@@ -218,7 +224,8 @@ class ConsciousIntelligenceLayer:
             1.0 - swan["risk_level"],  # Higher risk = lower confidence
             thought["confidence"],
             reality["confidence"],
-            sacred["alignment_score"] if sacred["is_sacred_date"] else 0.5
+            sacred["alignment_score"] if sacred["is_sacred_date"] else 0.5,
+            real_data["confidence"]
         ]
         
         unified_confidence = sum(confidence_factors) / len(confidence_factors)
