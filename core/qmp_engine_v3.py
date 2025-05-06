@@ -30,6 +30,8 @@ from advanced_modules.spectral_signal_fusion import SpectralSignalFusion
 from advanced_modules.void_trader_chart_renderer import VoidTraderChartRenderer
 from core.meta_conscious_routing_layer import MetaConsciousRoutingLayer
 
+from defense.atlantean_shield import AtlanteanShield
+
 class QMPUltraEngine:
     def __init__(self, algorithm):
         self.algo = algorithm
@@ -117,6 +119,9 @@ class QMPUltraEngine:
             'market_thought': 'collective_intent',
             'reality_matrix': 'primary_direction'
         }
+
+        self.activated_modules = {}
+        self.activated_modules['atlantean_shield'] = AtlanteanShield()
         
     def generate_signal(self, symbol, history_data):
         """
@@ -139,6 +144,10 @@ class QMPUltraEngine:
             isolation_info = self.self_destruct.get_isolation_info(symbol=symbol)
             reason = "Unknown" if isolation_info is None else isolation_info.get('reason', 'Unknown')
             self.algo.Debug(f"QMPUltra: {symbol} is isolated by Self-Destruct Protocol. Reason: {reason}")
+            return None, 0.0, {}
+        
+        if not self.activated_modules['atlantean_shield'].protect(symbol):
+            self.algo.Debug(f"QMPUltra: {symbol} - Atlantean Shield activated! No signal generated.")
             return None, 0.0, {}
         
         history_bars = self._convert_history_to_tradebars(history_data['1m'])
