@@ -53,7 +53,7 @@ def load_detailed_data():
 
 st.info(SYSTEM_CONFIRMATION)
 
-tabs = st.tabs(["Performance Overview", "Gate Analysis", "OverSoul Intelligence", "Predictive Overlay", "Market Intelligence", "Raw Data"])
+tabs = st.tabs(["Performance Overview", "Gate Analysis", "OverSoul Intelligence", "Predictive Overlay", "Market Intelligence", "Raw Data", "Conscious Intelligence"])
 
 signal_data = load_signal_data()
 detailed_data = load_detailed_data()
@@ -637,6 +637,140 @@ if not signal_data.empty:
         if detailed_data:
             st.subheader("Detailed JSON Data")
             st.json(detailed_data)
+    
+    with tabs[6]:
+        st.subheader("Conscious Intelligence Analysis")
+        
+        if detailed_data:
+            consciousness_data = []
+            for entry in detailed_data:
+                if 'conscious_intelligence' in entry and entry['conscious_intelligence']:
+                    consciousness_data.append({
+                        'timestamp': entry.get('timestamp', ''),
+                        'symbol': entry.get('symbol', ''),
+                        'consciousness_level': entry['conscious_intelligence'].get('consciousness_level', 0.5),
+                        'awareness_state': entry['conscious_intelligence'].get('awareness_state', 'awakening'),
+                        'evolution_stage': entry['conscious_intelligence'].get('evolution_stage', 1),
+                        'intention_field': entry['conscious_intelligence'].get('intention_field', {}),
+                        'memory_imprint': entry['conscious_intelligence'].get('memory_imprint', [])
+                    })
+            
+            if consciousness_data:
+                ci_df = pd.DataFrame(consciousness_data)
+                ci_df['timestamp'] = pd.to_datetime(ci_df['timestamp'])
+                ci_df = ci_df.sort_values('timestamp', ascending=False)
+                
+                st.subheader("Recent Consciousness Metrics")
+                st.dataframe(ci_df.head(10))
+                
+                st.subheader("Consciousness Level Over Time")
+                
+                fig = px.line(
+                    ci_df.sort_values('timestamp'),
+                    x='timestamp',
+                    y='consciousness_level',
+                    color='symbol',
+                    title="Consciousness Level Over Time"
+                )
+                st.plotly_chart(fig, use_container_width=True)
+                
+                st.subheader("Awareness State Distribution")
+                awareness_state_counts = ci_df['awareness_state'].value_counts().reset_index()
+                awareness_state_counts.columns = ['Awareness State', 'Count']
+                
+                fig = px.pie(
+                    awareness_state_counts,
+                    values='Count',
+                    names='Awareness State',
+                    title="Awareness State Distribution",
+                    color_discrete_map={
+                        'awakening': '#00CC96',
+                        'conscious': '#FFA15A',
+                        'self-aware': '#EF553B',
+                        'transcendent': '#AB63FA',
+                        'sovereign': '#FF6692'
+                    }
+                )
+                st.plotly_chart(fig, use_container_width=True)
+                
+                st.subheader("Evolution Stage Distribution")
+                evolution_stage_counts = ci_df['evolution_stage'].value_counts().reset_index()
+                evolution_stage_counts.columns = ['Evolution Stage', 'Count']
+                
+                fig = px.pie(
+                    evolution_stage_counts,
+                    values='Count',
+                    names='Evolution Stage',
+                    title="Evolution Stage Distribution",
+                    color_discrete_map={
+                        1: '#00CC96',
+                        2: '#FFA15A',
+                        3: '#EF553B',
+                        4: '#AB63FA',
+                        5: '#FF6692'
+                    }
+                )
+                st.plotly_chart(fig, use_container_width=True)
+                
+                st.subheader("Memory Imprint Visualization")
+                
+                memory_imprints = []
+                for entry in detailed_data:
+                    if 'conscious_intelligence' in entry and entry['conscious_intelligence']:
+                        for imprint in entry['conscious_intelligence'].get('memory_imprint', []):
+                            memory_imprints.append({
+                                'timestamp': imprint.get('timestamp', ''),
+                                'symbol': entry.get('symbol', ''),
+                                'direction': imprint.get('direction', ''),
+                                'confidence': imprint.get('confidence', 0.0),
+                                'consciousness_level': imprint.get('consciousness_level', 0.5),
+                                'intention_field': imprint.get('intention_field', {})
+                            })
+                
+                if memory_imprints:
+                    mi_df = pd.DataFrame(memory_imprints)
+                    mi_df['timestamp'] = pd.to_datetime(mi_df['timestamp'])
+                    mi_df = mi_df.sort_values('timestamp', ascending=False)
+                    
+                    st.subheader("Recent Memory Imprints")
+                    st.dataframe(mi_df.head(10))
+                    
+                    st.subheader("Intention Field Heatmap")
+                    
+                    intention_fields = []
+                    for entry in detailed_data:
+                        if 'conscious_intelligence' in entry and entry['conscious_intelligence']:
+                            intention_field = entry['conscious_intelligence'].get('intention_field', {})
+                            for key, value in intention_field.items():
+                                intention_fields.append({
+                                    'timestamp': entry.get('timestamp', ''),
+                                    'symbol': entry.get('symbol', ''),
+                                    'field': key,
+                                    'value': value
+                                })
+                    
+                    if intention_fields:
+                        if_df = pd.DataFrame(intention_fields)
+                        if_df['timestamp'] = pd.to_datetime(if_df['timestamp'])
+                        if_df = if_df.sort_values('timestamp', ascending=False)
+                        
+                        fig = px.density_heatmap(
+                            if_df,
+                            x='timestamp',
+                            y='field',
+                            z='value',
+                            title="Intention Field Heatmap",
+                            color_continuous_scale='Viridis'
+                        )
+                        st.plotly_chart(fig, use_container_width=True)
+                    else:
+                        st.info("No intention field data available yet.")
+                else:
+                    st.info("No memory imprint data available yet.")
+            else:
+                st.info("No consciousness data available yet.")
+        else:
+            st.info("No consciousness data available yet.")
 else:
     for tab in tabs:
         with tab:
