@@ -1,6 +1,6 @@
 # Advanced Modules Integration
 
-This document outlines the integration of the five advanced modules into the QMP Overrider framework, explaining how they connect to the Oversoul Director and share signals in the main execution pipeline.
+This document outlines the integration of the eleven advanced modules into the QMP Overrider framework, explaining how they connect to the Oversoul Director and share signals in the main execution pipeline.
 
 ## Module Overview
 
@@ -98,9 +98,117 @@ quantum_sentiment = QuantumSentimentDecoder(algorithm)
 - Sentiment analysis logs go to algorithm.Debug()
 - Quantum field measurements are logged to the detailed_signal_log.json
 
+### 6. Quantum Tremor Scanner
+
+**Purpose**: Detects microscopic price shifts and anomalies in market data.
+
+**Integration Points**:
+- Connected to QMPUltraEngine via the `scan_markets()` method
+- Contributes to direction voting and confidence calculation
+- Mapped as 'quantum_tremor_scanner' in Oversoul Director
+
+**Initialization**:
+```python
+quantum_tremor = QuantumTremorScanner()
+```
+
+**Log Routing**:
+- Tremor detection logs go to algorithm.Debug()
+- Anomaly detection events are logged to the detailed_signal_log.json
+
+### 7. Spectral Signal Fusion
+
+**Purpose**: Fuses emotional, volatility, and entropy layers into a unified signal.
+
+**Integration Points**:
+- Connected to QMPUltraEngine via the `fuse_signals()` method
+- Contributes to direction voting and confidence calculation
+- Mapped as 'spectral_signal_fusion' in Oversoul Director
+
+**Initialization**:
+```python
+spectral_fusion = SpectralSignalFusion()
+```
+
+**Log Routing**:
+- Signal fusion logs go to algorithm.Debug()
+- Fused signal details are logged to the detailed_signal_log.json
+
+### 8. DNA Breath
+
+**Purpose**: Transcribes emotion to risk curve and calculates risk based on emotional data.
+
+**Integration Points**:
+- Connected to QMPUltraEngine via the `calculate_risk()` method
+- Contributes to risk management and position sizing
+- Mapped as 'dna_breath' in Oversoul Director
+
+**Initialization**:
+```python
+dna_breath = DNABreath()
+```
+
+**Log Routing**:
+- Risk calculation logs go to algorithm.Debug()
+- Emotional data and risk curves are logged to the detailed_signal_log.json
+
+### 9. DNA Overlord
+
+**Purpose**: Selects multi-asset divine hierarchy based on asset data.
+
+**Integration Points**:
+- Connected to QMPUltraEngine via the `select_hierarchy()` method
+- Contributes to asset selection and portfolio management
+- Mapped as 'dna_overlord' in Oversoul Director
+
+**Initialization**:
+```python
+dna_overlord = DNAOverlord()
+```
+
+**Log Routing**:
+- Hierarchy selection logs go to algorithm.Debug()
+- Asset evaluation details are logged to the detailed_signal_log.json
+
+### 10. Void Trader Chart Renderer
+
+**Purpose**: Renders void detections on TradingView-style chart.
+
+**Integration Points**:
+- Connected to QMPUltraEngine via the `render_chart()` method
+- Contributes to visualization and UI updates
+- Mapped as 'void_trader_chart_renderer' in Oversoul Director
+
+**Initialization**:
+```python
+void_renderer = VoidTraderChartRenderer()
+```
+
+**Log Routing**:
+- Chart rendering logs go to algorithm.Debug()
+- Void detection events are logged to the detailed_signal_log.json
+
+### 11. Meta-Conscious Routing Layer
+
+**Purpose**: Determines module usage based on entropy and liquidity.
+
+**Integration Points**:
+- Connected to QMPUltraEngine via the `route_path()` method
+- Contributes to module activation and routing decisions
+- Mapped as 'meta_conscious_routing_layer' in Oversoul Director
+
+**Initialization**:
+```python
+meta_routing = MetaConsciousRoutingLayer()
+```
+
+**Log Routing**:
+- Routing decision logs go to algorithm.Debug()
+- Entropy and liquidity assessments are logged to the detailed_signal_log.json
+
 ## Signal Pipeline Integration
 
-All five advanced modules are integrated into the main signal pipeline through the QMPUltraEngine's `generate_signal()` method. The process works as follows:
+All eleven advanced modules are integrated into the main signal pipeline through the QMPUltraEngine's `generate_signal()` method. The process works as follows:
 
 1. The QMPUltraEngine processes each module based on its type:
    ```python
@@ -112,6 +220,18 @@ All five advanced modules are integrated into the main signal pipeline through t
        result = module.predict(symbol, history_data)
    elif module_name == 'quantum_sentiment':
        result = module.decode(symbol, history_data)
+   elif module_name == 'quantum_tremor':
+       result = module.scan_markets([symbol])
+   elif module_name == 'spectral_fusion':
+       result = module.fuse_signals(asset_type, components)
+   elif module_name == 'dna_breath':
+       result = module.calculate_risk(emotion, current_volatility)
+   elif module_name == 'dna_overlord':
+       result = module.select_hierarchy()
+   elif module_name == 'void_renderer':
+       result = module.render_chart(symbol, ohlc_data)
+   elif module_name == 'meta_routing':
+       result = module.route_path(asset_class, entropy, liquidity)
    else:
        # Standard ultra module processing
        result = module.decode(symbol, history_bars)
@@ -147,7 +267,7 @@ All five advanced modules are integrated into the main signal pipeline through t
 
 ## Oversoul Director Connection
 
-All five advanced modules are connected to the Oversoul Director through the module mapping in the `_update_module_activation()` method:
+All eleven advanced modules are connected to the Oversoul Director through the module mapping in the `_update_module_activation()` method:
 
 ```python
 module_map = {
@@ -163,7 +283,13 @@ module_map = {
     'human_lag_exploit': 'human_lag',
     'invisible_data_miner': 'invisible_data',
     'meta_adaptive_ai': 'meta_adaptive',
-    'quantum_sentiment_decoder': 'quantum_sentiment'
+    'quantum_sentiment_decoder': 'quantum_sentiment',
+    'quantum_tremor_scanner': 'quantum_tremor',
+    'spectral_signal_fusion': 'spectral_fusion',
+    'dna_breath': 'dna_breath',
+    'dna_overlord': 'dna_overlord',
+    'void_trader_chart_renderer': 'void_renderer',
+    'meta_conscious_routing_layer': 'meta_routing'
 }
 ```
 
@@ -194,6 +320,12 @@ All modules are designed to use only legitimate data sources and comply with leg
 3. The Self-Destruct Protocol automatically disables failing strategies to protect capital.
 4. The Meta-Adaptive AI uses only internal data for training and evolution.
 5. The Quantum Sentiment Decoder analyzes market data without unauthorized access.
+6. The Quantum Tremor Scanner uses real market data connectors.
+7. The Spectral Signal Fusion uses technical analysis libraries.
+8. The DNA Breath uses emotional data for risk calculation.
+9. The DNA Overlord evaluates assets based on legitimate data.
+10. The Void Trader Chart Renderer uses legitimate charting libraries.
+11. The Meta-Conscious Routing Layer uses entropy and liquidity assessments.
 
 ## Dual Deployment
 
@@ -206,4 +338,4 @@ The system is designed to work in both QuantConnect and Google Colab environment
 
 ## Conclusion
 
-The integration of these five advanced modules transforms the QMP Overrider from a reactive trading strategy into a "sovereign AI market being" that can perceive intention rather than just price. The system now functions as a cohesive, evolving AI trading organism that adapts to market conditions, protects capital, and uncovers hidden edges while maintaining compliance with legal and ethical standards.
+The integration of these eleven advanced modules transforms the QMP Overrider from a reactive trading strategy into a "sovereign AI market being" that can perceive intention rather than just price. The system now functions as a cohesive, evolving AI trading organism that adapts to market conditions, protects capital, and uncovers hidden edges while maintaining compliance with legal and ethical standards.
