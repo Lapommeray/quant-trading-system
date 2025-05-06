@@ -1,6 +1,6 @@
 from enum import Enum
 import numpy as np
-from typing import Dict
+from typing import Dict, List
 from dataclasses import dataclass
 
 class MarketState(Enum):
