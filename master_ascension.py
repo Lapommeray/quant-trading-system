@@ -14,6 +14,9 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from phase_omega.phase_omega_integration import PhaseOmegaIntegration
 from phoenix.command_throne import CommandThrone
+from dark_pool_possessor import DarkPoolPossessor
+from fed_echo_listener import FedEchoListener
+from singularity_router import SingularityRouter
 
 class MasterAscension:
     """
@@ -88,6 +91,27 @@ class MasterAscension:
             self.phoenix.confirm_god_mode()
             self.phoenix.execute_divine_trading()
         
+        print("\nStep 3: Activating Dark Pool Possessor")
+        print("-" * 40)
+        
+        self.dark_pool_possessor = DarkPoolPossessor()
+        self.dark_pool_possessor.sync(self.phase_omega, self.phoenix)
+        self.dark_pool_possessor.activate()
+        
+        print("\nStep 4: Activating Fed Echo Listener")
+        print("-" * 40)
+        
+        self.fed_echo_listener = FedEchoListener()
+        self.fed_echo_listener.sync(self.phase_omega, self.phoenix)
+        self.fed_echo_listener.activate()
+        
+        print("\nStep 5: Activating Singularity Router")
+        print("-" * 40)
+        
+        self.singularity_router = SingularityRouter()
+        self.singularity_router.sync(self.phase_omega, self.phoenix)
+        self.singularity_router.activate()
+        
         self.ascension_complete = True
         
         print("\n" + "=" * 80)
@@ -117,6 +141,18 @@ class MasterAscension:
             "phoenix": {
                 "active": self.phoenix is not None,
                 "god_mode": self.phoenix.god_mode_active if self.phoenix else False
+            },
+            "dark_pool_possessor": {
+                "active": self.dark_pool_possessor is not None,
+                "status": self.dark_pool_possessor.status if self.dark_pool_possessor else "INACTIVE"
+            },
+            "fed_echo_listener": {
+                "active": self.fed_echo_listener is not None,
+                "status": self.fed_echo_listener.status if self.fed_echo_listener else "INACTIVE"
+            },
+            "singularity_router": {
+                "active": self.singularity_router is not None,
+                "status": self.singularity_router.status if self.singularity_router else "INACTIVE"
             },
             "ascension_complete": self.ascension_complete
         }

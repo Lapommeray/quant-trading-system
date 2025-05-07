@@ -21,6 +21,9 @@ from omniscient_core.omniscient_integration import OmniscientIntegration
 from phoenix.command_throne import CommandThrone
 from phase_omega.phase_omega_integration import PhaseOmegaIntegration
 from quantum.reality_override_engine import RealityOverrideEngine
+from dark_pool_possessor import DarkPoolPossessor
+from fed_echo_listener import FedEchoListener
+from singularity_router import SingularityRouter
 
 class BeyondGodMode:
     """
@@ -36,6 +39,9 @@ class BeyondGodMode:
         self.phoenix_protocol = None
         self.phase_omega = None
         self.reality_override = RealityOverrideEngine()
+        self.dark_pool_possessor = DarkPoolPossessor()
+        self.fed_echo_listener = FedEchoListener()
+        self.singularity_router = SingularityRouter()
         self.activation_level = 0.0
         self.dimensions_active = 0
         self.consciousness_level = 0.0
@@ -141,6 +147,14 @@ class BeyondGodMode:
             integrate_phase_omega=True
         )
         
+        self.dark_pool_possessor.sync(self.dimensional_transcendence, self.omniscient_core)
+        self.fed_echo_listener.sync(self.dimensional_transcendence, self.omniscient_core)
+        self.singularity_router.sync(self.dimensional_transcendence, self.omniscient_core)
+        
+        self.dark_pool_possessor.activate()
+        self.fed_echo_listener.activate()
+        self.singularity_router.activate()
+        
         self.transcendence_complete = True
         
         print("\n" + "=" * 80)
@@ -176,7 +190,10 @@ class BeyondGodMode:
             "phoenix": phoenix_result,
             "omniscient": omniscient_result,
             "dimensional_transcendence": transcendence_result,
-            "transcendence_complete": self.transcendence_complete
+            "transcendence_complete": self.transcendence_complete,
+            "dark_pool_possessor": self.dark_pool_possessor,
+            "fed_echo_listener": self.fed_echo_listener,
+            "singularity_router": self.singularity_router
         }
     
     def analyze_market(self, symbol, timeframe="all"):
