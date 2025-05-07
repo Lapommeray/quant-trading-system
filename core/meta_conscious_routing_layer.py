@@ -3,6 +3,7 @@ import numpy as np
 from typing import Dict, List
 import pandas as pd
 from scipy.stats import entropy
+from quantum.reality_override_engine import RealityOverrideEngine
 
 class RoutingPath(Enum):
     SPIRIT = auto()
@@ -23,6 +24,7 @@ class MetaConsciousRoutingLayer:
             'commodities': 0.65,
             'indices': 0.90
         }
+        self.reality_override_engine = RealityOverrideEngine()
 
     def calculate_entropy(self, price_series: List[float], asset_class: str) -> float:
         """Asset-class specific entropy calculation"""
@@ -42,3 +44,7 @@ class MetaConsciousRoutingLayer:
             return RoutingPath.MOST_HIGH
         else:
             return RoutingPath.MM_EXPLOIT
+
+    def process_trade_signal(self, trade_signal):
+        """Process trade signal using RealityOverrideEngine"""
+        return self.reality_override_engine.process_signal(trade_signal)
