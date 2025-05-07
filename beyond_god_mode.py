@@ -20,6 +20,7 @@ from dimensional_transcendence.dimensional_transcendence_integration import Dime
 from omniscient_core.omniscient_integration import OmniscientIntegration
 from phoenix.command_throne import CommandThrone
 from phase_omega.phase_omega_integration import PhaseOmegaIntegration
+from quantum.reality_override_engine import RealityOverrideEngine
 
 class BeyondGodMode:
     """
@@ -34,6 +35,7 @@ class BeyondGodMode:
         self.omniscient_core = None
         self.phoenix_protocol = None
         self.phase_omega = None
+        self.reality_override = RealityOverrideEngine()
         self.activation_level = 0.0
         self.dimensions_active = 0
         self.consciousness_level = 0.0
