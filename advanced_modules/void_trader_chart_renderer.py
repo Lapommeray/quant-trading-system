@@ -1,64 +1,68 @@
-import plotly.graph_objects as go
-from plotly.subplots import make_subplots
 import pandas as pd
-from typing import Dict, List
-import streamlit as st
-from datetime import datetime
+import matplotlib.pyplot as plt
+import mplfinance as mpf
 
 class VoidTraderChartRenderer:
-    def __init__(self):
-        self.color_scheme = {
-            'bullish': '#00ff88',
-            'bearish': '#ff0077',
-            'neutral': '#aaaaaa'
-        }
-        self.void_events = []
+    def __init__(self, data_feed):
+        self.data_feed = data_feed
+        self.void_color = '#8B00FF'  # Violet spectrum
+        self.void_threshold = 0.0001  # Near-zero volume threshold
 
-    def _detect_void_zones(self, df: pd.DataFrame) -> List[Dict]:
-        """Identifies potential void events"""
-        events = []
-        for i in range(2, len(df)):
-            if (df['close'].iloc[i] - df['open'].iloc[i]).abs() < 0.001 * df['close'].iloc[i]:
-                events.append({
-                    'index': i,
-                    'price': df['close'].iloc[i],
-                    'timestamp': df.index[i]
-                })
-        return events
+    def render(self, symbol, timeframe='1H'):
+        """Renders candlestick chart with void signals"""
+        data = self._prepare_data(symbol, timeframe)
+        void_points = self._detect_void_signals(data)
+        
+        # Create market style
+        mc = mpf.make_marketcolors(up='g', down='r', wick='inherit', edge='inherit')
+        style = mpf.make_mpf_style(marketcolors=mc, gridstyle=':')
+        
+        # Add void annotations
+        addplot = [
+            mpf.make_addplot(void_points['price'], 
+                            type='scatter', 
+                            markersize=100,
+                            marker='*',
+                            color=self.void_color)
+        ]
+        
+        # Plot
+        mpf.plot(data, 
+                type='candle',
+                style=style,
+                title=f'{symbol} VOID_TRADER Signals',
+                ylabel='Price',
+                addplot=addplot,
+                volume=True,
+                figratio=(12,8))
 
-    def render_chart(self, symbol: str, ohlc_data: pd.DataFrame) -> go.Figure:
-        """Creates interactive chart with void annotations"""
-        fig = make_subplots(rows=2, cols=1, shared_xaxes=True)
-        
-        # Candlestick trace
-        fig.add_trace(
-            go.Candlestick(
-                x=ohlc_data.index,
-                open=ohlc_data['open'],
-                high=ohlc_data['high'],
-                low=ohlc_data['low'],
-                close=ohlc_data['close'],
-                name=symbol
-            ),
-            row=1, col=1
-        )
-        
-        # Add void event markers
-        void_events = self._detect_void_zones(ohlc_data)
-        for event in void_events:
-            fig.add_vline(
-                x=event['timestamp'],
-                line_dash="dot",
-                annotation_text="VOID",
-                line_color="#ffffff"
-            )
-        
-        return fig
+    def _prepare_data(self, symbol, timeframe):
+        """Fetches and formats market data"""
+        raw_data = self.data_feed.get_ohlcv(symbol, timeframe)
+        data = pd.DataFrame(raw_data)
+        data.columns = ['time', 'open', 'high', 'low', 'close', 'volume']
+        data['time'] = pd.to_datetime(data['time'], unit='ms')
+        data.set_index('time', inplace=True)
+        return data
 
-    def update_ui(self, symbol: str, ohlc_data: pd.DataFrame):
-        """Streamlit UI update handler"""
-        st.plotly_chart(
-            self.render_chart(symbol, ohlc_data),
-            use_container_width=True
-        )
-        st.write(f"Last update: {datetime.utcnow()} UTC")
+    def _detect_void_signals(self, data):
+        """Identifies spectral void points"""
+        voids = pd.DataFrame(columns=['price'])
+        
+        # Find volume voids
+        volume_voids = data[data['volume'] <= self.void_threshold]
+        
+        # Add price voids (where price didn't change between candles)
+        price_voids = data[data['high'] == data['low']]
+        
+        # Combine signals
+        all_voids = volume_voids.index.union(price_voids.index)
+        voids.loc[all_voids] = data.loc[all_voids]['close']
+        
+        return voids
+
+# Example Data Feed (replace with your actual feed)
+class CryptoDataFeed:
+    def get_ohlcv(self, symbol, timeframe):
+        # This would connect to Binance/FTX/etc API in production
+        return []  # Implement real data connection
