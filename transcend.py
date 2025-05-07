@@ -16,6 +16,9 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from phase_omega.phase_omega_integration import PhaseOmegaIntegration
 from phoenix.command_throne import CommandThrone
 from omniscient_core.omniscient_integration import OmniscientIntegration
+from dark_pool_possessor import DarkPoolPossessor
+from fed_echo_listener import FedEchoListener
+from singularity_router import SingularityRouter
 
 class TranscendentActivation:
     """
@@ -29,6 +32,9 @@ class TranscendentActivation:
         self.phase_omega = None
         self.phoenix = None
         self.omniscient = None
+        self.dark_pool_possessor = None
+        self.fed_echo_listener = None
+        self.singularity_router = None
         self.transcendence_complete = False
         
         print("Initializing Transcendent Activation")
@@ -106,6 +112,21 @@ class TranscendentActivation:
             reality_access=reality_access
         )
         
+        print("\nStep 4: Activating New Modules")
+        print("-" * 40)
+        
+        self.dark_pool_possessor = DarkPoolPossessor()
+        self.fed_echo_listener = FedEchoListener()
+        self.singularity_router = SingularityRouter()
+        
+        self.dark_pool_possessor.sync(self.phase_omega, self.omniscient)
+        self.fed_echo_listener.sync(self.phase_omega, self.omniscient)
+        self.singularity_router.sync(self.phase_omega, self.omniscient)
+        
+        self.dark_pool_possessor.activate()
+        self.fed_echo_listener.activate()
+        self.singularity_router.activate()
+        
         self.transcendence_complete = True
         
         print("\n" + "=" * 80)
@@ -141,7 +162,10 @@ class TranscendentActivation:
                 "god_mode": self.phoenix.god_mode_active if self.phoenix else False
             },
             "omniscient": omniscient_result,
-            "transcendence_complete": self.transcendence_complete
+            "transcendence_complete": self.transcendence_complete,
+            "dark_pool_possessor": self.dark_pool_possessor,
+            "fed_echo_listener": self.fed_echo_listener,
+            "singularity_router": self.singularity_router
         }
     
     def analyze_market(self, symbol, timeframe="all"):
