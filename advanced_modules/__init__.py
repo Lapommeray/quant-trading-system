@@ -29,6 +29,8 @@ from .dna_breath import DNABreath
 from .dna_overlord import DNAOverlord
 from .void_trader_chart_renderer import VoidTraderChartRenderer
 from .meta_conscious_routing_layer import MetaConsciousRoutingLayer
+from .quantum_code_generator import QuantumCodeGenerator
+from .anti_stuck import AntiStuck
 
 __all__ = [
     'HumanLagExploit',
@@ -41,5 +43,7 @@ __all__ = [
     'DNABreath',
     'DNAOverlord',
     'VoidTraderChartRenderer',
-    'MetaConsciousRoutingLayer'
+    'MetaConsciousRoutingLayer',
+    'QuantumCodeGenerator',
+    'AntiStuck'
 ]
