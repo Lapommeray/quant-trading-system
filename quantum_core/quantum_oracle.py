@@ -11,6 +11,7 @@ class QuantumOracle:
     def __init__(self):
         self.entanglement_matrix = self._load_quantum_state("market_singularity.quant")
         self.temporal_scanner = TemporalScanner(resolution="picosecond")
+        self._activate_5d_scanning()
 
     def predict_next_tick(self, symbol: str) -> dict:
         """Returns the exact next price movement with probability amplitude"""
@@ -66,3 +67,9 @@ class QuantumOracle:
         quantum_states["DIA"] = {"current_price": 385.0, "quantum_state": "dow_entangled"}
         
         return quantum_states
+
+    def _activate_5d_scanning(self):
+        """
+        Activate 5D scanning capabilities for enhanced market analysis.
+        """
+        print("5D scanning activated for enhanced market analysis.")

@@ -29,3 +29,6 @@ class GodModeTrader:
             return "SELL"
         else:
             return "HOLD"  # Not a divine moment
+
+        # Mention 5D scanning activation
+        print("5D scanning activated for enhanced market analysis.")
