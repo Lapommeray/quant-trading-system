@@ -1,4 +1,3 @@
-
 ---
 
 # QMP Overrider QuantConnect Strategy
@@ -87,3 +86,19 @@ The QMP Overrider system is built with a multi-layered intelligence architecture
 - **/dashboard.py** – Streamlit dashboard for performance tracking
 - **/main.py** – QuantConnect algorithm implementation
 - **/data/** – Signal logs and detailed diagnostics
+
+## Quantum Code Generator
+
+The `QuantumCodeGenerator` class is responsible for generating new trading strategies based on live DNA analysis. It mutates the best genes in the genetic pool and compiles the new code into quantum bytecode.
+
+## Anti-Stuck Mechanism
+
+The `AntiStuck` class is designed to prevent the system from getting stuck. It includes methods to rewrite history and summon an alternative reality when performance falls below a certain threshold.
+
+## Oversoul Director
+
+The `OversoulDirector` class has been enhanced with new methods to generate new algorithms, rewrite market reality, and activate the anti-stuck mechanism.
+
+## QMP Engine V3
+
+The `QMPUltraEngine` class now includes methods to generate new strategies, rewrite history, and summon alternative realities to avoid getting stuck.

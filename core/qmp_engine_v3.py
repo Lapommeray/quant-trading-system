@@ -376,6 +376,24 @@ class QMPUltraEngine:
                 
         self.algo.Debug(f"QMPUltra: Gate correlations with success: {correlations}")
 
+    def generate_new_strategy(self, market_state):
+        """
+        Generates a new trading strategy based on the current market state.
+        """
+        return self.modules['quantum_code_generator'].generate_new_strategy(market_state)
+
+    def rewrite_history(self):
+        """
+        Rewrites the history to avoid getting stuck.
+        """
+        self.modules['anti_stuck'].rewrite_history()
+
+    def summon_alternative_reality(self):
+        """
+        Summons an alternative reality to avoid getting stuck.
+        """
+        self.modules['anti_stuck'].summon_alternative_reality()
+
 class TradeBar:
     """
     Simple TradeBar implementation for module compatibility.
