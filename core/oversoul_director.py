@@ -11,6 +11,8 @@ from core.oversoul.quantum_tremor_scanner import QuantumTremorScanner
 from core.oversoul.market_thought_form_interpreter import MarketThoughtFormInterpreter
 from core.oversoul.reality_displacement_matrix import RealityDisplacementMatrix
 from ultra_modules.atlantis_resilience_layer import AtlantisResilienceLayer
+from advanced_modules.quantum_code_generator import QuantumCodeGenerator
+from advanced_modules.anti_stuck import AntiStuck
 
 class OverSoulDirector:
     def __init__(self, algorithm):
@@ -29,6 +31,8 @@ class OverSoulDirector:
             ],
             'defense': AtlantisResilienceLayer()
         }
+        self.quantum_code_generator = QuantumCodeGenerator()
+        self.anti_stuck = AntiStuck()
 
     def evaluate_state(self, gate_results, user_state=None, environment_state=None, monitoring_results=None):
         """
@@ -164,3 +168,22 @@ class OverSoulDirector:
             return {'action': 'EXECUTE', 'modules': self.enabled_modules, 'diagnostics': diagnostics}
 
         return {'action': 'WAIT', 'modules': self.enabled_modules, 'diagnostics': diagnostics}
+
+    def generate_new_algorithm(self, market_state):
+        """
+        Generates a new trading algorithm based on the current market state.
+        """
+        return self.quantum_code_generator.generate_new_strategy(market_state)
+
+    def rewrite_market_reality(self, target_outcome):
+        """
+        Rewrites the market reality to achieve the target outcome.
+        """
+        # Placeholder for market reality rewriting logic
+        pass
+
+    def activate_anti_stuck(self):
+        """
+        Activates the anti-stuck mechanism to avoid getting stuck.
+        """
+        self.anti_stuck.activate()
