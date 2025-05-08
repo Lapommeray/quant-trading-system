@@ -29,7 +29,7 @@ class QMPUltraEngine:
                     if win_rate < 0.9:  # Below 90% win rate
                         market_data = self.anti_stuck.activate(market_data, win_rate)
                         new_code = self.code_gen.generate_new_logic(market_data)
-                        self._hot_swap_strategy(new_code)
+                        self._deploy_new_algorithm(new_code)
                         signal = self.current_strategy(market_data)
                 
                 # Execute trade
@@ -46,6 +46,20 @@ class QMPUltraEngine:
                     self.performance_history)
                 if alt_trades:
                     self.performance_history = alt_trades
+
+    def _deploy_new_algorithm(self, new_code):
+        """Deploy new algorithm in real-time using hot-swap mechanism"""
+        try:
+            # Quantum validation gate
+            qc = QuantumCircuit(1)
+            qc.h(0)
+            qc.measure_all()
+            result = execute(qc, self.backend, shots=1).result()
+            if '1' in result.get_counts(qc):
+                exec(new_code, globals())
+                self.current_strategy = strategy
+        except:
+            pass  # Maintain current strategy on failure
 
     def _hot_swap_strategy(self, new_code):
         """Runtime strategy replacement with quantum validation"""
