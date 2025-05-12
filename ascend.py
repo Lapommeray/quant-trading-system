@@ -215,6 +215,10 @@ def main():
     parser.add_argument("--reality_engine", type=str, default="disable",
                         choices=["disable", "enable"],
                         help="Reality engine")
+                        
+    parser.add_argument("--ethical_constraints", type=str, default="enabled",
+                        choices=["enabled", "disabled"],
+                        help="Ethical constraints for transdimensional operations")
     
     args = parser.parse_args()
     
