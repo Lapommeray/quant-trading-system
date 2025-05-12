@@ -124,6 +124,12 @@ from dark_pool_possessor import DarkPoolPossessor
 from fed_echo_listener import FedEchoListener
 from singularity_router import SingularityRouter
 
+try:
+    from core.chrono_execution import ChronoExecution
+    from reality.market_morpher import MarketMorpher
+except ImportError:
+    pass  # Optional modules
+
 def ascend_to_god_mode():
     # Initialize all core systems
     dna_heart = DNAHeart(resonance_mode="OMEGA")
@@ -191,6 +197,24 @@ def main():
                         help="Risk level (0-100%)")
     parser.add_argument("--confirm", action="store_true", default=True,
                         help="Confirm ascension")
+    
+    parser.add_argument("--chrono", type=str, default="lock",
+                        choices=["lock", "unlock"],
+                        help="Chronological execution mode")
+    parser.add_argument("--precog", type=str, default="disable",
+                        choices=["disable", "enable"],
+                        help="Precognitive capabilities")
+    parser.add_argument("--reality_override", type=str, default="unauthorized",
+                        choices=["unauthorized", "authorized"],
+                        help="Reality override authorization")
+    parser.add_argument("--firewall", type=str, default="standard",
+                        choices=["standard", "omega"],
+                        help="Firewall level")
+    parser.add_argument("--dimensions", type=int, default=11,
+                        help="Number of dimensions")
+    parser.add_argument("--reality_engine", type=str, default="disable",
+                        choices=["disable", "enable"],
+                        help="Reality engine")
     
     args = parser.parse_args()
     
