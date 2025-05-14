@@ -72,12 +72,20 @@ class TemporalFractal:
         - Alignment score (0-200%)
         """
         try:
-            backend = qiskit.Aer.get_backend('qasm_simulator')
-            job = qiskit.execute(self.quantum_circuit, backend=backend, shots=1000)
-            results = job.result()
-            
-            all_aligned = '1' * len(self.timeframes)
-            alignment = 2 * (results.get_counts().get(all_aligned, 0) / 1000)
+            try:
+                backend = qiskit.Aer.get_backend('qasm_simulator')
+                job = qiskit.execute(self.quantum_circuit, backend=backend, shots=1000)
+                results = job.result()
+                
+                all_aligned = '1' * len(self.timeframes)
+                alignment = 2 * (results.get_counts().get(all_aligned, 0) / 1000)
+            except (AttributeError, ImportError) as e:
+                logger.warning(f"Quantum simulation not available: {str(e)}. Using classical fallback.")
+                
+                import random
+                # Calculate alignment based on price correlation across timeframes
+                alignment_score = self._classical_alignment_simulation(price_data)
+                alignment = alignment_score * 2.0  # Scale to 0-200%
             
             self.last_alignment = alignment
             self.alignment_history.append((datetime.now(), alignment))
@@ -88,6 +96,39 @@ class TemporalFractal:
         except Exception as e:
             logger.error(f"Error in alignment check: {str(e)}")
             return 0.0
+            
+    def _classical_alignment_simulation(self, price_data):
+        """
+        Classical simulation fallback when quantum simulation is not available.
+        
+        Parameters:
+        - price_data: Dictionary with price data for each timeframe
+        
+        Returns:
+        - Alignment score (0-1)
+        """
+        if not price_data:
+            return 0.0
+            
+        # Calculate trend direction for each timeframe
+        trends = {}
+        for tf, prices in price_data.items():
+            if len(prices) >= 2:
+                trends[tf] = 1 if prices[-1] > prices[0] else -1
+                
+        if not trends:
+            return 0.0
+            
+        first_tf = list(trends.keys())[0]
+        first_trend = trends[first_tf]
+        
+        aligned_count = sum(1 for trend in trends.values() if trend == first_trend)
+        alignment_ratio = aligned_count / len(trends)
+        
+        import random
+        quantum_noise = random.uniform(0.8, 1.2)
+        
+        return alignment_ratio * quantum_noise
             
     def get_fibonacci_resonance(self, price_data):
         """
