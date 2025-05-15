@@ -623,17 +623,17 @@ direction = "{direction}"
             
             pine_script += "\n// Key levels\n"
             
-            for level_type, level_value in key_levels.items():
-                var_name = f"{level_type}Level"
+            for i, level_value in enumerate(key_levels):
+                # Alternate between support and resistance for visualization
+                level_type = "support" if i % 2 == 0 else "resistance"
+                var_name = f"{level_type}Level{i}"
                 pine_script += f"{var_name} = {level_value}\n"
                 
                 level_color = "upColor" if level_type == "support" else "downColor"
-                if level_type not in ["support", "resistance"]:
-                    level_color = "neutralColor"
                 
                 pine_script += f"""
 if (showLevels)
-    hline({var_name}, "{level_type.capitalize()}", color={level_color}, linestyle=hline.style_dashed)
+    hline({var_name}, "{level_type.capitalize()} {i+1}", color={level_color}, linestyle=hline.style_dashed)
 """
         
         if "entry_points" in opportunity["predictions"] and opportunity["predictions"]["entry_points"]:
