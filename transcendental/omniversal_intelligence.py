@@ -407,11 +407,13 @@ class OmniversalIntelligence:
         signal = {
             "symbol": symbol,
             "market_type": market_type,
+            "signal_type": "OMNIVERSAL",
             "action": "buy" if direction == "up" else "sell",
             "entry_price": entry_points[0] if entry_points else None,
             "stop_loss": stop_loss,
             "take_profit": take_profit,
             "confidence": 1.0,  # 100% confidence
+            "strength": 1.0,  # 100% strength
             "timestamp": datetime.now().isoformat(),
             "message": f"OMNIVERSAL SIGNAL: {direction.upper()} {symbol}",
             "webhook_url": "https://api.tradingview.com/webhook/...",  # Placeholder
