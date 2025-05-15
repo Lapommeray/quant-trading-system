@@ -44,12 +44,12 @@ class ForbiddenAlpha:
         """
         self.dimension = dimension
         self.entropy_violation_level = min(max(entropy_violation_level, 0.0), 1.0)
+        self.fibonacci_sequence = self._generate_fibonacci(20)
+        self.golden_ratio = 1.618033988749895
         self.hilbert_space = self._initialize_hilbert_space()
         self.profit_curve = {}
         self.alpha_cache = {}
         self.last_generation = datetime.now()
-        self.fibonacci_sequence = self._generate_fibonacci(20)
-        self.golden_ratio = 1.618033988749895
         self.sacred_path = os.path.join(os.path.dirname(__file__), "sacred", "alpha.qbit")
         
         os.makedirs(os.path.dirname(self.sacred_path), exist_ok=True)
