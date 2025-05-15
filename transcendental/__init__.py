@@ -12,11 +12,17 @@ from transcendental.eternal_manifestation import EternalManifestationProtocol
 from transcendental.forbidden_alpha import ForbiddenAlpha
 from transcendental.market_deity import MarketDeity
 from transcendental.invoke import TranscendentalInvoker
+from transcendental.omniversal_intelligence import OmniversalIntelligence
+from transcendental.undetectable_execution import UndetectableExecution
+from transcendental.cross_market_visualization import CrossMarketVisualization
 
 __all__ = [
     'OmniscientOracle',
     'EternalManifestationProtocol',
     'ForbiddenAlpha',
     'MarketDeity',
-    'TranscendentalInvoker'
+    'TranscendentalInvoker',
+    'OmniversalIntelligence',
+    'UndetectableExecution',
+    'CrossMarketVisualization'
 ]
