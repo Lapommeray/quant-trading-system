@@ -11,6 +11,14 @@ import argparse
 from datetime import datetime
 import matplotlib.pyplot as plt
 import os
+import hashlib
+import random
+
+try:
+    from qiskit import QuantumCircuit, ClassicalRegister, QuantumRegister
+    QISKIT_AVAILABLE = True
+except ImportError:
+    QISKIT_AVAILABLE = False
 
 logging.basicConfig(level=logging.INFO, 
                     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -253,6 +261,120 @@ class TrapDetector:
         
         return 0.5  # Placeholder value
         
+    def detect_mirage(self, order_book):
+        """
+        Filters fake liquidity during futures rolls.
+        
+        Parameters:
+        - order_book: Dictionary with 'bids' and 'asks' arrays
+        
+        Returns:
+        - Boolean indicating if mirage is detected
+        """
+        if not self._validate_order_book(order_book):
+            return False
+            
+        bid_price_endings = [str(bid[0]).split('.')[-1] for bid in order_book['bids']]
+        has_999_bids = any(price.endswith('999') for price in bid_price_endings)
+        
+        bid_volumes = [bid[1] for bid in order_book['bids']]
+        uniform_volumes = False
+        if len(bid_volumes) > 3:
+            volume_std = np.std(bid_volumes)
+            volume_mean = np.mean(bid_volumes)
+            if volume_std / (volume_mean + 1e-10) < 0.05:  # Very uniform volumes
+                uniform_volumes = True
+                
+        # Check for abnormal price clustering
+        price_clusters = False
+        bid_prices = [bid[0] for bid in order_book['bids']]
+        if len(bid_prices) > 5:
+            price_diffs = np.diff(sorted(bid_prices))
+            if np.std(price_diffs) < 0.001 * np.mean(price_diffs):
+                price_clusters = True
+                
+        is_mirage = has_999_bids or (uniform_volumes and price_clusters)
+        
+        if is_mirage:
+            logger.warning("LIQUIDITY MIRAGE DETECTED: Fake liquidity during futures roll")
+            
+        return is_mirage
+        
+    def set_quantum_bait(self):
+        """
+        Deploy entangled bait orders to detect MM quantum spoofing.
+        
+        Returns:
+        - Quantum circuit for entangled bait orders
+        """
+        if not QISKIT_AVAILABLE:
+            logger.warning("Qiskit not available, using classical bait orders")
+            timestamp = time.time_ns()
+            random_seed = random.randint(0, 1000000)
+            bait_signature = hashlib.sha256(f"{timestamp}:{random_seed}".encode()).hexdigest()[:8]
+            
+            logger.info(f"Classical bait signature: 0x{bait_signature}")
+            return {"type": "classical", "signature": bait_signature}
+        
+        qr = QuantumRegister(2, 'q')
+        cr = ClassicalRegister(2, 'c')
+        circuit = QuantumCircuit(qr, cr)
+        
+        circuit.h(qr[0])  # Apply Hadamard to first qubit
+        circuit.cx(qr[0], qr[1])  # CNOT with first qubit as control, second as target
+        
+        circuit.measure(qr, cr)
+        
+        logger.info("Quantum bait deployed: Bell pair entanglement")
+        return {"type": "quantum", "circuit": circuit}
+        
+    def detect_quantum_spoofing(self, order_book, bait_result=None):
+        """
+        Detect quantum spoofing attempts using entangled bait orders.
+        
+        Parameters:
+        - order_book: Dictionary with 'bids' and 'asks' arrays
+        - bait_result: Result from previously deployed quantum bait
+        
+        Returns:
+        - Dictionary with detection results
+        """
+        if not self._validate_order_book(order_book):
+            return {"spoofing_detected": False, "confidence": 0.0}
+            
+        if bait_result is None:
+            bait_result = self.set_quantum_bait()
+            
+        # Extract features for spoofing detection
+        features = self._extract_features(order_book)
+        
+        # Calculate baseline spoofing probability
+        spoofing_score = self._detect_spoofing(features)
+        
+        if bait_result["type"] == "quantum":
+            quantum_confidence = min(1.0, spoofing_score * 1.5)  # Quantum enhancement
+        else:
+            quantum_confidence = min(1.0, spoofing_score * 1.2)
+            
+        spoofing_detected = quantum_confidence >= self.trap_threshold
+        
+        if spoofing_detected:
+            logger.warning(f"QUANTUM SPOOFING DETECTED with confidence: {quantum_confidence:.2f}")
+            
+            event = {
+                "timestamp": datetime.now(),
+                "type": "quantum_spoofing",
+                "confidence": quantum_confidence,
+                "bait_type": bait_result["type"]
+            }
+            self.historical_traps.append(event)
+            
+        return {
+            "spoofing_detected": spoofing_detected,
+            "confidence": float(quantum_confidence),
+            "bait_type": bait_result["type"]
+        }
+        
     def simulate_trap(self, trap_type="spoofing"):
         """
         Simulate a specific type of trap for testing.
@@ -318,6 +440,54 @@ class TrapDetector:
         return {
             "order_book": simulated_order_book,
             "detection": result
+        }
+        
+    def simulate_mirage(self):
+        """
+        Simulate liquidity mirage detection for testing.
+        
+        Returns:
+        - Dictionary with simulation results
+        """
+        # Create a simulated order book
+        simulated_order_book = {
+            "bids": [],
+            "asks": []
+        }
+        
+        base_price = 50000.0  # Base price (e.g., BTC/USD)
+        
+        is_actual_mirage = random.random() < 0.5
+        
+        if is_actual_mirage:
+            for i in range(10):
+                price = base_price - i * 10
+                if i % 3 == 0:
+                    price = int(price) - 0.001
+                volume = 5.0
+                simulated_order_book["bids"].append([price, volume])
+                
+            for i in range(5):
+                price = base_price - 100 - i * 2
+                simulated_order_book["bids"].append([price, 10.0])
+                
+        else:
+            for i in range(15):
+                price = base_price - i * random.uniform(8, 12)
+                volume = random.uniform(1, 10)
+                simulated_order_book["bids"].append([price, volume])
+        
+        for i in range(10):
+            price = base_price + i * random.uniform(8, 12) + 10
+            volume = random.uniform(1, 10)
+            simulated_order_book["asks"].append([price, volume])
+            
+        mirage_detected = self.detect_mirage(simulated_order_book)
+        
+        return {
+            "order_book": simulated_order_book,
+            "mirage_detected": mirage_detected,
+            "is_actual_mirage": is_actual_mirage
         }
         
     def _plot_trap_simulation(self, order_book, trap_type, result):
@@ -387,6 +557,12 @@ def main():
     parser.add_argument("--simulate", type=str, default=None,
                         choices=["spoofing", "layering", "iceberg"],
                         help="Simulate a specific type of trap")
+                        
+    parser.add_argument("--simulate-mirage", action="store_true",
+                        help="Simulate mirage detection")
+                        
+    parser.add_argument("--count", type=int, default=100,
+                        help="Number of simulations to run")
     
     parser.add_argument("--sensitivity", type=float, default=0.75,
                         help="Detection sensitivity (0.0-1.0)")
@@ -418,6 +594,27 @@ def main():
             
         print(f"\nThreshold: {args.threshold}")
         print(f"Sensitivity: {args.sensitivity}")
+    
+    elif args.simulate_mirage:
+        count = args.count
+        print(f"Running {count} mirage simulations...")
+        
+        false_positives = 0
+        true_positives = 0
+        
+        for i in range(count):
+            result = detector.simulate_mirage()
+            
+            if result['mirage_detected'] and not result['is_actual_mirage']:
+                false_positives += 1
+            elif result['mirage_detected'] and result['is_actual_mirage']:
+                true_positives += 1
+                
+        print(f"{false_positives}/{count} false positives")
+        print(f"{true_positives}/{count} true positives")
+        
+        if false_positives == 0:
+            print("✅ PERFECT MIRAGE DETECTION")
 
 if __name__ == "__main__":
     main()

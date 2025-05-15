@@ -8,6 +8,7 @@ import pandas as pd
 import logging
 import time
 import argparse
+import json
 from datetime import datetime
 import matplotlib.pyplot as plt
 import os
@@ -201,6 +202,80 @@ class MMPsychology:
             
         return emotional_state
         
+    def analyze_sleep_cycle(self, mm_identifier=None, market_data=None):
+        """
+        Analyze market maker sleep cycle patterns to predict behavior.
+        
+        Parameters:
+        - mm_identifier: Optional market maker identifier
+        - market_data: Optional market data for time-based analysis
+        
+        Returns:
+        - Dictionary with sleep cycle analysis
+        """
+        current_time = datetime.now()
+        current_hour = current_time.hour
+        
+        sleep_cycles = {
+            "US_MARKET_OPEN": (9, 16),  # 9:00 AM - 4:00 PM ET
+            "US_MARKET_CLOSE": (16, 17),  # 4:00 PM - 5:00 PM ET
+            "ASIAN_SESSION": (19, 3),  # 7:00 PM - 3:00 AM ET
+            "EUROPEAN_SESSION": (3, 9)  # 3:00 AM - 9:00 AM ET
+        }
+        
+        current_session = None
+        for session, (start, end) in sleep_cycles.items():
+            if start < end:
+                if start <= current_hour < end:
+                    current_session = session
+                    break
+            else:  # Handles overnight sessions (e.g., 19-3)
+                if current_hour >= start or current_hour < end:
+                    current_session = session
+                    break
+                    
+        if current_session is None:
+            current_session = "BETWEEN_SESSIONS"
+            
+        sleep_cycle = {
+            "current_session": current_session,
+            "activity_level": 0.85,
+            "aggression_factor": 0.75,
+            "preferred_patterns": ["momentum_ignition", "liquidity_pull"],
+            "fatigue_factor": 0.0
+        }
+        
+        if mm_identifier:
+            try:
+                mm_dna_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 
+                                          "data", "mm_dna", "citadel_2023.json")
+                
+                if os.path.exists(mm_dna_path):
+                    with open(mm_dna_path, 'r') as f:
+                        mm_dna = json.loads(f.read())
+                        
+                    if "sleep_cycles" in mm_dna:
+                        for cycle in mm_dna["sleep_cycles"]:
+                            if cycle["period"] == current_session:
+                                sleep_cycle["activity_level"] = cycle["activity_level"]
+                                sleep_cycle["aggression_factor"] = cycle["aggression_factor"]
+                                sleep_cycle["preferred_patterns"] = cycle["preferred_patterns"]
+                                break
+            except Exception as e:
+                logger.warning(f"Error loading MM DNA data: {str(e)}")
+                
+        # Calculate fatigue factor based on session duration
+        if market_data and "timestamps" in market_data:
+            timestamps = market_data["timestamps"]
+            if len(timestamps) > 1:
+                session_duration = (timestamps[-1] - timestamps[0]).total_seconds() / 3600  # hours
+                sleep_cycle["fatigue_factor"] = min(0.5, session_duration / 24)
+                
+        logger.info(f"MM Sleep Cycle: {current_session} (Activity: {sleep_cycle['activity_level']:.2f}, "
+                   f"Aggression: {sleep_cycle['aggression_factor']:.2f})")
+                   
+        return sleep_cycle
+        
     def _predict_decision_bias(self, emotional_state, mm_identifier=None):
         """
         Predict decision bias from emotional state.
@@ -220,30 +295,49 @@ class MMPsychology:
             "aggressive_positioning": 0.0
         }
         
+        sleep_cycle = self.analyze_sleep_cycle(mm_identifier)
+        activity_level = sleep_cycle["activity_level"]
+        aggression_factor = sleep_cycle["aggression_factor"]
+        fatigue_factor = sleep_cycle["fatigue_factor"]
+        
+        adjusted_emotional_state = {}
+        for emotion, value in emotional_state.items():
+            if emotion in ["fear", "uncertainty"]:
+                adjusted_value = value * (2.0 - activity_level)
+            elif emotion in ["greed", "confidence"]:
+                adjusted_value = value * activity_level
+            elif emotion == "panic":
+                adjusted_value = value * (1.0 + fatigue_factor)
+            else:
+                adjusted_value = value
+                
+            adjusted_emotional_state[emotion] = min(1.0, adjusted_value)
+            
+        # Calculate decision biases with sleep-cycle adjusted emotions
         decision_bias['risk_aversion'] = (
-            0.7 * emotional_state['fear'] + 
-            0.3 * emotional_state['uncertainty']
+            0.7 * adjusted_emotional_state['fear'] + 
+            0.3 * adjusted_emotional_state['uncertainty']
         )
         
         decision_bias['momentum_chasing'] = (
-            0.6 * emotional_state['greed'] + 
-            0.4 * emotional_state['confidence']
-        )
+            0.6 * adjusted_emotional_state['greed'] + 
+            0.4 * adjusted_emotional_state['confidence']
+        ) * aggression_factor
         
         decision_bias['contrarian'] = (
-            0.8 * emotional_state['confidence'] * 
-            (1 - emotional_state['fear'])
-        )
+            0.8 * adjusted_emotional_state['confidence'] * 
+            (1 - adjusted_emotional_state['fear'])
+        ) * (1.0 - fatigue_factor)
         
         decision_bias['liquidity_hoarding'] = (
-            0.5 * emotional_state['fear'] + 
-            0.5 * emotional_state['panic']
-        )
+            0.5 * adjusted_emotional_state['fear'] + 
+            0.5 * adjusted_emotional_state['panic']
+        ) * (2.0 - activity_level)
         
         decision_bias['aggressive_positioning'] = (
-            0.7 * emotional_state['greed'] * 
-            (1 - emotional_state['uncertainty'])
-        )
+            0.7 * adjusted_emotional_state['greed'] * 
+            (1 - adjusted_emotional_state['uncertainty'])
+        ) * aggression_factor
         
         if mm_identifier and mm_identifier in self.mm_profiles:
             profile = self.mm_profiles[mm_identifier]

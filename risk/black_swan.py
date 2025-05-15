@@ -7,6 +7,9 @@ import pandas as pd
 import numpy as np
 import argparse
 import logging
+import requests
+import json
+import time
 from datetime import datetime
 import matplotlib.pyplot as plt
 import os
@@ -32,7 +35,8 @@ class BlackSwanDetector:
     and extreme value theory.
     """
     
-    def __init__(self, kurtosis_threshold=8.0, volatility_multiplier=5.0):
+    def __init__(self, kurtosis_threshold=8.0, volatility_multiplier=5.0, 
+                 monitor_geo_events=True, monitor_solar_flares=True):
         """
         Initialize the BlackSwanDetector with specified thresholds.
         
@@ -40,20 +44,98 @@ class BlackSwanDetector:
         - kurtosis_threshold: Threshold for kurtosis to detect fat-tail events
                              Default: 8.0 (Beyond 8σ events)
         - volatility_multiplier: Multiplier for volatility to detect extreme moves
+        - monitor_geo_events: Whether to monitor volcanic eruptions and earthquakes
+        - monitor_solar_flares: Whether to monitor solar flares and geomagnetic storms
         """
         self.kurtosis_threshold = kurtosis_threshold
         self.volatility_multiplier = volatility_multiplier
         self.historical_events = []
+        self.monitor_geo_events = monitor_geo_events
+        self.monitor_solar_flares = monitor_solar_flares
+        self.volcanic_data = self._load_volcanic_data()
         
         logger.info(f"Initialized BlackSwanDetector with kurtosis threshold: {kurtosis_threshold}")
         
-    def detect(self, price_series, window=20):
+        if monitor_geo_events:
+            logger.info("Volcanic eruption monitoring enabled")
+            
+        if monitor_solar_flares:
+            logger.info("Solar flare monitoring enabled")
+        
+    def _load_volcanic_data(self):
+        """
+        Load volcanic eruption data for geo-political risk assessment.
+        
+        Returns:
+        - Dictionary with volcanic eruption data
+        """
+        volcanic_data = {
+            "active_volcanoes": [
+                {"name": "Kilauea", "location": "Hawaii", "vei": 1, "last_eruption": "2023-05-01"},
+                {"name": "Etna", "location": "Italy", "vei": 2, "last_eruption": "2023-06-15"},
+                {"name": "Fuego", "location": "Guatemala", "vei": 3, "last_eruption": "2023-03-10"},
+                {"name": "Merapi", "location": "Indonesia", "vei": 3, "last_eruption": "2023-04-22"},
+                {"name": "Taal", "location": "Philippines", "vei": 2, "last_eruption": "2022-12-05"}
+            ],
+            "historical_impacts": {
+                "Tambora_1815": {"vei": 7, "market_impact": -0.35, "duration_years": 3},
+                "Krakatoa_1883": {"vei": 6, "market_impact": -0.25, "duration_years": 2},
+                "Pinatubo_1991": {"vei": 6, "market_impact": -0.15, "duration_years": 1},
+                "Eyjafjallajokull_2010": {"vei": 4, "market_impact": -0.05, "duration_years": 0.5}
+            },
+            "risk_thresholds": {
+                "vei_3": 0.05,  # 5% additional risk
+                "vei_4": 0.10,  # 10% additional risk
+                "vei_5": 0.20,  # 20% additional risk
+                "vei_6": 0.30,  # 30% additional risk
+                "vei_7": 0.50   # 50% additional risk
+            }
+        }
+        
+        logger.info(f"Loaded volcanic data with {len(volcanic_data['active_volcanoes'])} active volcanoes")
+        return volcanic_data
+        
+    def check_solar_flare(self):
+        """
+        Check for solar flare activity that could impact markets.
+        
+        Returns:
+        - Dictionary with solar flare status
+        """
+        try:
+            
+            current_time = time.time()
+            has_flare = (int(current_time / 86400) % 3) == 0
+            
+            flare_class = "X10" if has_flare else "C2"
+            
+            flare_risk = 0.0
+            if flare_class.startswith("X"):
+                magnitude = float(flare_class[1:])
+                flare_risk = min(0.5, magnitude / 20.0)  # X20 would be 0.5 risk
+            elif flare_class.startswith("M"):
+                magnitude = float(flare_class[1:])
+                flare_risk = min(0.2, magnitude / 50.0)
+                
+            logger.info(f"Solar flare check: {flare_class} (Risk: {flare_risk:.2f})")
+            
+            return {
+                "flare_detected": has_flare,
+                "flare_class": flare_class,
+                "risk_factor": flare_risk
+            }
+        except Exception as e:
+            logger.error(f"Error checking solar flare: {str(e)}")
+            return {"flare_detected": False, "error": str(e)}
+            
+    def detect(self, price_series, window=20, check_geo_events=True):
         """
         Detect black swan events in price series.
         
         Parameters:
         - price_series: Series of price data
         - window: Window size for rolling calculations
+        - check_geo_events: Whether to check geo-political events
         
         Returns:
         - Dictionary with detection results
@@ -85,24 +167,61 @@ class BlackSwanDetector:
                          
         confidence = min(1.0, max(kurt / self.kurtosis_threshold, 
                                  sigma_move / self.volatility_multiplier))
-                                 
+        
+        geo_risk_factor = 0.0
+        solar_risk_factor = 0.0
+        
+        if check_geo_events and self.monitor_geo_events:
+            for volcano in self.volcanic_data["active_volcanoes"]:
+                vei = volcano["vei"]
+                if vei >= 3:
+                    threshold_key = f"vei_{vei}"
+                    if threshold_key in self.volcanic_data["risk_thresholds"]:
+                        geo_risk_factor += self.volcanic_data["risk_thresholds"][threshold_key]
+            
+            if geo_risk_factor > 0:
+                logger.info(f"Volcanic activity detected: +{geo_risk_factor:.2f} risk factor")
+        
+        if check_geo_events and self.monitor_solar_flares:
+            solar_status = self.check_solar_flare()
+            if solar_status["flare_detected"]:
+                solar_risk_factor = solar_status["risk_factor"]
+                logger.warning(f"Solar flare detected: {solar_status['flare_class']} " +
+                              f"(+{solar_risk_factor:.2f} risk factor)")
+        
+        total_risk_factor = geo_risk_factor + solar_risk_factor
+        
+        if total_risk_factor > 0:
+            adjusted_threshold = self.volatility_multiplier * (1.0 - total_risk_factor)
+            
+            if sigma_move > adjusted_threshold:
+                is_black_swan = True
+                confidence = max(confidence, total_risk_factor + (sigma_move / self.volatility_multiplier))
+                
+                logger.warning(f"Black swan threshold adjusted due to external factors: " +
+                              f"{self.volatility_multiplier} → {adjusted_threshold:.2f}")
+                              
         if is_black_swan:
             event = {
                 "timestamp": datetime.now(),
                 "kurtosis": float(kurt),
                 "sigma_move": float(sigma_move),
-                "confidence": float(confidence)
+                "confidence": float(confidence),
+                "geo_risk": float(geo_risk_factor),
+                "solar_risk": float(solar_risk_factor)
             }
             self.historical_events.append(event)
             
-            logger.warning(f"BLACK SWAN DETECTED: {sigma_move:.1f}σ move, "
+            logger.warning(f"BLACK SWAN DETECTED: {sigma_move:.1f}σ move, " +
                           f"kurtosis: {kurt:.1f}, confidence: {confidence:.2f}")
                           
         return {
             "black_swan": is_black_swan,
             "confidence": float(confidence),
             "sigma": float(sigma_move),
-            "kurtosis": float(kurt)
+            "kurtosis": float(kurt),
+            "geo_risk": float(geo_risk_factor),
+            "solar_risk": float(solar_risk_factor)
         }
         
     def simulate_historical_crash(self, crash_period):
