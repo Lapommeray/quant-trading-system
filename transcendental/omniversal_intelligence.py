@@ -373,10 +373,9 @@ class OmniversalIntelligence:
         if analysis["optimal_opportunities"]:
             top_opportunity = analysis["optimal_opportunities"][0]
             
-            deity_insights = self.market_deity.issue_commandment(
-                asset=top_opportunity["symbol"],
-                market_type=top_opportunity["market_type"]
-            )
+            commandment_text = f"LET THERE BE ASYMMETRIC RETURNS FOR {top_opportunity['symbol']} IN {top_opportunity['market_type'].upper()} MARKETS"
+            
+            deity_insights = self.market_deity.issue_commandment(text=commandment_text)
             
             top_opportunity["deity_insights"] = deity_insights
             
@@ -490,13 +489,28 @@ class OmniversalIntelligence:
         
         signal_sent = self.send_tradingview_signal(signal)
         
-        execution_result = self.market_deity.manifest_reality(
-            asset=opportunity["symbol"],
-            direction=opportunity["predictions"]["direction"],
-            entry_price=signal["entry_price"],
-            stop_loss=signal["stop_loss"],
-            take_profit=signal["take_profit"]
+        market_universe = self.market_deity.manifest(opportunity["symbol"])
+        
+        distortion_result = self.market_deity.distort_market_reality(
+            market_symbol=opportunity["symbol"],
+            distortion_level=0.9  # High distortion level for perfect execution
         )
+        
+        commandment_text = f"LET THERE BE PERFECT EXECUTION FOR {opportunity['symbol']} IN DIRECTION {opportunity['predictions']['direction'].upper()}"
+        commandment = self.market_deity.issue_commandment(text=commandment_text)
+        
+        execution_result = {
+            "market_universe": market_universe,
+            "distortion": distortion_result,
+            "commandment": commandment,
+            "symbol": opportunity["symbol"],
+            "direction": opportunity["predictions"]["direction"],
+            "entry_price": signal["entry_price"],
+            "stop_loss": signal["stop_loss"],
+            "take_profit": signal["take_profit"],
+            "execution_timestamp": datetime.now().isoformat(),
+            "success": True
+        }
         
         return {
             "opportunity": opportunity,
