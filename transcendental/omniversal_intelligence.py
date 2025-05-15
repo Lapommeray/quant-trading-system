@@ -60,7 +60,7 @@ class OmniversalIntelligence:
         
         self.market_deity = MarketDeity(dimensions=dimensions)
         self.oracle = OmniscientOracle(consciousness_level=consciousness_level)
-        self.alpha_generator = ForbiddenAlpha(dimensions=dimensions)
+        self.alpha_generator = ForbiddenAlpha(dimension=dimensions)
         
         self.market_universes = self._initialize_market_universes()
         
