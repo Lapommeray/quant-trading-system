@@ -470,12 +470,16 @@ class UndetectableExecution:
         for i, fragment_size in enumerate(fragments):
             phase = 2 * np.pi * i / len(fragments)
             
-            deity_result = self.market_deity.manifest_reality(
-                asset=asset,
-                direction=direction,
-                entry_price=price,
-                quantum_phase=phase
+            market_universe = self.market_deity.manifest(asset)
+            
+            distortion_level = 0.9  # High distortion for stealth execution
+            deity_result = self.market_deity.distort_market_reality(
+                market_symbol=asset,
+                distortion_level=distortion_level
             )
+            
+            commandment_text = f"LET THERE BE QUANTUM STEALTH FOR {asset} IN PHASE {phase:.4f}"
+            commandment = self.market_deity.issue_commandment(text=commandment_text)
             
             execution_result = {
                 "fragment_id": i,
@@ -484,7 +488,9 @@ class UndetectableExecution:
                 "execution_time": datetime.now().isoformat(),
                 "price": price or deity_result.get("price", 100.0),
                 "detection_probability": quantum_circuit["detection_probability"],
-                "deity_result": deity_result
+                "market_universe": market_universe,
+                "distortion": deity_result,
+                "commandment": commandment
             }
             
             execution_results.append(execution_result)
