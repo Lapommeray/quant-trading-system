@@ -236,16 +236,14 @@ class CrossMarketVisualization:
         if show_key_levels and "key_levels" in opportunity["predictions"]:
             key_levels = opportunity["predictions"]["key_levels"]
             
-            for level_type, level_value in key_levels.items():
-                if level_type == "support":
+            for i, level_value in enumerate(key_levels):
+                # Alternate between support and resistance for visualization
+                if i % 2 == 0:
                     ax.axhline(y=level_value, color=colors["up"], linestyle="--", alpha=0.7,
                               label=f"Support: {level_value:.2f}")
-                elif level_type == "resistance":
+                else:
                     ax.axhline(y=level_value, color=colors["down"], linestyle="--", alpha=0.7,
                               label=f"Resistance: {level_value:.2f}")
-                else:
-                    ax.axhline(y=level_value, color=colors["neutral"], linestyle=":", alpha=0.5,
-                              label=f"{level_type.capitalize()}: {level_value:.2f}")
         
         if "entry_points" in opportunity["predictions"]:
             entry_points = opportunity["predictions"]["entry_points"]
