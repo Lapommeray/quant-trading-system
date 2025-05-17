@@ -631,6 +631,61 @@ class HolyGrailModules:
         
         return combined_result
     
+    def generate_divine_signal(self, data: Dict) -> Dict:
+        """Generate divine trading signal using Holy Grail Modules
+        
+        Args:
+            data: Market data including ohlcv, order_book, etc.
+            
+        Returns:
+            Dict containing divine trading signal
+        """
+        if 'ohlcv' in data and not self._verify_real_time_data(data):
+            return {
+                "signal": "HOLD",
+                "confidence": 0.0,
+                "divine_intervention": False,
+                "details": "Data failed authenticity verification"
+            }
+        
+        manna_result = self.manna_generator.generate_manna(data)
+        arbitrage_result = self.armageddon_arbitrage.detect_arbitrage(data)
+        
+        if arbitrage_result["arbitrage_detected"]:
+            if arbitrage_result["opportunity_type"] == "EXTREME_FEAR_REVERSAL":
+                signal = "DIVINE_BUY"
+                confidence = min(1.0, arbitrage_result["profit_potential"] * 1.5)
+            elif arbitrage_result["opportunity_type"] == "VOLATILITY_EXPLOSION":
+                signal = "DIVINE_SELL"
+                confidence = min(1.0, arbitrage_result["profit_potential"] * 1.5)
+            else:
+                signal = "DIVINE_HOLD"
+                confidence = min(1.0, arbitrage_result["profit_potential"])
+        elif manna_result["manna_generated"]:
+            if manna_result["yield_potential"] > 0.8:
+                signal = "DIVINE_BUY"
+                confidence = min(1.0, manna_result["yield_potential"])
+            elif manna_result["yield_potential"] > 0.5:
+                signal = "DIVINE_ACCUMULATE"
+                confidence = min(1.0, manna_result["yield_potential"] * 0.9)
+            else:
+                signal = "DIVINE_HOLD"
+                confidence = min(1.0, manna_result["yield_potential"] * 0.8)
+        else:
+            signal = "HOLD"
+            confidence = 0.5
+        
+        return {
+            "signal": signal,
+            "confidence": confidence,
+            "divine_intervention": True,
+            "manna_generated": manna_result["manna_generated"],
+            "manna_amount": manna_result.get("manna_amount", 0.0),
+            "arbitrage_detected": arbitrage_result["arbitrage_detected"],
+            "opportunity_type": arbitrage_result.get("opportunity_type", None),
+            "details": "Divine signal generated from Holy Grail Modules"
+        }
+    
     def _verify_real_time_data(self, data: Dict) -> bool:
         """Verify the data is 100% real-time with no synthetic elements"""
         if 'ohlcv' not in data:
