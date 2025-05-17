@@ -16,6 +16,8 @@ import numpy as np
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional, Union, Tuple
 
+sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
