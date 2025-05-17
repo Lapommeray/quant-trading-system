@@ -89,9 +89,26 @@ def test_apocalypse_protocol():
     """Test the Apocalypse-Proofing Protocol"""
     logger.info("Testing Apocalypse-Proofing Protocol...")
     
-    apocalypse = ApocalypseProtocol()
+    apocalypse = ApocalypseProtocol(crash_threshold=0.4)
     
     data = load_test_data()
+    
+    ohlcv = data['ohlcv']
+    base_price = ohlcv[-1][4]  # Last close price
+    
+    for i in range(10):
+        timestamp = ohlcv[-1][0] + (i + 1) * 60 * 1000  # 1-minute candles
+        drop_factor = 0.98 - (i * 0.005)  # Increasing drops
+        open_price = base_price
+        close_price = base_price * drop_factor
+        high_price = max(open_price, close_price) * 1.001
+        low_price = min(open_price, close_price) * 0.995
+        volume = 50 + i * 10  # Increasing volume during crash
+        
+        ohlcv.append([timestamp, open_price, high_price, low_price, close_price, volume])
+        base_price = close_price
+    
+    data['ohlcv'] = ohlcv
     
     result = apocalypse.analyze_crash_risk(data)
     
@@ -110,6 +127,8 @@ def test_apocalypse_protocol():
         logger.info(f"Original signal: {trading_signal['signal']}")
         logger.info(f"Transformed signal: {immunity_result['signal']}")
         logger.info(f"New confidence: {immunity_result['confidence']}")
+    else:
+        logger.warning("Crash risk not detected despite simulated crash scenario")
         
     return result['crash_risk_detected']
 

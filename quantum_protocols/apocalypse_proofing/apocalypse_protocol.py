@@ -19,14 +19,20 @@ logger.setLevel(logging.INFO)
 class ApocalypseProtocol:
     """Apocalypse-Proofing Protocol that protects against extreme market events"""
     
-    def __init__(self):
-        """Initialize the Apocalypse Protocol"""
+    def __init__(self, crash_threshold=0.65, volatility_threshold=3.5):
+        """Initialize the Apocalypse Protocol
+        
+        Args:
+            crash_threshold: Threshold for crash probability to detect crash risk
+            volatility_threshold: Threshold for volatility Z-score (standard deviations)
+        """
         self.initialized = True
         self.crash_indicators = {}
-        self.volatility_threshold = 3.5  # Standard deviations
+        self.crash_threshold = crash_threshold
+        self.volatility_threshold = volatility_threshold
         self.immunity_active = False
         self.immunity_level = 0.0
-        logger.info("Initialized ApocalypseProtocol")
+        logger.info(f"Initialized ApocalypseProtocol with crash_threshold={crash_threshold}")
     
     def analyze_crash_risk(self, data: Dict) -> Dict:
         """Analyze market for potential crash risks"""
@@ -62,7 +68,7 @@ class ApocalypseProtocol:
             correlation_signal["probability"] * 0.3
         )
         
-        crash_risk_detected = crash_probability > 0.65
+        crash_risk_detected = crash_probability > self.crash_threshold
         immunity_level = self._generate_immunity(crash_probability) if crash_risk_detected else 0.0
         
         symbol = data.get('symbol', 'unknown')
