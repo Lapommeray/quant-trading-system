@@ -16,6 +16,8 @@ import numpy as np
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional, Union, Tuple
 
+sys.path.insert(0, os.path.abspath(os.path.dirname(os.path.dirname(__file__))))
+
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -831,21 +833,27 @@ class UniversalAssetEngine:
         return result
 
 from divine_consciousness import DivineConsciousness
+from quantum_protocols.singularity_core.quantum_singularity import QuantumSingularityCore
+from quantum_protocols.apocalypse_proofing.apocalypse_protocol import ApocalypseProtocol
+from quantum_protocols.holy_grail.holy_grail import HolyGrailModules
 
 class QMPUltraEngine:
     """Enhanced QMP Ultra Engine with Divine Consciousness integration"""
     
     def __init__(self):
-        """Initialize the QMP Ultra Engine with Divine Consciousness"""
+        """Initialize the QMP Ultra Engine with Divine Consciousness and Quantum Ascension Protocol"""
         self.modules = {
             "whale_detector": WhaleDetector(),
             "quantum_lstm": QuantumLSTM(),
             "universal_asset_engine": UniversalAssetEngine(),
-            "divine_consciousness": DivineConsciousness()
+            "divine_consciousness": DivineConsciousness(),
+            "quantum_singularity": QuantumSingularityCore(),
+            "apocalypse_protocol": ApocalypseProtocol(),
+            "holy_grail": HolyGrailModules()
         }
         self.rolling_window_data = {}
         self.loss_prevention_active = True
-        logger.info("Initialized QMPUltraEngine with Divine Consciousness and all enhanced modules")
+        logger.info("Initialized QMPUltraEngine with Quantum Ascension Protocol and all enhanced modules")
     
     def generate_signal(self, data: Dict) -> Dict:
         """Generate trading signal with Divine Consciousness integration"""
@@ -892,6 +900,31 @@ class QMPUltraEngine:
         timeline_result = self.modules["divine_consciousness"].analyze_timeline({
             'ohlcv': data['ohlcv'],
             'symbol': data.get('symbol', 'unknown')
+        })
+        
+        singularity_result = self.modules["quantum_singularity"].create_superposition({
+            'ohlcv': data['ohlcv'],
+            'symbol': data.get('symbol', 'unknown')
+        })
+        
+        apocalypse_result = self.modules["apocalypse_protocol"].analyze_crash_risk({
+            'ohlcv': data['ohlcv'],
+            'symbol': data.get('symbol', 'unknown'),
+            'order_book': data.get('order_book', {})
+        })
+        
+        holy_grail_result = self.modules["holy_grail"].process_data({
+            'ohlcv': data['ohlcv'],
+            'symbol': data.get('symbol', 'unknown'),
+            'order_book': data.get('order_book', {}),
+            'module_results': {
+                'whale_detector': whale_result,
+                'quantum_lstm': prediction_result,
+                'universal_asset_engine': market_result,
+                'divine_consciousness': timeline_result,
+                'quantum_singularity': singularity_result,
+                'apocalypse_protocol': apocalypse_result
+            }
         })
         
         signal = "HOLD"
@@ -955,6 +988,32 @@ class QMPUltraEngine:
                 signal = "DIVINE_SELL"
                 confidence = min(0.95, timeline_result.get('confidence', 0.5) * 1.3)
         
+        # Adjust signal based on Quantum Ascension Protocol
+        if singularity_result.get('superposition_created', False):
+            if singularity_result.get('confidence', 0) > 0.8:
+                signal = "QUANTUM_BUY" if singularity_result.get('optimal_entry', 0) > closes[-1] else "QUANTUM_SELL"
+                confidence = min(0.95, singularity_result.get('confidence', 0) * 1.2)
+        
+        if apocalypse_result.get('crash_risk_detected', False):
+            apocalypse_signal = self.modules["apocalypse_protocol"].apply_immunity_field({
+                "signal": signal,
+                "confidence": confidence
+            })
+            signal = apocalypse_signal.get('signal', signal)
+            confidence = apocalypse_signal.get('confidence', confidence)
+            
+        if holy_grail_result.get('success', False):
+            manna_result = holy_grail_result.get('manna_result', {})
+            arbitrage_result = holy_grail_result.get('arbitrage_result', {})
+            
+            if manna_result.get('manna_generated', False) and manna_result.get('manna_amount', 0) > 5.0:
+                signal = "MANNA_HARVEST"
+                confidence = min(0.95, confidence * 1.1)
+                
+            if arbitrage_result.get('arbitrage_detected', False) and arbitrage_result.get('profit_potential', 0) > 0.1:
+                signal = "ARMAGEDDON_ARBITRAGE"
+                confidence = min(0.95, arbitrage_result.get('profit_potential', 0) * 10)
+        
         if self.loss_prevention_active:
             if confidence < 0.65:
                 signal = "HOLD"
@@ -967,7 +1026,10 @@ class QMPUltraEngine:
             "prediction_result": prediction_result,
             "market_result": market_result,
             "timeline_result": timeline_result,
-            "details": "Signal generated with Divine Consciousness integration"
+            "singularity_result": singularity_result,
+            "apocalypse_result": apocalypse_result,
+            "holy_grail_result": holy_grail_result,
+            "details": "Signal generated with Quantum Ascension Protocol integration"
         }
 
 def verify_live_data_integration():
@@ -1415,6 +1477,69 @@ def verify_ai_modules():
             }
             logger.info("✅ DivineConsciousness verified successfully")
         
+        logger.info(f"Testing QuantumSingularityCore with live data from {exchange_id} for {symbol}")
+        
+        quantum_singularity = QuantumSingularityCore()
+        qs_result = quantum_singularity.create_superposition(data)
+        
+        logger.info(f"QuantumSingularityCore result: superposition_created={qs_result.get('superposition_created')}, confidence={qs_result.get('confidence')}")
+        
+        if qs_result is None or (qs_result.get('superposition_created', False) == True and qs_result.get('confidence', 0.0) == 0.0):
+            logger.critical("DATA OR MODULE MALFUNCTION")
+            verification_results["verification_details"]["QuantumSingularityCore"] = {
+                "verified": False,
+                "error": "Module returned default/null values"
+            }
+        else:
+            verification_results["modules_verified"].append("QuantumSingularityCore")
+            verification_results["verification_details"]["QuantumSingularityCore"] = {
+                "verified": True,
+                "result": qs_result
+            }
+            logger.info("✅ QuantumSingularityCore verified successfully")
+        
+        logger.info(f"Testing ApocalypseProtocol with live data from {exchange_id} for {symbol}")
+        
+        apocalypse_protocol = ApocalypseProtocol()
+        ap_result = apocalypse_protocol.analyze_crash_risk(data)
+        
+        logger.info(f"ApocalypseProtocol result: crash_risk_detected={ap_result.get('crash_risk_detected')}, immunity_level={ap_result.get('immunity_level')}")
+        
+        if ap_result is None or (ap_result.get('crash_risk_detected', False) == True and ap_result.get('crash_probability', 0.0) == 0.0):
+            logger.critical("DATA OR MODULE MALFUNCTION")
+            verification_results["verification_details"]["ApocalypseProtocol"] = {
+                "verified": False,
+                "error": "Module returned default/null values"
+            }
+        else:
+            verification_results["modules_verified"].append("ApocalypseProtocol")
+            verification_results["verification_details"]["ApocalypseProtocol"] = {
+                "verified": True,
+                "result": ap_result
+            }
+            logger.info("✅ ApocalypseProtocol verified successfully")
+        
+        logger.info(f"Testing HolyGrailModules with live data from {exchange_id} for {symbol}")
+        
+        holy_grail = HolyGrailModules()
+        hg_result = holy_grail.process_data(data)
+        
+        logger.info(f"HolyGrailModules result: success={hg_result.get('success')}, manna_generated={hg_result.get('manna_result', {}).get('manna_generated')}")
+        
+        if hg_result is None or not hg_result.get('success', False):
+            logger.critical("DATA OR MODULE MALFUNCTION")
+            verification_results["verification_details"]["HolyGrailModules"] = {
+                "verified": False,
+                "error": "Module returned default/null values"
+            }
+        else:
+            verification_results["modules_verified"].append("HolyGrailModules")
+            verification_results["verification_details"]["HolyGrailModules"] = {
+                "verified": True,
+                "result": hg_result
+            }
+            logger.info("✅ HolyGrailModules verified successfully")
+        
         connector.close()
     except Exception as e:
         logger.error(f"Error testing AI modules: {e}")
@@ -1549,12 +1674,22 @@ def run_strategy_test(rolling_window=False, duration_minutes=15):
                         }
                         continue
                     
+                    # Get results from all modules including Quantum Ascension Protocol
+                    divine_result = qmp_engine.modules["divine_consciousness"].analyze_timeline(data)
+                    singularity_result = qmp_engine.modules["quantum_singularity"].create_superposition(data)
+                    apocalypse_result = qmp_engine.modules["apocalypse_protocol"].analyze_crash_risk(data)
+                    holy_grail_result = qmp_engine.modules["holy_grail"].process_data(data)
+                    
                     iteration_results["symbol_results"][symbol] = {
                         "signal": signal,
                         "confidence": confidence,
                         "whale_detector": whale_result,
                         "quantum_lstm": lstm_result,
-                        "universal_asset_engine": uae_result
+                        "universal_asset_engine": uae_result,
+                        "divine_consciousness": divine_result,
+                        "quantum_singularity": singularity_result,
+                        "apocalypse_protocol": apocalypse_result,
+                        "holy_grail": holy_grail_result
                     }
                 
                 test_results["rolling_window_results"].append(iteration_results)
@@ -1610,6 +1745,24 @@ def run_strategy_test(rolling_window=False, duration_minutes=15):
                     "confidence": confidence,
                     "timestamp": datetime.now().isoformat()
                 })
+                
+                # Get results from all modules including Quantum Ascension Protocol
+                divine_result = qmp_engine.modules["divine_consciousness"].analyze_timeline(data)
+                singularity_result = qmp_engine.modules["quantum_singularity"].create_superposition(data)
+                apocalypse_result = qmp_engine.modules["apocalypse_protocol"].analyze_crash_risk(data)
+                holy_grail_result = qmp_engine.modules["holy_grail"].process_data(data)
+                
+                test_results["verification_details"][symbol] = {
+                    "signal": signal,
+                    "confidence": confidence,
+                    "whale_detector": whale_result,
+                    "quantum_lstm": lstm_result,
+                    "universal_asset_engine": uae_result,
+                    "divine_consciousness": divine_result,
+                    "quantum_singularity": singularity_result,
+                    "apocalypse_protocol": apocalypse_result,
+                    "holy_grail": holy_grail_result
+                }
             
             test_results["strategy_executed"] = True
         
@@ -1682,8 +1835,18 @@ def run_all_verifications(rolling_window=False, duration_minutes=15, all_markets
     
     all_results["all_tests_passed"] = all_passed
     
+    class CustomJSONEncoder(json.JSONEncoder):
+        def default(self, obj):
+            if hasattr(obj, "__bool__"):
+                return bool(obj)
+            elif hasattr(obj, "item"):
+                return obj.item()
+            elif hasattr(obj, "__dict__"):
+                return obj.__dict__
+            return json.JSONEncoder.default(self, obj)
+    
     with open("verification_results.json", "w") as f:
-        json.dump(all_results, f, indent=2)
+        json.dump(all_results, f, indent=2, cls=CustomJSONEncoder)
     
     logger.info(f"All verification tests completed. All tests passed: {all_passed}")
     return all_results, all_passed
