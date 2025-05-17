@@ -27,13 +27,60 @@ logging.basicConfig(
 
 logger = logging.getLogger("LiveDataVerification")
 
-EXCHANGES = ['binance', 'coinbase', 'kraken']
+EXCHANGES = ['binance', 'coinbase', 'kraken', 'oanda', 'fxcm', 'alpaca']
 SYMBOLS = {
-    'crypto': ['BTC/USDT', 'ETH/USDT'],
-    'forex': ['XAU/USD', 'EUR/USD'],
+    'crypto': ['BTC/USDT', 'ETH/USDT', 'DOGE/USDT'],
+    'forex': ['XAU/USD', 'USD/JPY', 'EUR/USD'],
+    'indices': ['US30', 'SPX500'],
+    'commodities': ['OIL/USD', 'XAU/USD'],
     'stocks': ['TSLA', 'AAPL']
 }
 TIMEFRAMES = ['1m', '5m', '15m']
+
+EXCHANGE_SYMBOLS = {
+    'binance': {
+        'crypto': {'BTC/USDT': 'BTCUSDT', 'ETH/USDT': 'ETHUSDT', 'DOGE/USDT': 'DOGEUSDT'},
+        'forex': {},  # Binance doesn't support forex directly
+        'indices': {},  # Binance doesn't support indices directly
+        'commodities': {},  # Binance doesn't support commodities directly
+        'stocks': {}  # Binance doesn't support stocks directly
+    },
+    'coinbase': {
+        'crypto': {'BTC/USDT': 'BTC-USDT', 'ETH/USDT': 'ETH-USDT', 'DOGE/USDT': 'DOGE-USDT'},
+        'forex': {},
+        'indices': {},
+        'commodities': {},
+        'stocks': {}
+    },
+    'kraken': {
+        'crypto': {'BTC/USDT': 'XBTUSDT', 'ETH/USDT': 'ETHUSDT', 'DOGE/USDT': 'DOGEUSDT'},
+        'forex': {'XAU/USD': 'XAUUSD', 'USD/JPY': 'USDJPY', 'EUR/USD': 'EURUSD'},
+        'indices': {'US30': 'US30USD', 'SPX500': 'SP500USD'},
+        'commodities': {'OIL/USD': 'OILUSD', 'XAU/USD': 'XAUUSD'},
+        'stocks': {'TSLA': 'TSLAUSD', 'AAPL': 'AAPLUSD'}
+    },
+    'oanda': {
+        'crypto': {},
+        'forex': {'XAU/USD': 'XAU_USD', 'USD/JPY': 'USD_JPY', 'EUR/USD': 'EUR_USD'},
+        'indices': {'US30': 'US30_USD', 'SPX500': 'SPX500_USD'},
+        'commodities': {'OIL/USD': 'OIL_USD', 'XAU/USD': 'XAU_USD'},
+        'stocks': {}
+    },
+    'alpaca': {
+        'crypto': {'BTC/USDT': 'BTCUSD', 'ETH/USDT': 'ETHUSD', 'DOGE/USDT': 'DOGEUSD'},
+        'forex': {},
+        'indices': {},
+        'commodities': {},
+        'stocks': {'TSLA': 'TSLA', 'AAPL': 'AAPL'}
+    }
+}
+
+ALTERNATIVE_EXCHANGES = {
+    'forex': ['oanda', 'fxcm'],
+    'indices': ['ig', 'fxcm'],
+    'commodities': ['oanda', 'fxcm'],
+    'stocks': ['alpaca', 'tradier']
+}
 
 class APIVault:
     """Simplified API Vault for verification purposes"""
@@ -153,15 +200,49 @@ class ExchangeConnector:
     
     def fetch_ticker(self, symbol: str) -> Dict:
         """Fetch ticker data for a symbol"""
-        return self.exchange.fetch_ticker(symbol)
+        try:
+            if '/' in symbol:
+                asset_type = self._get_asset_type(symbol)
+                if asset_type != 'crypto' and self.exchange_id in EXCHANGE_SYMBOLS and asset_type in EXCHANGE_SYMBOLS[self.exchange_id]:
+                    mapped_symbol = EXCHANGE_SYMBOLS[self.exchange_id][asset_type].get(symbol, symbol)
+                    return self.exchange.fetch_ticker(mapped_symbol)
+            return self.exchange.fetch_ticker(symbol)
+        except Exception as e:
+            logger.warning(f"Error fetching ticker for {symbol}: {e}")
+            return {}
     
     def fetch_order_book(self, symbol: str, limit: int = 20) -> Dict:
         """Fetch order book data for a symbol"""
-        return self.exchange.fetch_order_book(symbol, limit)
+        try:
+            if '/' in symbol:
+                asset_type = self._get_asset_type(symbol)
+                if asset_type != 'crypto' and self.exchange_id in EXCHANGE_SYMBOLS and asset_type in EXCHANGE_SYMBOLS[self.exchange_id]:
+                    mapped_symbol = EXCHANGE_SYMBOLS[self.exchange_id][asset_type].get(symbol, symbol)
+                    return self.exchange.fetch_order_book(mapped_symbol, limit)
+            return self.exchange.fetch_order_book(symbol, limit)
+        except Exception as e:
+            logger.warning(f"Error fetching order book for {symbol}: {e}")
+            return {'bids': [], 'asks': []}
     
     def fetch_ohlcv(self, symbol: str, timeframe: str = '1m', limit: int = 100) -> List:
         """Fetch OHLCV data for a symbol"""
-        return self.exchange.fetch_ohlcv(symbol, timeframe, limit=limit)
+        try:
+            if '/' in symbol:
+                asset_type = self._get_asset_type(symbol)
+                if asset_type != 'crypto' and self.exchange_id in EXCHANGE_SYMBOLS and asset_type in EXCHANGE_SYMBOLS[self.exchange_id]:
+                    mapped_symbol = EXCHANGE_SYMBOLS[self.exchange_id][asset_type].get(symbol, symbol)
+                    return self.exchange.fetch_ohlcv(mapped_symbol, timeframe, limit=limit)
+            return self.exchange.fetch_ohlcv(symbol, timeframe, limit=limit)
+        except Exception as e:
+            logger.warning(f"Error fetching OHLCV for {symbol}: {e}")
+            return []
+            
+    def _get_asset_type(self, symbol: str) -> str:
+        """Determine the asset type for a symbol"""
+        for asset_type, symbols in SYMBOLS.items():
+            if symbol in symbols:
+                return asset_type
+        return 'crypto'  # Default to crypto if not found
     
     def close(self):
         """Close the exchange connection"""
@@ -372,6 +453,34 @@ class DataVerifier:
         return True, "Volume patterns appear natural"
 
         return self.verification_stats
+        
+    def perform_cross_market_validation(self, data1: Dict, data2: Dict, symbol: str, exchange1: str, exchange2: str, tolerance: float = 0.01) -> Tuple[bool, str]:
+        """Validate data consistency across different markets"""
+        self.verification_stats["total_checks"] += 1
+        
+        if not data1 or not data2:
+            self.verification_stats["failed_checks"] += 1
+            return False, "Missing data for cross-market validation"
+        
+        if abs(data1.get('last', 0) - data2.get('last', 0)) / max(data1.get('last', 1), 0.0001) > tolerance:
+            self.verification_stats["failed_checks"] += 1
+            return False, f"Price deviation between {exchange1} and {exchange2} exceeds tolerance: {abs(data1.get('last', 0) - data2.get('last', 0)) / max(data1.get('last', 1), 0.0001):.4f} > {tolerance}"
+        
+        current_time = time.time() * 1000
+        if abs(data1.get('timestamp', 0) - current_time) > 5 * 60 * 1000 or abs(data2.get('timestamp', 0) - current_time) > 5 * 60 * 1000:
+            self.verification_stats["failed_checks"] += 1
+            return False, f"One or both data sources not real-time: {abs(data1.get('timestamp', 0) - current_time)/1000:.2f}s, {abs(data2.get('timestamp', 0) - current_time)/1000:.2f}s"
+        
+        if data1.get('quoteVolume', 0) <= 0 or data2.get('quoteVolume', 0) <= 0:
+            self.verification_stats["failed_checks"] += 1
+            return False, f"Missing volume data from one or both sources"
+        
+        self.verification_stats["passed_checks"] += 1
+        self.verification_stats["verification_rate"] = (
+            self.verification_stats["passed_checks"] / self.verification_stats["total_checks"]
+        )
+        
+        return True, f"Data verified across {exchange1} and {exchange2} for {symbol}"
 
 class WhaleDetector:
     """Detects large orders (whales) in order book data"""
@@ -600,8 +709,17 @@ def verify_live_data_integration():
         "components_verified": [],
         "all_verified": True,
         "verification_details": {},
-        "available_exchanges": []
+        "available_exchanges": [],
+        "asset_type_coverage": {}
     }
+    
+    for asset_type in SYMBOLS.keys():
+        verification_results["asset_type_coverage"][asset_type] = {
+            "verified": False,
+            "exchanges_tried": [],
+            "exchanges_succeeded": [],
+            "symbols_verified": []
+        }
     
     verifier = DataVerifier(strict_mode=True)
     logger.info("Initialized DataVerifier in strict mode")
@@ -647,117 +765,222 @@ def verify_live_data_integration():
             verification_results["end_time"] = datetime.now().isoformat()
             return verification_results
     
+    exchange_asset_support = {}
     for exchange_id in available_exchanges:
-        try:
-            connector = ExchangeConnector(exchange_id)
+        exchange_asset_support[exchange_id] = {}
+        for asset_type in SYMBOLS.keys():
+            if exchange_id in EXCHANGE_SYMBOLS and asset_type in EXCHANGE_SYMBOLS[exchange_id] and EXCHANGE_SYMBOLS[exchange_id][asset_type]:
+                exchange_asset_support[exchange_id][asset_type] = True
+                logger.info(f"Exchange {exchange_id} supports {asset_type} assets")
+            else:
+                exchange_asset_support[exchange_id][asset_type] = False
+                logger.info(f"Exchange {exchange_id} does not support {asset_type} assets")
+    
+    for asset_type in SYMBOLS.keys():
+        logger.info(f"=== Verifying {asset_type.upper()} assets ===")
+        
+        # Find exchanges that support this asset type
+        supporting_exchanges = [ex for ex in available_exchanges if exchange_asset_support.get(ex, {}).get(asset_type, False)]
+        verification_results["asset_type_coverage"][asset_type]["exchanges_tried"] = supporting_exchanges
+        
+        if not supporting_exchanges:
+            logger.warning(f"No primary exchanges support {asset_type} assets. Trying alternative exchanges.")
             
-            symbols = SYMBOLS['crypto'][:1]  # Just test the first symbol
-            
-            for symbol in symbols:
-                try:
+            # Try alternative exchanges for this asset type
+            if asset_type in ALTERNATIVE_EXCHANGES:
+                for alt_exchange_id in ALTERNATIVE_EXCHANGES[asset_type]:
+                    if alt_exchange_id in available_exchanges:
+                        supporting_exchanges.append(alt_exchange_id)
+                        logger.info(f"Using alternative exchange {alt_exchange_id} for {asset_type} assets")
+                        verification_results["asset_type_coverage"][asset_type]["exchanges_tried"].append(alt_exchange_id)
+                        break
+                    else:
+                        try:
+                            logger.info(f"Testing connection to alternative exchange {alt_exchange_id}")
+                            connector = ExchangeConnector(alt_exchange_id)
+                            connection_success = connector.test_connection()
+                            
+                            if connection_success:
+                                logger.info(f"✅ Successfully connected to alternative exchange {alt_exchange_id}")
+                                supporting_exchanges.append(alt_exchange_id)
+                                available_exchanges.append(alt_exchange_id)
+                                verification_results["available_exchanges"].append(alt_exchange_id)
+                                verification_results["asset_type_coverage"][asset_type]["exchanges_tried"].append(alt_exchange_id)
+                                connector.close()
+                                break
+                            
+                            connector.close()
+                        except Exception as e:
+                            logger.error(f"Error connecting to alternative exchange {alt_exchange_id}: {e}")
+        
+        if not supporting_exchanges:
+            logger.warning(f"No exchanges available for {asset_type} assets. Skipping verification.")
+            continue
+        
+        # Verify each symbol for this asset type
+        asset_verified = False
+        for exchange_id in supporting_exchanges:
+            try:
+                connector = ExchangeConnector(exchange_id)
+                
+                for symbol in SYMBOLS[asset_type][:2]:  # Test first two symbols of each asset type
                     try:
-                        ticker = connector.fetch_ticker(symbol)
-                        logger.info(f"Fetched ticker for {symbol}: last price = {ticker.get('last', 'N/A')}")
+                        try:
+                            ticker = connector.fetch_ticker(symbol)
+                            logger.info(f"Fetched ticker for {symbol}: last price = {ticker.get('last', 'N/A')}")
+                            
+                            is_authentic, reason = verifier.verify_ticker_data(ticker, symbol, exchange_id)
+                            logger.info(f"Ticker verification: {is_authentic} - {reason}")
+                            
+                            verification_results["verification_details"][f"{exchange_id}:{symbol}:ticker"] = {
+                                "verified": is_authentic,
+                                "reason": reason
+                            }
+                            
+                            if not is_authentic:
+                                logger.warning(f"Ticker verification failed: {reason}")
+                        except Exception as e:
+                            logger.warning(f"Error fetching ticker for {symbol} on {exchange_id}: {e}")
+                            verification_results["verification_details"][f"{exchange_id}:{symbol}:ticker"] = {
+                                "verified": False,
+                                "error": str(e)
+                            }
                         
-                        is_authentic, reason = verifier.verify_ticker_data(ticker, symbol, exchange_id)
-                        logger.info(f"Ticker verification: {is_authentic} - {reason}")
+                        try:
+                            order_book = connector.fetch_order_book(symbol)
+                            logger.info(f"Fetched order book for {symbol}")
+                            
+                            is_authentic, reason = verifier.verify_order_book_data(order_book, symbol, exchange_id)
+                            logger.info(f"Order book verification: {is_authentic} - {reason}")
+                            
+                            verification_results["verification_details"][f"{exchange_id}:{symbol}:order_book"] = {
+                                "verified": is_authentic,
+                                "reason": reason
+                            }
+                            
+                            if not is_authentic:
+                                logger.warning(f"Order book verification failed: {reason}")
+                        except Exception as e:
+                            logger.warning(f"Error fetching order book for {symbol} on {exchange_id}: {e}")
+                            verification_results["verification_details"][f"{exchange_id}:{symbol}:order_book"] = {
+                                "verified": False,
+                                "error": str(e)
+                            }
                         
-                        verification_results["verification_details"][f"{exchange_id}:{symbol}:ticker"] = {
-                            "verified": is_authentic,
-                            "reason": reason
-                        }
+                        try:
+                            ohlcv = connector.fetch_ohlcv(symbol, timeframe='1m', limit=100)
+                            logger.info(f"Fetched OHLCV for {symbol}: {len(ohlcv)} candles")
+                            
+                            is_authentic, reason = verifier.verify_ohlcv_data(ohlcv, symbol, exchange_id, '1m')
+                            logger.info(f"OHLCV verification: {is_authentic} - {reason}")
+                            
+                            verification_results["verification_details"][f"{exchange_id}:{symbol}:ohlcv"] = {
+                                "verified": is_authentic,
+                                "reason": reason
+                            }
+                            
+                            if not is_authentic:
+                                logger.warning(f"OHLCV verification failed: {reason}")
+                            else:
+                                if len(ohlcv) > 0:
+                                    latest_timestamp = ohlcv[-1][0]
+                                    current_time = time.time() * 1000
+                                    time_diff = current_time - latest_timestamp
+                                    logger.info(f"Latest data timestamp: {datetime.fromtimestamp(latest_timestamp/1000)}")
+                                    logger.info(f"Time difference: {time_diff/1000/60:.2f} minutes")
+                                    
+                                    if time_diff > 30 * 60 * 1000:
+                                        logger.warning(f"Data not real-time: {time_diff/1000/60:.2f} minutes old")
+                                        verification_results["verification_details"][f"{exchange_id}:{symbol}:ohlcv"]["real_time"] = False
+                                    else:
+                                        logger.info("Data is real-time")
+                                        verification_results["verification_details"][f"{exchange_id}:{symbol}:ohlcv"]["real_time"] = True
+                                    
+                                    synthetic_markers = [
+                                        'simulated', 'synthetic', 'fake', 'mock', 'test', 
+                                        'dummy', 'placeholder', 'generated', 'artificial', 
+                                        'virtualized', 'pseudo', 'demo', 'sample',
+                                        'backtesting', 'historical', 'backfill', 'sandbox',
+                                        'paper', 'virtual', 'emulated', 'replay'
+                                    ]
+                                    
+                                    data_str = str(ohlcv).lower()
+                                    synthetic_detected = False
+                                    for marker in synthetic_markers:
+                                        if marker in data_str:
+                                            logger.warning(f"Synthetic data marker detected: {marker}")
+                                            synthetic_detected = True
+                                            break
+                                    
+                                    verification_results["verification_details"][f"{exchange_id}:{symbol}:ohlcv"]["synthetic"] = synthetic_detected
+                                    
+                                    if not synthetic_detected:
+                                        logger.info("No synthetic data markers detected")
+                                        
+                                        volume_authentic, volume_reason = verifier.analyze_volume_patterns(ohlcv)
+                                        verification_results["verification_details"][f"{exchange_id}:{symbol}:ohlcv"]["volume_analysis"] = {
+                                            "authentic": volume_authentic,
+                                            "reason": volume_reason
+                                        }
+                                        
+                                        if not volume_authentic:
+                                            logger.warning(f"Volume pattern analysis indicates potential synthetic data: {volume_reason}")
+                                        else:
+                                            logger.info("Volume pattern analysis confirms authentic data")
+                        except Exception as e:
+                            logger.warning(f"Error fetching OHLCV for {symbol} on {exchange_id}: {e}")
+                            verification_results["verification_details"][f"{exchange_id}:{symbol}:ohlcv"] = {
+                                "verified": False,
+                                "error": str(e)
+                            }
                         
-                        if not is_authentic:
-                            logger.warning(f"Ticker verification failed: {reason}")
+                        if (verification_results["verification_details"].get(f"{exchange_id}:{symbol}:ticker", {}).get("verified", False) or
+                            verification_results["verification_details"].get(f"{exchange_id}:{symbol}:order_book", {}).get("verified", False) or
+                            verification_results["verification_details"].get(f"{exchange_id}:{symbol}:ohlcv", {}).get("verified", False)):
+                            verification_results["components_verified"].append(f"{exchange_id}:{symbol}")
+                            asset_verified = True
+                            
+                            if exchange_id not in verification_results["asset_type_coverage"][asset_type]["exchanges_succeeded"]:
+                                verification_results["asset_type_coverage"][asset_type]["exchanges_succeeded"].append(exchange_id)
+                            
+                            if symbol not in verification_results["asset_type_coverage"][asset_type]["symbols_verified"]:
+                                verification_results["asset_type_coverage"][asset_type]["symbols_verified"].append(symbol)
+                        
                     except Exception as e:
-                        logger.warning(f"Error fetching ticker for {symbol} on {exchange_id}: {e}")
-                        verification_results["verification_details"][f"{exchange_id}:{symbol}:ticker"] = {
-                            "verified": False,
-                            "error": str(e)
-                        }
-                    
-                    try:
-                        order_book = connector.fetch_order_book(symbol)
-                        logger.info(f"Fetched order book for {symbol}")
-                        
-                        is_authentic, reason = verifier.verify_order_book_data(order_book, symbol, exchange_id)
-                        logger.info(f"Order book verification: {is_authentic} - {reason}")
-                        
-                        verification_results["verification_details"][f"{exchange_id}:{symbol}:order_book"] = {
-                            "verified": is_authentic,
-                            "reason": reason
-                        }
-                        
-                        if not is_authentic:
-                            logger.warning(f"Order book verification failed: {reason}")
-                    except Exception as e:
-                        logger.warning(f"Error fetching order book for {symbol} on {exchange_id}: {e}")
-                        verification_results["verification_details"][f"{exchange_id}:{symbol}:order_book"] = {
-                            "verified": False,
-                            "error": str(e)
-                        }
-                    
-                    try:
-                        ohlcv = connector.fetch_ohlcv(symbol, timeframe='1m', limit=100)
-                        logger.info(f"Fetched OHLCV for {symbol}: {len(ohlcv)} candles")
-                        
-                        is_authentic, reason = verifier.verify_ohlcv_data(ohlcv, symbol, exchange_id, '1m')
-                        logger.info(f"OHLCV verification: {is_authentic} - {reason}")
-                        
-                        verification_results["verification_details"][f"{exchange_id}:{symbol}:ohlcv"] = {
-                            "verified": is_authentic,
-                            "reason": reason
-                        }
-                        
-                        if not is_authentic:
-                            logger.warning(f"OHLCV verification failed: {reason}")
-                        else:
-                            if len(ohlcv) > 0:
-                                latest_timestamp = ohlcv[-1][0]
-                                current_time = time.time() * 1000
-                                time_diff = current_time - latest_timestamp
-                                logger.info(f"Latest data timestamp: {datetime.fromtimestamp(latest_timestamp/1000)}")
-                                logger.info(f"Time difference: {time_diff/1000/60:.2f} minutes")
-                                
-                                if time_diff > 30 * 60 * 1000:
-                                    logger.warning(f"Data not real-time: {time_diff/1000/60:.2f} minutes old")
-                                    verification_results["verification_details"][f"{exchange_id}:{symbol}:ohlcv"]["real_time"] = False
-                                else:
-                                    logger.info("Data is real-time")
-                                    verification_results["verification_details"][f"{exchange_id}:{symbol}:ohlcv"]["real_time"] = True
-                                
-                                if "simulated" in str(ohlcv).lower():
-                                    logger.warning("Synthetic data marker detected")
-                                    verification_results["verification_details"][f"{exchange_id}:{symbol}:ohlcv"]["synthetic"] = True
-                                else:
-                                    logger.info("No synthetic data markers detected")
-                                    verification_results["verification_details"][f"{exchange_id}:{symbol}:ohlcv"]["synthetic"] = False
-                    except Exception as e:
-                        logger.warning(f"Error fetching OHLCV for {symbol} on {exchange_id}: {e}")
-                        verification_results["verification_details"][f"{exchange_id}:{symbol}:ohlcv"] = {
-                            "verified": False,
-                            "error": str(e)
-                        }
-                    
-                    if (verification_results["verification_details"].get(f"{exchange_id}:{symbol}:ticker", {}).get("verified", False) or
-                        verification_results["verification_details"].get(f"{exchange_id}:{symbol}:order_book", {}).get("verified", False) or
-                        verification_results["verification_details"].get(f"{exchange_id}:{symbol}:ohlcv", {}).get("verified", False)):
-                        verification_results["components_verified"].append(f"{exchange_id}:{symbol}")
-                    
-                except Exception as e:
-                    logger.error(f"Error verifying {symbol} on {exchange_id}: {e}")
-            
-            connector.close()
-        except Exception as e:
-            logger.error(f"Error during verification with {exchange_id}: {e}")
+                        logger.error(f"Error verifying {symbol} on {exchange_id}: {e}")
+                
+                connector.close()
+                
+                if asset_verified:
+                    verification_results["asset_type_coverage"][asset_type]["verified"] = True
+                    break
+                
+            except Exception as e:
+                logger.error(f"Error during verification with {exchange_id} for {asset_type}: {e}")
     
     if not verification_results["components_verified"]:
         verification_results["all_verified"] = False
         logger.warning("No components were successfully verified")
     else:
         logger.info(f"Successfully verified {len(verification_results['components_verified'])} components")
-        verification_results["all_verified"] = True
+        
+        # Check if all asset types were verified
+        all_asset_types_verified = all(
+            verification_results["asset_type_coverage"][asset_type]["verified"] 
+            for asset_type in SYMBOLS.keys()
+        )
+        
+        if all_asset_types_verified:
+            logger.info("✅ All asset types were successfully verified")
+        else:
+            unverified_assets = [
+                asset_type for asset_type in SYMBOLS.keys() 
+                if not verification_results["asset_type_coverage"][asset_type]["verified"]
+            ]
+            logger.warning(f"❌ Some asset types could not be verified: {', '.join(unverified_assets)}")
+            verification_results["all_verified"] = False
     
+    # Run nuclear verification
     try:
         nuclear_verification = verifier.run_nuclear_verification()
         logger.info(f"Nuclear verification: {nuclear_verification}")
@@ -1103,7 +1326,7 @@ def run_strategy_test(rolling_window=False, duration_minutes=15):
     test_results["end_time"] = datetime.now().isoformat()
     return test_results
 
-def run_all_verifications(rolling_window=False, duration_minutes=15):
+def run_all_verifications(rolling_window=False, duration_minutes=15, all_markets=False, market_type=None):
     """Run all verification tests and compile results"""
     all_results = {
         "live_data_verification": None,
@@ -1112,7 +1335,8 @@ def run_all_verifications(rolling_window=False, duration_minutes=15):
         "rolling_window_test": None if not rolling_window else {},
         "all_tests_passed": False,
         "timestamp": datetime.now().isoformat(),
-        "environment": "local"  # Could be "local", "colab", or "quantconnect"
+        "environment": "local",  # Could be "local", "colab", or "quantconnect"
+        "tested_markets": ["crypto"] if not all_markets and not market_type else (list(SYMBOLS.keys()) if all_markets else [market_type])
     }
     
     try:
@@ -1215,19 +1439,24 @@ def analyze_signal_consistency(rolling_window_results):
             consistency_results["details"][symbol] = "Signals too volatile"
     
     return consistency_results
-def schedule_verification(interval_hours=6):
+def schedule_verification(interval_hours=6, all_markets=True):
     """Schedule regular verification checks"""
     import schedule
     import time
     
     def job():
         logger.info(f"Running scheduled verification at {datetime.now().isoformat()}")
-        results, all_passed = run_all_verifications(rolling_window=True, duration_minutes=30)
+        results, all_passed = run_all_verifications(rolling_window=True, duration_minutes=30, all_markets=all_markets)
         
         with open(f"verification_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json", "w") as f:
             json.dump(results, f, indent=2)
         
-        if not all_passed:
+        # Run cross-asset verification
+        cross_asset_results = run_cross_asset_verification()
+        with open(f"cross_asset_verification_results_{datetime.now().strftime('%Y%m%d_%H%M%S')}.json", "w") as f:
+            json.dump(cross_asset_results, f, indent=2)
+        
+        if not all_passed or not cross_asset_results.get("all_verified", False):
             logger.critical("SCHEDULED VERIFICATION FAILED - DATA INTEGRITY COMPROMISED")
         else:
             logger.info("Scheduled verification passed successfully")
@@ -1241,6 +1470,78 @@ def schedule_verification(interval_hours=6):
         schedule.run_pending()
         time.sleep(60)
 
+def run_cross_asset_verification(asset_pairs=[('BTC/USDT', 'ETH/USDT'), ('XAU/USD', 'OIL/USD')]):
+    """Verify data consistency across correlated assets"""
+    logger.info("=== RUNNING CROSS-ASSET VERIFICATION ===")
+    
+    verification_results = {
+        "start_time": datetime.now().isoformat(),
+        "pairs_verified": [],
+        "all_verified": True,
+        "verification_details": {},
+        "available_exchanges": []
+    }
+    
+    available_exchanges = []
+    for exchange_id in EXCHANGES:
+        try:
+            connector = ExchangeConnector(exchange_id)
+            connection_success = connector.test_connection()
+            
+            if connection_success:
+                logger.info(f"✅ Exchange {exchange_id} available for cross-asset verification")
+                available_exchanges.append(exchange_id)
+                verification_results["available_exchanges"].append(exchange_id)
+                break  # We only need one working exchange
+            
+            connector.close()
+        except Exception as e:
+            logger.error(f"Error connecting to {exchange_id}: {e}")
+    
+    if not available_exchanges:
+        logger.warning("No exchanges available for cross-asset verification. Cannot proceed.")
+        verification_results["all_verified"] = False
+        verification_results["error"] = "No exchanges available for cross-asset verification"
+        verification_results["end_time"] = datetime.now().isoformat()
+        return verification_results
+        
+    exchange_id = available_exchanges[0]
+    connector = ExchangeConnector(exchange_id)
+    verifier = DataVerifier(strict_mode=True)
+    
+    for pair in asset_pairs:
+        asset1, asset2 = pair
+        logger.info(f"Verifying correlation between {asset1} and {asset2}")
+        
+        try:
+            data1 = connector.fetch_ticker(asset1)
+            data2 = connector.fetch_ticker(asset2)
+            
+            is_valid, reason = verifier.perform_cross_market_validation(data1, data2, f"{asset1}-{asset2}", exchange_id, exchange_id)
+            
+            verification_results["verification_details"][f"{asset1}-{asset2}"] = {
+                "verified": is_valid,
+                "reason": reason
+            }
+            
+            if is_valid:
+                verification_results["pairs_verified"].append(f"{asset1}-{asset2}")
+                logger.info(f"✅ Cross-asset verification passed for {asset1}-{asset2}: {reason}")
+            else:
+                verification_results["all_verified"] = False
+                logger.warning(f"❌ Cross-asset verification failed for {asset1}-{asset2}: {reason}")
+        except Exception as e:
+            logger.error(f"Error during cross-asset verification for {asset1}-{asset2}: {e}")
+            verification_results["verification_details"][f"{asset1}-{asset2}"] = {
+                "verified": False,
+                "error": str(e)
+            }
+            verification_results["all_verified"] = False
+    
+    connector.close()
+    verification_results["end_time"] = datetime.now().isoformat()
+    return verification_results
+
 if __name__ == "__main__":
     import argparse
     parser = argparse.ArgumentParser(description="Live Data Verification")
@@ -1248,6 +1549,9 @@ if __name__ == "__main__":
     parser.add_argument("--interval", type=int, default=6, help="Verification interval in hours")
     parser.add_argument("--rolling", action="store_true", help="Run rolling window test")
     parser.add_argument("--duration", type=int, default=15, help="Duration for rolling window test in minutes")
+    parser.add_argument("--all-markets", action="store_true", help="Test all markets, not just crypto")
+    parser.add_argument("--market-type", choices=list(SYMBOLS.keys()), help="Test specific market type")
+    parser.add_argument("--cross-asset", action="store_true", help="Run cross-asset verification")
     
     args = parser.parse_args()
     
@@ -1255,11 +1559,31 @@ if __name__ == "__main__":
         schedule_verification(args.interval)
     else:
         logger.info("Starting verification of quant-trading-system")
-        results, all_passed = run_all_verifications(rolling_window=args.rolling, duration_minutes=args.duration)
+        
+        if args.cross_asset:
+            logger.info("Running cross-asset verification")
+            cross_asset_results = run_cross_asset_verification()
+            with open("cross_asset_verification_results.json", "w") as f:
+                json.dump(cross_asset_results, f, indent=2)
+                
+            if cross_asset_results["all_verified"]:
+                logger.info("✅ Cross-asset verification PASSED")
+                logger.info(f"Verified pairs: {', '.join(cross_asset_results['pairs_verified'])}")
+            else:
+                logger.error("❌ Cross-asset verification FAILED")
+                logger.error("Please check cross_asset_verification_results.json for details")
+        
+        results, all_passed = run_all_verifications(
+            rolling_window=args.rolling, 
+            duration_minutes=args.duration,
+            all_markets=args.all_markets,
+            market_type=args.market_type
+        )
         
         if all_passed:
             logger.info("✅ All verification tests PASSED")
             logger.info("The system is using 100% real live data with no synthetic datasets")
+            logger.info(f"Markets verified: {', '.join(results['tested_markets'])}")
             logger.info("Ready to tag as v9.0.0-LIVE-STABLE")
             sys.exit(0)
         else:
