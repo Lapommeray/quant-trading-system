@@ -1837,8 +1837,12 @@ def run_all_verifications(rolling_window=False, duration_minutes=15, all_markets
     
     class CustomJSONEncoder(json.JSONEncoder):
         def default(self, obj):
-            if isinstance(obj, bool) or obj is True or obj is False:
+            if hasattr(obj, "__bool__"):
                 return bool(obj)
+            elif hasattr(obj, "item"):
+                return obj.item()
+            elif hasattr(obj, "__dict__"):
+                return obj.__dict__
             return json.JSONEncoder.default(self, obj)
     
     with open("verification_results.json", "w") as f:
