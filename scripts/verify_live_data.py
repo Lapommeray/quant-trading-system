@@ -1536,11 +1536,13 @@ def run_strategy_test(rolling_window=False, duration_minutes=15):
                     
                     uae_result = qmp_engine.modules["universal_asset_engine"].analyze_market(data)
                     
-                    signal, confidence = qmp_engine.generate_signal(data)
+                    signal_result = qmp_engine.generate_signal(data)
+                    signal = signal_result["signal"]
+                    confidence = signal_result["confidence"]
                     
                     logger.info(f"Strategy generated signal for {symbol}: {signal} with confidence {confidence}")
                     
-                    if signal is None:
+                    if signal is None or signal == "NONE":
                         logger.critical("DATA OR MODULE MALFUNCTION")
                         iteration_results["symbol_results"][symbol] = {
                             "error": "Module returned null signal"
@@ -1589,11 +1591,13 @@ def run_strategy_test(rolling_window=False, duration_minutes=15):
                 uae_result = qmp_engine.modules["universal_asset_engine"].analyze_market(data)
                 test_results["module_responses"][f"{symbol}_universal_asset_engine"] = uae_result
                 
-                signal, confidence = qmp_engine.generate_signal(data)
+                signal_result = qmp_engine.generate_signal(data)
+                signal = signal_result["signal"]
+                confidence = signal_result["confidence"]
                 
                 logger.info(f"Strategy generated signal for {symbol}: {signal} with confidence {confidence}")
                 
-                if signal is None:
+                if signal is None or signal == "NONE":
                     logger.critical("DATA OR MODULE MALFUNCTION")
                     test_results["verification_details"][symbol] = {
                         "error": "Module returned null signal"
