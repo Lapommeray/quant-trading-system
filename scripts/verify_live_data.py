@@ -1214,6 +1214,7 @@ def analyze_signal_consistency(rolling_window_results):
             consistency_results["consistent"] = False
             consistency_results["details"][symbol] = "Signals too volatile"
     
+    return consistency_results
 def schedule_verification(interval_hours=6):
     """Schedule regular verification checks"""
     import schedule
@@ -1265,17 +1266,3 @@ if __name__ == "__main__":
             logger.error("❌ Some verification tests FAILED")
             logger.error("Please check verification_results.json and verification_results.log for details")
             sys.exit(1)
-
-if __name__ == "__main__":
-    logger.info("Starting verification of quant-trading-system")
-    results, all_passed = run_all_verifications()
-    
-    if all_passed:
-        logger.info("✅ All verification tests PASSED")
-        logger.info("The system is using 100% real live data with no synthetic datasets")
-        logger.info("Ready to tag as v9.0.0-LIVE-STABLE")
-        sys.exit(0)
-    else:
-        logger.error("❌ Some verification tests FAILED")
-        logger.error("Please check verification_results.json and verification_results.log for details")
-        sys.exit(1)
