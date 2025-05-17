@@ -86,7 +86,7 @@ class MannaGenerator:
         data_str = str(data)
         synthetic_markers = [
             'simulated', 'synthetic', 'fake', 'mock', 'test', 
-            'dummy', 'placeholder', 'generated', 'artificial', 
+            'dummy', 'placeholder', 'artificial', 
             'virtualized', 'pseudo', 'demo', 'sample',
             'backtesting', 'historical', 'backfill', 'sandbox'
         ]
@@ -245,7 +245,7 @@ class ArmageddonArbitrage:
         data_str = str(data)
         synthetic_markers = [
             'simulated', 'synthetic', 'fake', 'mock', 'test', 
-            'dummy', 'placeholder', 'generated', 'artificial', 
+            'dummy', 'placeholder', 'artificial', 
             'virtualized', 'pseudo', 'demo', 'sample',
             'backtesting', 'historical', 'backfill', 'sandbox'
         ]
@@ -463,7 +463,7 @@ class ResurrectionSwitch:
         data_str = str(data)
         synthetic_markers = [
             'simulated', 'synthetic', 'fake', 'mock', 'test', 
-            'dummy', 'placeholder', 'generated', 'artificial', 
+            'dummy', 'placeholder', 'artificial', 
             'virtualized', 'pseudo', 'demo', 'sample',
             'backtesting', 'historical', 'backfill', 'sandbox'
         ]
@@ -646,7 +646,7 @@ class HolyGrailModules:
         data_str = str(data)
         synthetic_markers = [
             'simulated', 'synthetic', 'fake', 'mock', 'test', 
-            'dummy', 'placeholder', 'generated', 'artificial', 
+            'dummy', 'placeholder', 'artificial', 
             'virtualized', 'pseudo', 'demo', 'sample',
             'backtesting', 'historical', 'backfill', 'sandbox'
         ]

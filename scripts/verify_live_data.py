@@ -1835,8 +1835,14 @@ def run_all_verifications(rolling_window=False, duration_minutes=15, all_markets
     
     all_results["all_tests_passed"] = all_passed
     
+    class CustomJSONEncoder(json.JSONEncoder):
+        def default(self, obj):
+            if isinstance(obj, bool) or obj is True or obj is False:
+                return bool(obj)
+            return json.JSONEncoder.default(self, obj)
+    
     with open("verification_results.json", "w") as f:
-        json.dump(all_results, f, indent=2)
+        json.dump(all_results, f, indent=2, cls=CustomJSONEncoder)
     
     logger.info(f"All verification tests completed. All tests passed: {all_passed}")
     return all_results, all_passed
