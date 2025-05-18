@@ -253,12 +253,16 @@ class LiveDataVerifier:
                             if self.consecutive_wins > 1:
                                 position_size_factor = min(1.0, position_size_factor * 1.2)
                             
-                            if self.volatility > 0.02:  # Lower threshold for crisis detection
+                            # Even more sensitive crisis detection
+                            if self.volatility > 0.015:  # Further lowered threshold for crisis detection
                                 self.market_regime = 'crisis'
-                            elif self.volatility > 0.01:  # Lower threshold for volatile detection
+                            elif self.volatility > 0.008:  # Further lowered threshold for volatile detection
                                 self.market_regime = 'volatile'
                             else:
                                 self.market_regime = 'normal'
+                                
+                            if self.volatility > 0.025:
+                                self.trade_cooldown = 30  # Extended cooldown during extreme volatility
                                 
                             regime_multiplier = 1.0
                             if self.market_regime == 'volatile':
@@ -266,19 +270,25 @@ class LiveDataVerifier:
                                 position_size_factor *= 0.7  # Reduce position size
                                 self.trade_cooldown = max(self.trade_cooldown, 8)  # Longer cooldown in volatile markets
                             elif self.market_regime == 'crisis':
-                                regime_multiplier = 3.0  # Much more conservative in crisis
-                                position_size_factor *= 0.3  # Significantly reduce position size
-                                self.max_position_size = 0.02  # Further reduce max position in crisis
-                                self.trade_cooldown = max(self.trade_cooldown, 15)  # Much longer cooldown in crisis
+                                regime_multiplier = 4.0  # Even more conservative in crisis
+                                position_size_factor *= 0.2  # Drastically reduce position size
+                                self.max_position_size = 0.01  # Severely limit max position in crisis
+                                self.trade_cooldown = max(self.trade_cooldown, 20)  # Extended cooldown in crisis
                                 
-                                # Close positions early in crisis to prevent large drawdowns
-                                if self.position and self.signal_counter % 3 == 0:
+                                hedge_ratio = min(0.8, self.volatility * 20)  # Dynamic hedge ratio based on volatility
+                                
+                                # Close positions immediately in crisis to prevent large drawdowns
+                                if self.position:
                                     return {
                                         'direction': 'BUY' if self.position == 'SHORT' else 'SELL',
                                         'price': bar['close'],
-                                        'confidence': 0.95,
+                                        'confidence': 0.99,
                                         'size': 1.0
                                     }
+                                    
+                                if (self.trend_strength > 0 and bar['close'] < sma_slow * 0.98) or \
+                                   (self.trend_strength < 0 and bar['close'] > sma_slow * 1.02):
+                                    position_size_factor *= 0.5
                                 
                             dynamic_win_threshold = max(0.02, self.win_threshold * (1 + self.volatility * 5))
                             dynamic_loss_threshold = max(0.02, self.loss_threshold * (1 + self.volatility * 5)) * regime_multiplier
