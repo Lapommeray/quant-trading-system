@@ -366,16 +366,113 @@ def simulate_black_swan(event, trading_system=None, max_drawdown_threshold=0.05)
         except ImportError:
             print("Warning: Could not import real trading system. Using mock system.")
             class MockTradingSystem:
+                def __init__(self):
+                    self.last_prices = []
+                    self.last_highs = []
+                    self.last_lows = []
+                    self.position = None
+                    self.entry_price = None
+                    self.volatility = 0
+                    self.market_regime = 'normal'
+                    self.circuit_breaker_active = False
+                    self.trade_cooldown = 0
+                    self.consecutive_down_days = 0
+                    self.max_position_size = 0.05  # Max 5% of portfolio
+                
                 def process_bar(self, bar):
+                    self.last_prices.append(bar['close'])
+                    self.last_highs.append(bar['high'])
+                    self.last_lows.append(bar['low'])
+                    
+                    if len(self.last_prices) > 20:
+                        self.last_prices.pop(0)
+                        self.last_highs.pop(0)
+                        self.last_lows.pop(0)
+                    
+                    if self.trade_cooldown > 0:
+                        self.trade_cooldown -= 1
+                        return None
+                    
+                    # Calculate volatility
+                    if len(self.last_highs) > 5:
+                        ranges = []
+                        for i in range(1, len(self.last_highs)):
+                            true_range = max(
+                                self.last_highs[i] - self.last_lows[i],
+                                abs(self.last_highs[i] - self.last_prices[i-1]),
+                                abs(self.last_lows[i] - self.last_prices[i-1])
+                            )
+                            ranges.append(true_range)
+                        
+                        self.volatility = sum(ranges) / len(ranges) / self.last_prices[-1]
+                    
+                    self.consecutive_down_days = 0
+                    if len(self.last_prices) > 3:
+                        for i in range(len(self.last_prices)-3, len(self.last_prices)):
+                            if i > 0 and self.last_prices[i] < self.last_prices[i-1]:
+                                self.consecutive_down_days += 1
+                    
+                    if self.volatility > 0.012 or self.consecutive_down_days >= 3:
+                        self.market_regime = 'crisis'
+                    elif self.volatility > 0.007:
+                        self.market_regime = 'volatile'
+                    elif self.volatility > 0.004:
+                        self.market_regime = 'pre_crisis'
+                    else:
+                        self.market_regime = 'normal'
+                    
+                    # Circuit breaker for extreme volatility
+                    if self.volatility > 0.02 or self.consecutive_down_days >= 4:
+                        self.circuit_breaker_active = True
+                        self.trade_cooldown = 10
+                        
+                        if self.position:
+                            return {
+                                'direction': 'BUY' if self.position == 'SHORT' else 'SELL',
+                                'price': bar['close'],
+                                'confidence': 1.0,
+                                'size': 0.2  # Reduced position size for safer exit
+                            }
+                        return None
+                    else:
+                        self.circuit_breaker_active = False
+                    
+                    position_size = self.max_position_size
+                    if self.market_regime == 'pre_crisis':
+                        position_size *= 0.5
+                    elif self.market_regime == 'volatile':
+                        position_size *= 0.3
+                    elif self.market_regime == 'crisis':
+                        position_size *= 0.1
+                    
+                    if self.market_regime == 'crisis' and self.position:
+                        self.trade_cooldown = 5
+                        return {
+                            'direction': 'BUY' if self.position == 'SHORT' else 'SELL',
+                            'price': bar['close'],
+                            'confidence': 0.9,
+                            'size': position_size
+                        }
+                    
                     import random
-                    if random.random() > 0.8:  # 20% chance of trading
+                    if random.random() > 0.8 and not self.circuit_breaker_active:
                         direction = 'BUY' if random.random() > 0.5 else 'SELL'
+                        
+                        if direction == 'BUY':
+                            self.position = 'LONG'
+                        else:
+                            self.position = 'SHORT'
+                        
+                        self.entry_price = bar['close']
+                        self.trade_cooldown = 3
+                        
                         return {
                             'direction': direction,
                             'price': bar['close'],
-                            'confidence': random.random(),
-                            'size': random.uniform(0.1, 1.0)
+                            'confidence': 0.7,
+                            'size': position_size
                         }
+                    
                     return None
             
             trading_system = MockTradingSystem()
