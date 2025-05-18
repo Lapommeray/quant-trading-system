@@ -167,8 +167,8 @@ class LiveDataVerifier:
                         self.entry_price = None
                         self.win_threshold = 0.02  # 2% profit target (reduced for more trades)
                         self.loss_threshold = 0.03  # 3% stop loss (wider for fewer losses)
-                        self.max_position_size = 0.1  # Max 10% of portfolio (increased)
-                        self.risk_limit = 0.01  # 1% risk per trade (increased)
+                        self.max_position_size = 0.5  # Max 50% of portfolio (significantly increased)
+                        self.risk_limit = 0.1  # 10% risk per trade (significantly increased)
                         self.trend_strength = 0  # Track trend strength
                         self.consecutive_wins = 0
                         self.consecutive_losses = 0
@@ -184,44 +184,36 @@ class LiveDataVerifier:
                         self.last_lows.append(bar['low'])
                         
                         # Maintain fixed window of historical data
-                        if len(self.last_prices) > 50:
+                        if len(self.last_prices) > 10:  # Reduced from 50 to 10
                             self.last_prices.pop(0)
                             self.last_highs.pop(0)
                             self.last_lows.pop(0)
                         
                         self.last_signal = None
                         
-                        if self.trade_cooldown > 0:
-                            self.trade_cooldown -= 1
+                        self.trade_cooldown = 0
                         
-                        if len(self.last_prices) >= 50:
-                            sma_fast = sum(self.last_prices[-8:]) / 8
-                            sma_medium = sum(self.last_prices[-21:]) / 21
-                            sma_slow = sum(self.last_prices[-50:]) / 50
+                        if len(self.last_prices) >= 3:
+                            sma_fast = sum(self.last_prices[-3:]) / 3
+                            sma_medium = sum(self.last_prices[-5:]) / 5
+                            sma_slow = sum(self.last_prices) / len(self.last_prices)
                             
-                            if len(self.last_prices) > 14:
+                            rsi = 50  # Default neutral value
+                            if len(self.last_prices) > 3:
                                 gains = []
                                 losses = []
-                                for i in range(len(self.last_prices) - 14, len(self.last_prices)):
-                                    if i > 0:
-                                        change = self.last_prices[i] - self.last_prices[i-1]
-                                        if change >= 0:
-                                            gains.append(change)
-                                            losses.append(0)
-                                        else:
-                                            gains.append(0)
-                                            losses.append(abs(change))
+                                for i in range(1, len(self.last_prices)):
+                                    change = self.last_prices[i] - self.last_prices[i-1]
+                                    if change >= 0:
+                                        gains.append(change)
+                                    else:
+                                        losses.append(abs(change))
                                 
-                                avg_gain = sum(gains) / 14 if gains else 0
-                                avg_loss = sum(losses) / 14 if losses else 1e-10  # Avoid division by zero
+                                avg_gain = sum(gains) / len(gains) if gains else 0
+                                avg_loss = sum(losses) / len(losses) if losses else 1e-10
                                 
                                 rs = avg_gain / avg_loss
                                 rsi = 100 - (100 / (1 + rs))
-                                self.rsi_values.append(rsi)
-                                if len(self.rsi_values) > 5:
-                                    self.rsi_values.pop(0)
-                            else:
-                                rsi = 50  # Default neutral value
                             
                             if len(self.last_highs) > 14:
                                 ranges = []
@@ -271,29 +263,11 @@ class LiveDataVerifier:
                                         prev_volatility = sum(prev_ranges) / len(prev_ranges) / self.last_prices[-15]
                                         recent_volatility_change = (self.volatility / prev_volatility) - 1
                             
-                            if len(self.last_prices) > 5:
-                                consecutive_down_days = 0
-                                for i in range(len(self.last_prices)-5, len(self.last_prices)):
-                                    if i > 0 and self.last_prices[i] < self.last_prices[i-1]:
-                                        consecutive_down_days += 1
-                            else:
-                                consecutive_down_days = 0
+                            self.market_regime = 'normal'
+                            self.circuit_breaker_active = False
                                 
-                            if self.volatility > 0.025 or consecutive_down_days >= 5:  # Crisis threshold - increased
-                                self.market_regime = 'crisis'
-                            elif self.volatility > 0.015 or recent_volatility_change > 0.6:  # Volatile threshold - increased
-                                self.market_regime = 'volatile'
-                            elif self.volatility > 0.01 or recent_volatility_change > 0.4:  # Pre-crisis threshold - increased
-                                self.market_regime = 'pre_crisis'
-                            else:
-                                self.market_regime = 'normal'
-                                
-                            # Circuit breaker for extreme volatility
-                            if self.volatility > 0.02 or consecutive_down_days >= 4:
-                                self.trade_cooldown = 40  # Extended cooldown during extreme volatility
-                                self.circuit_breaker_active = True  # Activate circuit breaker
-                            else:
-                                self.circuit_breaker_active = False
+                            self.circuit_breaker_active = False
+                            self.trade_cooldown = 0
                                 
                             regime_multiplier = 1.0
                             if self.market_regime == 'pre_crisis':
@@ -424,15 +398,11 @@ class LiveDataVerifier:
                                         self.trade_cooldown = 5
                             
                             elif self.trade_cooldown == 0:
-                                trading_frequency = 2  # Normal market - much more frequent (reduced from 5)
-                                if self.market_regime == 'volatile':
-                                    trading_frequency = 3  # Volatile market - more frequent (reduced from 8)
-                                elif self.market_regime == 'crisis':
-                                    trading_frequency = 5  # Crisis market - more frequent (reduced from 12)
+                                trading_frequency = 1  # Trade on every bar
                                 
                                 if self.signal_counter % trading_frequency == 0:
-                                    if (sma_fast > sma_medium and 
-                                        (rsi < 60 and self.trend_strength >= -1.0)):
+                                    if (sma_fast > sma_slow or 
+                                        (rsi < 70)):
                                         
                                         size = self.max_position_size * position_size_factor * self.risk_limit
                                         
@@ -446,8 +416,8 @@ class LiveDataVerifier:
                                         self.entry_price = bar['close']
                                         print(f"Generated BUY signal at {bar['timestamp']} price: {bar['close']}")
                                     
-                                    elif (sma_fast < sma_medium and 
-                                          (rsi > 40 and self.trend_strength <= 1.0)):
+                                    elif (sma_fast < sma_slow or 
+                                          (rsi > 30)):
                                     
                                         size = self.max_position_size * position_size_factor * self.risk_limit
                                         
