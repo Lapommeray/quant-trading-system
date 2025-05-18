@@ -356,8 +356,22 @@ class LiveDataVerifier:
             'max_drawdown_acceptable': self.results['drawdowns'].get('passed', True)
         }
         
+        class CustomEncoder(json.JSONEncoder):
+            def default(self, obj):
+                if isinstance(obj, (pd.Timestamp, pd.DatetimeIndex)):
+                    return str(obj)
+                if isinstance(obj, np.ndarray):
+                    return obj.tolist()
+                if isinstance(obj, np.integer):
+                    return int(obj)
+                if isinstance(obj, np.floating):
+                    return float(obj)
+                if isinstance(obj, bool):
+                    return bool(obj)  # Explicitly convert booleans
+                return str(obj)
+        
         with open("stress_report.json", 'w') as f:
-            json.dump(stress_report, f, indent=4)
+            json.dump(stress_report, f, indent=4, cls=CustomEncoder)
         
         print("Stress report saved to stress_report.json")
         return stress_report
