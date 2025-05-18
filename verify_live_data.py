@@ -161,66 +161,222 @@ class LiveDataVerifier:
                         self.last_signal = None
                         self.signal_counter = 0
                         self.last_prices = []
+                        self.last_highs = []
+                        self.last_lows = []
                         self.position = None
                         self.entry_price = None
-                        self.win_threshold = 0.005  # 0.5% profit target
-                        self.loss_threshold = 0.003  # 0.3% stop loss
-                        self.max_position_size = 0.2  # Max 20% of portfolio
-                        self.risk_limit = 0.01  # 1% risk per trade
+                        self.win_threshold = 0.03  # 3% profit target (increased)
+                        self.loss_threshold = 0.025  # 2.5% stop loss (wider)
+                        self.max_position_size = 0.05  # Max 5% of portfolio (reduced)
+                        self.risk_limit = 0.005  # 0.5% risk per trade (reduced)
+                        self.trend_strength = 0  # Track trend strength
+                        self.consecutive_wins = 0
+                        self.consecutive_losses = 0
+                        self.volatility = 0
+                        self.rsi_values = []
+                        self.trade_cooldown = 5  # Increased cooldown period after trades
+                        self.market_regime = 'normal'  # Track market regime (normal, volatile, crisis)
                     
                     def process_bar(self, bar):
                         self.last_prices.append(bar['close'])
-                        if len(self.last_prices) > 20:
+                        self.last_highs.append(bar['high'])
+                        self.last_lows.append(bar['low'])
+                        
+                        # Maintain fixed window of historical data
+                        if len(self.last_prices) > 50:
                             self.last_prices.pop(0)
+                            self.last_highs.pop(0)
+                            self.last_lows.pop(0)
                         
                         self.last_signal = None
                         
-                        if len(self.last_prices) >= 20:
-                            sma_fast = sum(self.last_prices[-5:]) / 5
-                            sma_slow = sum(self.last_prices[-20:]) / 20
+                        if self.trade_cooldown > 0:
+                            self.trade_cooldown -= 1
+                        
+                        if len(self.last_prices) >= 50:
+                            sma_fast = sum(self.last_prices[-8:]) / 8
+                            sma_medium = sum(self.last_prices[-21:]) / 21
+                            sma_slow = sum(self.last_prices[-50:]) / 50
                             
+                            if len(self.last_prices) > 14:
+                                gains = []
+                                losses = []
+                                for i in range(len(self.last_prices) - 14, len(self.last_prices)):
+                                    if i > 0:
+                                        change = self.last_prices[i] - self.last_prices[i-1]
+                                        if change >= 0:
+                                            gains.append(change)
+                                            losses.append(0)
+                                        else:
+                                            gains.append(0)
+                                            losses.append(abs(change))
+                                
+                                avg_gain = sum(gains) / 14 if gains else 0
+                                avg_loss = sum(losses) / 14 if losses else 1e-10  # Avoid division by zero
+                                
+                                rs = avg_gain / avg_loss
+                                rsi = 100 - (100 / (1 + rs))
+                                self.rsi_values.append(rsi)
+                                if len(self.rsi_values) > 5:
+                                    self.rsi_values.pop(0)
+                            else:
+                                rsi = 50  # Default neutral value
+                            
+                            if len(self.last_highs) > 14:
+                                ranges = []
+                                for i in range(len(self.last_highs) - 14, len(self.last_highs)):
+                                    true_range = max(
+                                        self.last_highs[i] - self.last_lows[i],
+                                        abs(self.last_highs[i] - self.last_prices[i-1]),
+                                        abs(self.last_lows[i] - self.last_prices[i-1])
+                                    )
+                                    ranges.append(true_range)
+                                
+                                self.volatility = sum(ranges) / 14 / self.last_prices[-1]
+                            
+                            if sma_fast > sma_medium and sma_medium > sma_slow:
+                                self.trend_strength = min(2, self.trend_strength + 1)  # Strong uptrend
+                            elif sma_fast < sma_medium and sma_medium < sma_slow:
+                                self.trend_strength = max(-2, self.trend_strength - 1)  # Strong downtrend
+                            elif sma_fast > sma_medium:
+                                self.trend_strength = min(1, self.trend_strength + 0.5)  # Weak uptrend
+                            elif sma_fast < sma_medium:
+                                self.trend_strength = max(-1, self.trend_strength - 0.5)  # Weak downtrend
+                            else:
+                                self.trend_strength = self.trend_strength * 0.5  # Trend weakening
+                            
+                            position_size_factor = 0.5 + (0.1 * abs(self.trend_strength))
+                            
+                            if self.consecutive_losses > 1:
+                                position_size_factor *= 0.7
+                            
+                            if self.consecutive_wins > 1:
+                                position_size_factor = min(1.0, position_size_factor * 1.2)
+                            
+                            if self.volatility > 0.03:
+                                self.market_regime = 'crisis'
+                            elif self.volatility > 0.015:
+                                self.market_regime = 'volatile'
+                            else:
+                                self.market_regime = 'normal'
+                                
+                            regime_multiplier = 1.0
+                            if self.market_regime == 'volatile':
+                                regime_multiplier = 1.5
+                            elif self.market_regime == 'crisis':
+                                regime_multiplier = 2.0
+                                
+                            dynamic_win_threshold = max(0.02, self.win_threshold * (1 + self.volatility * 5))
+                            dynamic_loss_threshold = max(0.02, self.loss_threshold * (1 + self.volatility * 5)) * regime_multiplier
                             
                             if self.position:
                                 if self.position == 'LONG':
                                     pnl_pct = (bar['close'] / self.entry_price) - 1
-                                    if pnl_pct >= self.win_threshold or pnl_pct <= -self.loss_threshold:
+                                    
+                                    if pnl_pct >= dynamic_win_threshold or pnl_pct <= -dynamic_loss_threshold or self.signal_counter % 50 == 0:
                                         self.last_signal = {
                                             'direction': 'SELL',
                                             'price': bar['close'],
-                                            'confidence': 0.8,
+                                            'confidence': 0.9,
                                             'size': 1.0
                                         }
+                                        
+                                        if pnl_pct > 0:
+                                            self.consecutive_wins += 1
+                                            self.consecutive_losses = 0
+                                            print(f"Closing LONG position with profit: {pnl_pct:.2%}")
+                                        else:
+                                            self.consecutive_losses += 1
+                                            self.consecutive_wins = 0
+                                            print(f"Closing LONG position with loss: {pnl_pct:.2%}")
+                                        
                                         self.position = None
+                                        self.trade_cooldown = 3  # Shorter cooldown
+                                    
+                                    elif pnl_pct > 0.01 and self.trend_strength < 0:
+                                        self.last_signal = {
+                                            'direction': 'SELL',
+                                            'price': bar['close'],
+                                            'confidence': 0.85,
+                                            'size': 1.0
+                                        }
+                                        self.consecutive_wins += 1
+                                        self.consecutive_losses = 0
+                                        self.position = None
+                                        self.trade_cooldown = 5
+                                
                                 elif self.position == 'SHORT':
                                     pnl_pct = 1 - (bar['close'] / self.entry_price)
-                                    if pnl_pct >= self.win_threshold or pnl_pct <= -self.loss_threshold:
+                                    
+                                    if pnl_pct >= dynamic_win_threshold or pnl_pct <= -dynamic_loss_threshold or self.signal_counter % 50 == 0:
                                         self.last_signal = {
                                             'direction': 'BUY',
                                             'price': bar['close'],
-                                            'confidence': 0.8,
+                                            'confidence': 0.9,
                                             'size': 1.0
                                         }
+                                        
+                                        if pnl_pct > 0:
+                                            self.consecutive_wins += 1
+                                            self.consecutive_losses = 0
+                                            print(f"Closing SHORT position with profit: {pnl_pct:.2%}")
+                                        else:
+                                            self.consecutive_losses += 1
+                                            self.consecutive_wins = 0
+                                            print(f"Closing SHORT position with loss: {pnl_pct:.2%}")
+                                        
                                         self.position = None
+                                        self.trade_cooldown = 3  # Shorter cooldown
+                                    
+                                    elif pnl_pct > 0.01 and self.trend_strength > 0:
+                                        self.last_signal = {
+                                            'direction': 'BUY',
+                                            'price': bar['close'],
+                                            'confidence': 0.85,
+                                            'size': 1.0
+                                        }
+                                        self.consecutive_wins += 1
+                                        self.consecutive_losses = 0
+                                        self.position = None
+                                        self.trade_cooldown = 5
                             
-                            elif self.signal_counter % 10 == 0:  # Don't trade too frequently
-                                if sma_fast > sma_slow:
-                                    self.last_signal = {
-                                        'direction': 'BUY',
-                                        'price': bar['close'],
-                                        'confidence': 0.7,
-                                        'size': self.max_position_size * self.risk_limit
-                                    }
-                                    self.position = 'LONG'
-                                    self.entry_price = bar['close']
-                                elif sma_fast < sma_slow:
-                                    self.last_signal = {
-                                        'direction': 'SELL',
-                                        'price': bar['close'],
-                                        'confidence': 0.7,
-                                        'size': self.max_position_size * self.risk_limit
-                                    }
-                                    self.position = 'SHORT'
-                                    self.entry_price = bar['close']
+                            elif self.trade_cooldown == 0:
+                                trading_frequency = 5  # Normal market
+                                if self.market_regime == 'volatile':
+                                    trading_frequency = 8  # Volatile market
+                                elif self.market_regime == 'crisis':
+                                    trading_frequency = 12  # Crisis market
+                                
+                                if self.signal_counter % trading_frequency == 0:
+                                    if (sma_fast > sma_medium and 
+                                        (rsi < 45 and self.trend_strength >= -0.5)):
+                                        
+                                        size = self.max_position_size * position_size_factor * self.risk_limit
+                                        
+                                        self.last_signal = {
+                                            'direction': 'BUY',
+                                            'price': bar['close'],
+                                            'confidence': 0.7 + (0.1 * max(0, self.trend_strength)),
+                                            'size': size
+                                        }
+                                        self.position = 'LONG'
+                                        self.entry_price = bar['close']
+                                        print(f"Generated BUY signal at {bar['timestamp']} price: {bar['close']}")
+                                    
+                                    elif (sma_fast < sma_medium and 
+                                          (rsi > 55 and self.trend_strength <= 0.5)):
+                                    
+                                        size = self.max_position_size * position_size_factor * self.risk_limit
+                                        
+                                        self.last_signal = {
+                                            'direction': 'SELL',
+                                            'price': bar['close'],
+                                            'confidence': 0.7 + (0.1 * abs(min(0, self.trend_strength))),
+                                            'size': size
+                                        }
+                                        self.position = 'SHORT'
+                                        self.entry_price = bar['close']
+                                        print(f"Generated SELL signal at {bar['timestamp']} price: {bar['close']}")
                         
                         self.signal_counter += 1
                         return self.last_signal
@@ -271,37 +427,67 @@ class LiveDataVerifier:
                         'latency_ms': 0
                     }
                 
+                trade_record = fill.copy()
+                trade_record['position'] = 0
+                trade_record['portfolio_value'] = portfolio_value
+                
                 if direction == 'BUY':
                     if position < 0:
-                        entry_price = trades[-1]['fill_price']
-                        pnl = (entry_price - fill_price) * abs(position)
-                        portfolio_value += pnl
+                        entry_trade = None
+                        for t in reversed(trades):
+                            if t.get('position', 0) < 0 and 'pnl' not in t:
+                                entry_trade = t
+                                break
                         
-                        fill['pnl'] = pnl
-                        fill['pnl_pct'] = pnl / (entry_price * abs(position))
-                        trades.append(fill)
+                        if entry_trade:
+                            entry_price = entry_trade['fill_price']
+                            pnl = (entry_price - fill_price) * abs(position)
+                            portfolio_value += pnl
+                            
+                            trade_record['pnl'] = pnl
+                            trade_record['pnl_pct'] = pnl / (entry_price * abs(position))
+                            trade_record['entry_price'] = entry_price
+                            trade_record['exit_price'] = fill_price
+                            trade_record['trade_type'] = 'CLOSE_SHORT'
+                            
+                            entry_trade['closed'] = True
+                            
+                            print(f"Closing SHORT position with {'profit' if pnl > 0 else 'loss'}: {(pnl / (entry_price * abs(position))):.2%}")
                     
                     position = volume
-                    
-                    fill['position'] = position
-                    fill['portfolio_value'] = portfolio_value
-                    trades.append(fill)
+                    trade_record['position'] = position
+                    trade_record['trade_type'] = 'OPEN_LONG'
+                    print(f"Generated BUY signal at {bar['timestamp']} price: {fill_price}")
                     
                 elif direction == 'SELL':
                     if position > 0:
-                        entry_price = trades[-1]['fill_price']
-                        pnl = (fill_price - entry_price) * position
-                        portfolio_value += pnl
+                        entry_trade = None
+                        for t in reversed(trades):
+                            if t.get('position', 0) > 0 and 'pnl' not in t:
+                                entry_trade = t
+                                break
                         
-                        fill['pnl'] = pnl
-                        fill['pnl_pct'] = pnl / (entry_price * position)
-                        trades.append(fill)
+                        if entry_trade:
+                            entry_price = entry_trade['fill_price']
+                            pnl = (fill_price - entry_price) * position
+                            portfolio_value += pnl
+                            
+                            trade_record['pnl'] = pnl
+                            trade_record['pnl_pct'] = pnl / (entry_price * position)
+                            trade_record['entry_price'] = entry_price
+                            trade_record['exit_price'] = fill_price
+                            trade_record['trade_type'] = 'CLOSE_LONG'
+                            
+                            entry_trade['closed'] = True
+                            
+                            print(f"Closing LONG position with {'profit' if pnl > 0 else 'loss'}: {(pnl / (entry_price * position)):.2%}")
                     
                     position = -volume
-                    
-                    fill['position'] = position
-                    fill['portfolio_value'] = portfolio_value
-                    trades.append(fill)
+                    trade_record['position'] = position
+                    trade_record['trade_type'] = 'OPEN_SHORT'
+                    print(f"Generated SELL signal at {bar['timestamp']} price: {fill_price}")
+                
+                trades.append(trade_record)
             
             if i > 0 and position != 0:
                 price_change = bar['close'] / data.iloc[i-1]['close'] - 1
@@ -309,6 +495,16 @@ class LiveDataVerifier:
                 portfolio_value *= (1 + portfolio_change)
             
             portfolio_values.append(portfolio_value)
+        
+        for trade in trades:
+            if 'trade_type' not in trade:
+                if trade['direction'] == 'BUY':
+                    trade['trade_type'] = 'OPEN_LONG'
+                else:
+                    trade['trade_type'] = 'OPEN_SHORT'
+        
+        # Store trades in results before calculating performance
+        self.results['trades'] = trades
         
         performance = self._calculate_performance(portfolio_values, data)
         
@@ -321,12 +517,16 @@ class LiveDataVerifier:
                 'passed': max_drawdown < 0.05
             }
         
-        self.results['trades'] = trades
         self.results['performance'] = performance
         self.results['drawdowns'] = drawdowns
         self.results['portfolio_values'] = portfolio_values
         
-        self.fill_engine.save_trades_csv("trades.csv")
+        if trades:
+            df = pd.DataFrame(trades)
+            df.to_csv("trades.csv", index=False)
+            print(f"Trades saved to trades.csv")
+        else:
+            self.fill_engine.save_trades_csv("trades.csv")
         
         self.fill_engine.generate_costs_log("costs.log")
         
@@ -347,19 +547,106 @@ class LiveDataVerifier:
         returns = [portfolio_values[i] / portfolio_values[i-1] - 1 for i in range(1, len(portfolio_values))]
         sharpe_ratio = (np.mean(returns) - 0.02/365) / (np.std(returns) * np.sqrt(365))
         
-        trades = self.results['trades']
-        winning_trades = [t for t in trades if 'pnl' in t and t['pnl'] > 0]
-        win_rate = len(winning_trades) / max(1, len([t for t in trades if 'pnl' in t]))
+        trades = self.results.get('trades', [])
         
-        if trades and any('pnl' in t for t in trades):
-            avg_profit = np.mean([t['pnl'] for t in trades if 'pnl' in t and t['pnl'] > 0] or [0])
-            avg_loss = np.mean([t['pnl'] for t in trades if 'pnl' in t and t['pnl'] < 0] or [0])
-            profit_factor = abs(sum([t['pnl'] for t in trades if 'pnl' in t and t['pnl'] > 0] or [0]) / 
-                              sum([t['pnl'] for t in trades if 'pnl' in t and t['pnl'] < 0] or [-1]))
+        print(f"Processing {len(trades)} trades for performance calculation")
+        
+        for trade in trades:
+            if 'trade_type' not in trade:
+                if trade['direction'] == 'BUY':
+                    trade['trade_type'] = 'OPEN_LONG'
+                else:
+                    trade['trade_type'] = 'OPEN_SHORT'
+        
+        closing_trades = [t for t in trades if 'trade_type' in t and 
+                          (t['trade_type'] == 'CLOSE_LONG' or t['trade_type'] == 'CLOSE_SHORT')]
+        
+        if not closing_trades:
+            closing_trades = [t for t in trades if 'pnl' in t and t['pnl'] != 0]
+        
+        if not closing_trades:
+            print("No closing trades found. Attempting to calculate PnL...")
+            
+            for i, trade in enumerate(trades):
+                if 'position' not in trade:
+                    if trade['direction'] == 'BUY':
+                        trade['position'] = trade.get('volume', 1.0)
+                    else:
+                        trade['position'] = -trade.get('volume', 1.0)
+            
+            # Track entry positions by symbol
+            entry_positions = {}
+            
+            for i in range(len(trades)):
+                trade = trades[i]
+                symbol = trade['symbol']
+                direction = trade['direction']
+                
+                if 'pnl' in trade and trade['pnl'] != 0:
+                    continue
+                
+                if direction == 'BUY' and symbol in entry_positions and entry_positions[symbol]['direction'] == 'SELL':
+                    entry = entry_positions[symbol]
+                    entry_price = entry['fill_price']
+                    exit_price = trade['fill_price']
+                    position_size = abs(entry['position'])
+                    
+                    pnl = (entry_price - exit_price) * position_size
+                    trade['pnl'] = pnl
+                    trade['pnl_pct'] = pnl / (entry_price * position_size)
+                    trade['trade_type'] = 'CLOSE_SHORT'
+                    
+                    entry['closed'] = True
+                    entry_positions.pop(symbol, None)
+                    
+                elif direction == 'SELL' and symbol in entry_positions and entry_positions[symbol]['direction'] == 'BUY':
+                    entry = entry_positions[symbol]
+                    entry_price = entry['fill_price']
+                    exit_price = trade['fill_price']
+                    position_size = abs(entry['position'])
+                    
+                    pnl = (exit_price - entry_price) * position_size
+                    trade['pnl'] = pnl
+                    trade['pnl_pct'] = pnl / (entry_price * position_size)
+                    trade['trade_type'] = 'CLOSE_LONG'
+                    
+                    entry['closed'] = True
+                    entry_positions.pop(symbol, None)
+                    
+                else:
+                    entry_positions[symbol] = trade
+                    if direction == 'BUY':
+                        trade['trade_type'] = 'OPEN_LONG'
+                    else:
+                        trade['trade_type'] = 'OPEN_SHORT'
+            
+            closing_trades = [t for t in trades if 'trade_type' in t and 
+                             (t['trade_type'] == 'CLOSE_LONG' or t['trade_type'] == 'CLOSE_SHORT')]
+        
+        winning_trades = [t for t in closing_trades if 'pnl' in t and t['pnl'] > 0]
+        losing_trades = [t for t in closing_trades if 'pnl' in t and t['pnl'] < 0]
+        
+        print(f"Total trades: {len(trades)}")
+        print(f"Closing trades: {len(closing_trades)}")
+        print(f"Winning trades: {len(winning_trades)}")
+        print(f"Losing trades: {len(losing_trades)}")
+        
+        win_rate = len(winning_trades) / max(1, len(closing_trades))
+        print(f"Calculated win rate: {win_rate:.2%}")
+        
+        if closing_trades:
+            avg_profit = np.mean([t['pnl'] for t in winning_trades] or [0])
+            avg_loss = np.mean([t['pnl'] for t in losing_trades] or [0])
+            
+            total_profit = sum([t['pnl'] for t in winning_trades] or [0])
+            total_loss = sum([t['pnl'] for t in losing_trades] or [-1])
+            
+            profit_factor = abs(total_profit / total_loss) if total_loss != 0 else float('inf')
         else:
             avg_profit = 0
             avg_loss = 0
             profit_factor = 0
+        
         
         return {
             'initial_capital': portfolio_values[0],
@@ -371,7 +658,7 @@ class LiveDataVerifier:
             'avg_profit': avg_profit,
             'avg_loss': avg_loss,
             'profit_factor': profit_factor,
-            'total_trades': len([t for t in trades if 'pnl' in t])
+            'total_trades': len(closing_trades)
         }
     
     def _calculate_max_drawdown(self, portfolio_values):
