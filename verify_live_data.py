@@ -165,16 +165,16 @@ class LiveDataVerifier:
                         self.last_lows = []
                         self.position = None
                         self.entry_price = None
-                        self.win_threshold = 0.03  # 3% profit target (increased)
-                        self.loss_threshold = 0.025  # 2.5% stop loss (wider)
-                        self.max_position_size = 0.05  # Max 5% of portfolio (reduced)
-                        self.risk_limit = 0.005  # 0.5% risk per trade (reduced)
+                        self.win_threshold = 0.02  # 2% profit target (reduced for more trades)
+                        self.loss_threshold = 0.03  # 3% stop loss (wider for fewer losses)
+                        self.max_position_size = 0.1  # Max 10% of portfolio (increased)
+                        self.risk_limit = 0.01  # 1% risk per trade (increased)
                         self.trend_strength = 0  # Track trend strength
                         self.consecutive_wins = 0
                         self.consecutive_losses = 0
                         self.volatility = 0
                         self.rsi_values = []
-                        self.trade_cooldown = 5  # Increased cooldown period after trades
+                        self.trade_cooldown = 0  # No cooldown period initially
                         self.market_regime = 'normal'  # Track market regime (normal, volatile, crisis)
                         self.circuit_breaker_active = False  # Circuit breaker for extreme market conditions
                     
@@ -279,11 +279,11 @@ class LiveDataVerifier:
                             else:
                                 consecutive_down_days = 0
                                 
-                            if self.volatility > 0.012 or consecutive_down_days >= 3:  # Crisis threshold - lowered from 0.015
+                            if self.volatility > 0.025 or consecutive_down_days >= 5:  # Crisis threshold - increased
                                 self.market_regime = 'crisis'
-                            elif self.volatility > 0.007 or recent_volatility_change > 0.4:  # Volatile threshold - lowered from 0.008
+                            elif self.volatility > 0.015 or recent_volatility_change > 0.6:  # Volatile threshold - increased
                                 self.market_regime = 'volatile'
-                            elif self.volatility > 0.004 or recent_volatility_change > 0.25:  # Pre-crisis threshold - lowered from 0.005
+                            elif self.volatility > 0.01 or recent_volatility_change > 0.4:  # Pre-crisis threshold - increased
                                 self.market_regime = 'pre_crisis'
                             else:
                                 self.market_regime = 'normal'
@@ -424,15 +424,15 @@ class LiveDataVerifier:
                                         self.trade_cooldown = 5
                             
                             elif self.trade_cooldown == 0:
-                                trading_frequency = 5  # Normal market
+                                trading_frequency = 2  # Normal market - much more frequent (reduced from 5)
                                 if self.market_regime == 'volatile':
-                                    trading_frequency = 8  # Volatile market
+                                    trading_frequency = 3  # Volatile market - more frequent (reduced from 8)
                                 elif self.market_regime == 'crisis':
-                                    trading_frequency = 12  # Crisis market
+                                    trading_frequency = 5  # Crisis market - more frequent (reduced from 12)
                                 
                                 if self.signal_counter % trading_frequency == 0:
                                     if (sma_fast > sma_medium and 
-                                        (rsi < 45 and self.trend_strength >= -0.5)):
+                                        (rsi < 60 and self.trend_strength >= -1.0)):
                                         
                                         size = self.max_position_size * position_size_factor * self.risk_limit
                                         
@@ -447,7 +447,7 @@ class LiveDataVerifier:
                                         print(f"Generated BUY signal at {bar['timestamp']} price: {bar['close']}")
                                     
                                     elif (sma_fast < sma_medium and 
-                                          (rsi > 55 and self.trend_strength <= 0.5)):
+                                          (rsi > 40 and self.trend_strength <= 1.0)):
                                     
                                         size = self.max_position_size * position_size_factor * self.risk_limit
                                         
