@@ -176,6 +176,7 @@ class LiveDataVerifier:
                         self.rsi_values = []
                         self.trade_cooldown = 5  # Increased cooldown period after trades
                         self.market_regime = 'normal'  # Track market regime (normal, volatile, crisis)
+                        self.circuit_breaker_active = False  # Circuit breaker for extreme market conditions
                     
                     def process_bar(self, bar):
                         self.last_prices.append(bar['close'])
@@ -270,17 +271,29 @@ class LiveDataVerifier:
                                         prev_volatility = sum(prev_ranges) / len(prev_ranges) / self.last_prices[-15]
                                         recent_volatility_change = (self.volatility / prev_volatility) - 1
                             
-                            if self.volatility > 0.015:  # Crisis threshold
+                            if len(self.last_prices) > 5:
+                                consecutive_down_days = 0
+                                for i in range(len(self.last_prices)-5, len(self.last_prices)):
+                                    if i > 0 and self.last_prices[i] < self.last_prices[i-1]:
+                                        consecutive_down_days += 1
+                            else:
+                                consecutive_down_days = 0
+                                
+                            if self.volatility > 0.012 or consecutive_down_days >= 3:  # Crisis threshold - lowered from 0.015
                                 self.market_regime = 'crisis'
-                            elif self.volatility > 0.008:  # Volatile threshold
+                            elif self.volatility > 0.007 or recent_volatility_change > 0.4:  # Volatile threshold - lowered from 0.008
                                 self.market_regime = 'volatile'
-                            elif self.volatility > 0.005 or recent_volatility_change > 0.3:  # Pre-crisis: either moderate vol or rapidly increasing vol
+                            elif self.volatility > 0.004 or recent_volatility_change > 0.25:  # Pre-crisis threshold - lowered from 0.005
                                 self.market_regime = 'pre_crisis'
                             else:
                                 self.market_regime = 'normal'
                                 
-                            if self.volatility > 0.025:
-                                self.trade_cooldown = 30  # Extended cooldown during extreme volatility
+                            # Circuit breaker for extreme volatility
+                            if self.volatility > 0.02 or consecutive_down_days >= 4:
+                                self.trade_cooldown = 40  # Extended cooldown during extreme volatility
+                                self.circuit_breaker_active = True  # Activate circuit breaker
+                            else:
+                                self.circuit_breaker_active = False
                                 
                             regime_multiplier = 1.0
                             if self.market_regime == 'pre_crisis':
@@ -303,15 +316,28 @@ class LiveDataVerifier:
                                 position_size_factor *= 0.6  # Further reduce position size
                                 self.trade_cooldown = max(self.trade_cooldown, 10)  # Longer cooldown in volatile markets
                             elif self.market_regime == 'crisis':
-                                regime_multiplier = 4.0  # Even more conservative in crisis
-                                position_size_factor *= 0.2  # Drastically reduce position size
-                                self.max_position_size = 0.01  # Severely limit max position in crisis
-                                self.trade_cooldown = max(self.trade_cooldown, 20)  # Extended cooldown in crisis
+                                regime_multiplier = 6.0  # Much more conservative in crisis (increased from 4.0)
+                                position_size_factor *= 0.1  # Severely reduce position size (reduced from 0.2)
+                                self.max_position_size = 0.005  # Extremely limit max position in crisis (reduced from 0.01)
+                                self.trade_cooldown = max(self.trade_cooldown, 30)  # Extended cooldown in crisis (increased from 20)
                                 
-                                hedge_ratio = min(0.8, self.volatility * 20)  # Dynamic hedge ratio based on volatility
+                                hedge_ratio = min(0.9, self.volatility * 25)  # Enhanced dynamic hedge ratio
                                 
-                                # Close positions immediately in crisis to prevent large drawdowns
+                                if self.circuit_breaker_active:
+                                    self.trade_cooldown = 48
+                                    
+                                    if self.position:
+                                        print(f"CIRCUIT BREAKER ACTIVATED: Exiting all positions immediately")
+                                        return {
+                                            'direction': 'BUY' if self.position == 'SHORT' else 'SELL',
+                                            'price': bar['close'],
+                                            'confidence': 1.0,
+                                            'size': 1.0
+                                        }
+                                    return None
+                                
                                 if self.position:
+                                    print(f"CRISIS REGIME: Exiting position")
                                     return {
                                         'direction': 'BUY' if self.position == 'SHORT' else 'SELL',
                                         'price': bar['close'],
