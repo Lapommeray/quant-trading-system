@@ -266,8 +266,22 @@ class MarketStressTest:
     
     def generate_stress_report(self, output_file="stress_report.json"):
         """Generate stress test report and save to file"""
+        class CustomEncoder(json.JSONEncoder):
+            def default(self, obj):
+                if isinstance(obj, (pd.Timestamp, pd.DatetimeIndex)):
+                    return str(obj)
+                if isinstance(obj, np.ndarray):
+                    return obj.tolist()
+                if isinstance(obj, np.integer):
+                    return int(obj)
+                if isinstance(obj, np.floating):
+                    return float(obj)
+                if isinstance(obj, bool):
+                    return bool(obj)  # Explicitly convert booleans
+                return str(obj)
+        
         with open(output_file, 'w') as f:
-            json.dump(self.results, f, indent=4)
+            json.dump(self.results, f, indent=4, cls=CustomEncoder)
         
         print(f"Stress test report saved to {output_file}")
         return self.results
