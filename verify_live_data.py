@@ -157,7 +157,7 @@ class LiveDataVerifier:
                 print("Warning: Could not import real trading system. Using mock system.")
                 class MockTradingSystem:
                     def __init__(self):
-                        self.asset = self.asset
+                        self.asset = None  # Will be set after initialization
                         self.last_signal = None
                         self.signal_counter = 0
                     
@@ -179,6 +179,7 @@ class LiveDataVerifier:
                         return self.last_signal
                 
                 trading_system = MockTradingSystem()
+                trading_system.asset = self.asset  # Set the asset from the verifier
                 print("Using mock trading system")
         
         initial_capital = 10000.0
