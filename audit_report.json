@@ -1,0 +1,55 @@
+{
+    "file": "trades.csv",
+    "total_trades": 9,
+    "winning_trades": 2,
+    "win_rate": 0.5,
+    "is_realistic": true,
+    "total_pnl": -2.606739642976362,
+    "avg_win": 0.46815096571686843,
+    "avg_loss": -1.7715207872050494,
+    "profit_factor": 0.26426501404788827,
+    "symbol_stats": {
+        "XAUUSD": {
+            "trades": 9,
+            "wins": 2,
+            "win_rate": 0.2222222222222222,
+            "is_realistic": false,
+            "total_pnl": -2.606739642976362,
+            "avg_win": 0.46815096571686843,
+            "avg_loss": -1.7715207872050494
+        }
+    },
+    "weekly_stats": {
+        "2020-10": {
+            "trades": 5,
+            "wins": 2,
+            "win_rate": 0.4,
+            "is_realistic": false,
+            "total_pnl": 0.9363019314337369
+        },
+        "2020-11": {
+            "trades": 1,
+            "wins": 0,
+            "win_rate": 0.0,
+            "is_realistic": false,
+            "total_pnl": -2.3297110317709824
+        },
+        "2020-12": {
+            "trades": 1,
+            "wins": 0,
+            "win_rate": 0.0,
+            "is_realistic": false,
+            "total_pnl": 0.0
+        },
+        "2020-13": {
+            "trades": 2,
+            "wins": 0,
+            "win_rate": 0.0,
+            "is_realistic": false,
+            "total_pnl": -1.213330542639116
+        }
+    },
+    "min_win_rate": 0.5,
+    "max_win_rate": 0.8,
+    "assertion_passed": true
+}

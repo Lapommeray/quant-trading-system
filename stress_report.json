@@ -1,0 +1,16 @@
+{
+    "events": [
+        {
+            "event_type": "2022-01-01",
+            "max_drawdown": 0.0007379564094573719,
+            "passed": "True",
+            "trades": 54,
+            "final_portfolio_value": 10069.194135647615,
+            "return": 0.006919413564761445
+        }
+    ],
+    "total_tests": 1,
+    "passed_tests": 1,
+    "worst_drawdown": 0.0007379564094573719,
+    "max_loss_event": "2022-01-01"
+}
