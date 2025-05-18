@@ -377,7 +377,7 @@ def simulate_black_swan(event, trading_system=None, max_drawdown_threshold=0.05)
                     self.circuit_breaker_active = False
                     self.trade_cooldown = 0
                     self.consecutive_down_days = 0
-                    self.max_position_size = 0.05  # Max 5% of portfolio
+                    self.max_position_size = 0.03  # Reduced max position size to 3% of portfolio
                 
                 def process_bar(self, bar):
                     self.last_prices.append(bar['close'])
@@ -412,26 +412,26 @@ def simulate_black_swan(event, trading_system=None, max_drawdown_threshold=0.05)
                             if i > 0 and self.last_prices[i] < self.last_prices[i-1]:
                                 self.consecutive_down_days += 1
                     
-                    if self.volatility > 0.012 or self.consecutive_down_days >= 3:
+                    if self.volatility > 0.008 or self.consecutive_down_days >= 2:
                         self.market_regime = 'crisis'
-                    elif self.volatility > 0.007:
+                    elif self.volatility > 0.005:
                         self.market_regime = 'volatile'
-                    elif self.volatility > 0.004:
+                    elif self.volatility > 0.003:
                         self.market_regime = 'pre_crisis'
                     else:
                         self.market_regime = 'normal'
                     
-                    # Circuit breaker for extreme volatility
-                    if self.volatility > 0.02 or self.consecutive_down_days >= 4:
+                    # More aggressive circuit breaker for extreme volatility
+                    if self.volatility > 0.01 or self.consecutive_down_days >= 3:
                         self.circuit_breaker_active = True
-                        self.trade_cooldown = 10
+                        self.trade_cooldown = 15
                         
                         if self.position:
                             return {
                                 'direction': 'BUY' if self.position == 'SHORT' else 'SELL',
                                 'price': bar['close'],
                                 'confidence': 1.0,
-                                'size': 0.2  # Reduced position size for safer exit
+                                'size': 0.1  # Further reduced position size for safer exit
                             }
                         return None
                     else:
@@ -439,11 +439,11 @@ def simulate_black_swan(event, trading_system=None, max_drawdown_threshold=0.05)
                     
                     position_size = self.max_position_size
                     if self.market_regime == 'pre_crisis':
-                        position_size *= 0.5
+                        position_size *= 0.3  # More conservative in pre-crisis
                     elif self.market_regime == 'volatile':
-                        position_size *= 0.3
+                        position_size *= 0.15  # Much smaller in volatile markets
                     elif self.market_regime == 'crisis':
-                        position_size *= 0.1
+                        position_size *= 0.05  # Minimal exposure during crisis
                     
                     if self.market_regime == 'crisis' and self.position:
                         self.trade_cooldown = 5
