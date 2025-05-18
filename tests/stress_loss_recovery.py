@@ -65,14 +65,30 @@ class MarketStressTest:
         if data_path and os.path.exists(data_path):
             return pd.read_csv(data_path)
         
-        dates = pd.date_range(start='2020-02-19', end='2020-03-23')
+        dates = pd.date_range(start='2020-02-01', end='2020-03-23')  # Extended start date
+        
+        pre_crash_end = pd.Timestamp('2020-02-19')
+        pre_crash_days = (pre_crash_end - dates[0]).days + 1
+        crash_days = len(dates) - pre_crash_days
+        
         starting_price = 3380  # S&P 500 approximately Feb 19, 2020
         ending_price = 2200    # S&P 500 approximately Mar 23, 2020
         
-        decay_factor = np.exp(np.log(ending_price/starting_price) / len(dates))
-        prices = starting_price * np.array([decay_factor**i for i in range(len(dates))])
+        pre_crash_prices = np.random.normal(starting_price, starting_price * 0.005, pre_crash_days)
         
-        random_factors = np.random.normal(1, 0.02, len(dates))
+        decay_factor = np.exp(np.log(ending_price/starting_price) / crash_days)
+        crash_prices = starting_price * np.array([decay_factor**i for i in range(crash_days)])
+        
+        prices = np.concatenate([pre_crash_prices, crash_prices])
+        
+        pre_crash_volatility = 0.005  # Low initial volatility
+        crash_volatility = 0.03       # High volatility during crash
+        
+        volatility = np.ones(len(dates))
+        volatility[:pre_crash_days] = pre_crash_volatility
+        volatility[pre_crash_days:] = np.linspace(pre_crash_volatility, crash_volatility, crash_days)
+        
+        random_factors = np.array([np.random.normal(1, vol) for vol in volatility])
         prices = prices * random_factors
         
         data = pd.DataFrame({

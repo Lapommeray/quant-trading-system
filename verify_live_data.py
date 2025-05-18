@@ -253,18 +253,32 @@ class LiveDataVerifier:
                             if self.consecutive_wins > 1:
                                 position_size_factor = min(1.0, position_size_factor * 1.2)
                             
-                            if self.volatility > 0.03:
+                            if self.volatility > 0.02:  # Lower threshold for crisis detection
                                 self.market_regime = 'crisis'
-                            elif self.volatility > 0.015:
+                            elif self.volatility > 0.01:  # Lower threshold for volatile detection
                                 self.market_regime = 'volatile'
                             else:
                                 self.market_regime = 'normal'
                                 
                             regime_multiplier = 1.0
                             if self.market_regime == 'volatile':
-                                regime_multiplier = 1.5
+                                regime_multiplier = 2.0  # More conservative in volatile markets
+                                position_size_factor *= 0.7  # Reduce position size
+                                self.trade_cooldown = max(self.trade_cooldown, 8)  # Longer cooldown in volatile markets
                             elif self.market_regime == 'crisis':
-                                regime_multiplier = 2.0
+                                regime_multiplier = 3.0  # Much more conservative in crisis
+                                position_size_factor *= 0.3  # Significantly reduce position size
+                                self.max_position_size = 0.02  # Further reduce max position in crisis
+                                self.trade_cooldown = max(self.trade_cooldown, 15)  # Much longer cooldown in crisis
+                                
+                                # Close positions early in crisis to prevent large drawdowns
+                                if self.position and self.signal_counter % 3 == 0:
+                                    return {
+                                        'direction': 'BUY' if self.position == 'SHORT' else 'SELL',
+                                        'price': bar['close'],
+                                        'confidence': 0.95,
+                                        'size': 1.0
+                                    }
                                 
                             dynamic_win_threshold = max(0.02, self.win_threshold * (1 + self.volatility * 5))
                             dynamic_loss_threshold = max(0.02, self.loss_threshold * (1 + self.volatility * 5)) * regime_multiplier
