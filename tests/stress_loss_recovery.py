@@ -107,15 +107,31 @@ class MarketStressTest:
         if data_path and os.path.exists(data_path):
             return pd.read_csv(data_path)
         
-        dates = pd.date_range(start='2022-09-13', end='2022-09-30')
+        dates = pd.date_range(start='2022-09-01', end='2022-09-30')  # Extended start date
+        
+        pre_panic_end = pd.Timestamp('2022-09-13')
+        pre_panic_days = (pre_panic_end - dates[0]).days + 1
+        panic_days = len(dates) - pre_panic_days
+        
         starting_price = 4110  # S&P 500 approximately Sept 13, 2022
         lowest_price = 3585    # S&P 500 approximately Sept 30, 2022
         
-        decay_factor = np.exp(np.log(lowest_price/starting_price) / len(dates))
-        base_prices = starting_price * np.array([decay_factor**i for i in range(len(dates))])
+        pre_panic_prices = np.random.normal(starting_price, starting_price * 0.004, pre_panic_days)
         
-        random_factors = np.random.normal(1, 0.025, len(dates))  # Higher volatility
-        prices = base_prices * random_factors
+        decay_factor = np.exp(np.log(lowest_price/starting_price) / panic_days)
+        panic_prices = starting_price * np.array([decay_factor**i for i in range(panic_days)])
+        
+        prices = np.concatenate([pre_panic_prices, panic_prices])
+        
+        pre_panic_volatility = 0.004  # Low initial volatility
+        panic_volatility = 0.03       # High volatility during panic
+        
+        volatility = np.ones(len(dates))
+        volatility[:pre_panic_days] = pre_panic_volatility
+        volatility[pre_panic_days:] = np.linspace(pre_panic_volatility, panic_volatility, panic_days)
+        
+        random_factors = np.array([np.random.normal(1, vol) for vol in volatility])
+        prices = prices * random_factors
         
         data = pd.DataFrame({
             'timestamp': dates,

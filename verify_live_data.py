@@ -265,10 +265,22 @@ class LiveDataVerifier:
                                 self.trade_cooldown = 30  # Extended cooldown during extreme volatility
                                 
                             regime_multiplier = 1.0
-                            if self.market_regime == 'volatile':
-                                regime_multiplier = 2.0  # More conservative in volatile markets
-                                position_size_factor *= 0.7  # Reduce position size
-                                self.trade_cooldown = max(self.trade_cooldown, 8)  # Longer cooldown in volatile markets
+                            if self.market_regime == 'pre_crisis':
+                                regime_multiplier = 1.5  # Slightly more conservative in pre-crisis
+                                position_size_factor *= 0.8  # Slightly reduce position size
+                                self.trade_cooldown = max(self.trade_cooldown, 5)  # Moderate cooldown in pre-crisis
+                                
+                                if self.position and self.signal_counter % 5 == 0:
+                                    return {
+                                        'direction': 'BUY' if self.position == 'SHORT' else 'SELL',
+                                        'price': bar['close'],
+                                        'confidence': 0.8,
+                                        'size': 0.5  # Reduce position by half
+                                    }
+                            elif self.market_regime == 'volatile':
+                                regime_multiplier = 2.5  # More conservative in volatile markets
+                                position_size_factor *= 0.6  # Further reduce position size
+                                self.trade_cooldown = max(self.trade_cooldown, 10)  # Longer cooldown in volatile markets
                             elif self.market_regime == 'crisis':
                                 regime_multiplier = 4.0  # Even more conservative in crisis
                                 position_size_factor *= 0.2  # Drastically reduce position size
