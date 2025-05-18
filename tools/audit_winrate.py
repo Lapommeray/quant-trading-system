@@ -56,8 +56,26 @@ class WinRateAuditor:
             print("PnL column not found. Calculating PnL from trade data...")
             trades = self._calculate_pnl(trades)
         
-        winning_trades = trades[trades['pnl'] > 0]
-        win_rate = len(winning_trades) / len(trades)
+        trades_with_pnl = trades[trades['pnl'].notna() & (trades['pnl'] != 0)].copy()
+        
+        if 'entry_price' in trades.columns and 'exit_price' in trades.columns:
+            completed_trades = trades_with_pnl[trades_with_pnl['entry_price'].notna() & 
+                                              trades_with_pnl['exit_price'].notna()].copy()
+            if len(completed_trades) > 0:
+                trades_with_pnl = completed_trades
+                print("Using completed trades with entry and exit prices")
+        
+        if len(trades_with_pnl) == 0:
+            print("Warning: No trades with PnL values found. Using all trades.")
+            trades_with_pnl = trades.copy()
+        
+        winning_trades = trades_with_pnl[trades_with_pnl['pnl'] > 0]
+        win_rate = len(winning_trades) / len(trades_with_pnl) if len(trades_with_pnl) > 0 else 0
+        
+        print(f"Total trades: {len(trades)}")
+        print(f"Trades with PnL values: {len(trades_with_pnl)}")
+        print(f"Winning trades: {len(winning_trades)}")
+        print(f"Win rate: {win_rate:.2%}")
         
         is_realistic = self.min_win_rate <= win_rate <= self.max_win_rate
         
