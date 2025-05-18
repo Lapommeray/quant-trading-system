@@ -253,11 +253,29 @@ class LiveDataVerifier:
                             if self.consecutive_wins > 1:
                                 position_size_factor = min(1.0, position_size_factor * 1.2)
                             
-                            # Even more sensitive crisis detection
-                            if self.volatility > 0.015:  # Further lowered threshold for crisis detection
+                            if len(self.last_prices) > 5:
+                                recent_volatility_change = 0
+                                if len(self.last_prices) > 10:
+                                    prev_ranges = []
+                                    for i in range(len(self.last_highs) - 24, len(self.last_highs) - 14):
+                                        if i >= 0:
+                                            true_range = max(
+                                                self.last_highs[i] - self.last_lows[i],
+                                                abs(self.last_highs[i] - self.last_prices[i-1]),
+                                                abs(self.last_lows[i] - self.last_prices[i-1])
+                                            )
+                                            prev_ranges.append(true_range)
+                                    
+                                    if prev_ranges:
+                                        prev_volatility = sum(prev_ranges) / len(prev_ranges) / self.last_prices[-15]
+                                        recent_volatility_change = (self.volatility / prev_volatility) - 1
+                            
+                            if self.volatility > 0.015:  # Crisis threshold
                                 self.market_regime = 'crisis'
-                            elif self.volatility > 0.008:  # Further lowered threshold for volatile detection
+                            elif self.volatility > 0.008:  # Volatile threshold
                                 self.market_regime = 'volatile'
+                            elif self.volatility > 0.005 or recent_volatility_change > 0.3:  # Pre-crisis: either moderate vol or rapidly increasing vol
+                                self.market_regime = 'pre_crisis'
                             else:
                                 self.market_regime = 'normal'
                                 
@@ -266,17 +284,20 @@ class LiveDataVerifier:
                                 
                             regime_multiplier = 1.0
                             if self.market_regime == 'pre_crisis':
-                                regime_multiplier = 1.5  # Slightly more conservative in pre-crisis
-                                position_size_factor *= 0.8  # Slightly reduce position size
-                                self.trade_cooldown = max(self.trade_cooldown, 5)  # Moderate cooldown in pre-crisis
+                                regime_multiplier = 2.0  # More conservative in pre-crisis (increased from 1.5)
+                                position_size_factor *= 0.5  # Significantly reduce position size (reduced from 0.8)
+                                self.trade_cooldown = max(self.trade_cooldown, 8)  # Longer cooldown in pre-crisis
+                                self.max_position_size = 0.03  # Limit max position in pre-crisis
                                 
-                                if self.position and self.signal_counter % 5 == 0:
-                                    return {
-                                        'direction': 'BUY' if self.position == 'SHORT' else 'SELL',
-                                        'price': bar['close'],
-                                        'confidence': 0.8,
-                                        'size': 0.5  # Reduce position by half
-                                    }
+                                # Reduce exposure more aggressively in pre-crisis
+                                if self.position:
+                                    if recent_volatility_change > 0.2 or self.signal_counter % 3 == 0:
+                                        return {
+                                            'direction': 'BUY' if self.position == 'SHORT' else 'SELL',
+                                            'price': bar['close'],
+                                            'confidence': 0.9,
+                                            'size': 0.7  # Reduce position more aggressively
+                                        }
                             elif self.market_regime == 'volatile':
                                 regime_multiplier = 2.5  # More conservative in volatile markets
                                 position_size_factor *= 0.6  # Further reduce position size
