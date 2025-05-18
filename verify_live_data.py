@@ -160,20 +160,67 @@ class LiveDataVerifier:
                         self.asset = None  # Will be set after initialization
                         self.last_signal = None
                         self.signal_counter = 0
+                        self.last_prices = []
+                        self.position = None
+                        self.entry_price = None
+                        self.win_threshold = 0.005  # 0.5% profit target
+                        self.loss_threshold = 0.003  # 0.3% stop loss
+                        self.max_position_size = 0.2  # Max 20% of portfolio
+                        self.risk_limit = 0.01  # 1% risk per trade
                     
                     def process_bar(self, bar):
-                        if self.signal_counter % 20 == 0:  # Signal every 20 bars
-                            if bar['close'] > bar['open']:
-                                direction = 'BUY'
-                            else:
-                                direction = 'SELL'
+                        self.last_prices.append(bar['close'])
+                        if len(self.last_prices) > 20:
+                            self.last_prices.pop(0)
+                        
+                        self.last_signal = None
+                        
+                        if len(self.last_prices) >= 20:
+                            sma_fast = sum(self.last_prices[-5:]) / 5
+                            sma_slow = sum(self.last_prices[-20:]) / 20
                             
-                            self.last_signal = {
-                                'direction': direction,
-                                'price': bar['close'],
-                                'confidence': 0.7,
-                                'size': 1.0
-                            }
+                            
+                            if self.position:
+                                if self.position == 'LONG':
+                                    pnl_pct = (bar['close'] / self.entry_price) - 1
+                                    if pnl_pct >= self.win_threshold or pnl_pct <= -self.loss_threshold:
+                                        self.last_signal = {
+                                            'direction': 'SELL',
+                                            'price': bar['close'],
+                                            'confidence': 0.8,
+                                            'size': 1.0
+                                        }
+                                        self.position = None
+                                elif self.position == 'SHORT':
+                                    pnl_pct = 1 - (bar['close'] / self.entry_price)
+                                    if pnl_pct >= self.win_threshold or pnl_pct <= -self.loss_threshold:
+                                        self.last_signal = {
+                                            'direction': 'BUY',
+                                            'price': bar['close'],
+                                            'confidence': 0.8,
+                                            'size': 1.0
+                                        }
+                                        self.position = None
+                            
+                            elif self.signal_counter % 10 == 0:  # Don't trade too frequently
+                                if sma_fast > sma_slow:
+                                    self.last_signal = {
+                                        'direction': 'BUY',
+                                        'price': bar['close'],
+                                        'confidence': 0.7,
+                                        'size': self.max_position_size * self.risk_limit
+                                    }
+                                    self.position = 'LONG'
+                                    self.entry_price = bar['close']
+                                elif sma_fast < sma_slow:
+                                    self.last_signal = {
+                                        'direction': 'SELL',
+                                        'price': bar['close'],
+                                        'confidence': 0.7,
+                                        'size': self.max_position_size * self.risk_limit
+                                    }
+                                    self.position = 'SHORT'
+                                    self.entry_price = bar['close']
                         
                         self.signal_counter += 1
                         return self.last_signal
