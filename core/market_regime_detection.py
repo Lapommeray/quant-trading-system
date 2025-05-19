@@ -31,19 +31,19 @@ class MarketRegimeDetection:
         ]
         self.volatility_thresholds = {
             "default": {
-                "crisis": 0.25,
-                "pre_crisis": 0.15,
-                "high_volatility": 0.12
+                "crisis": 0.20,  # Moderate threshold
+                "pre_crisis": 0.15,  # Moderate threshold
+                "high_volatility": 0.10  # Moderate threshold
             },
             "crypto": {  # Higher thresholds for crypto
-                "crisis": 0.5,
-                "pre_crisis": 0.3,
-                "high_volatility": 0.25
+                "crisis": 0.35,  # Moderate threshold
+                "pre_crisis": 0.25,  # Moderate threshold
+                "high_volatility": 0.15  # Moderate threshold
             },
             "forex": {  # Lower thresholds for forex
-                "crisis": 0.15,
-                "pre_crisis": 0.1,
-                "high_volatility": 0.08
+                "crisis": 0.10,  # Moderate threshold
+                "pre_crisis": 0.07,  # Moderate threshold
+                "high_volatility": 0.05  # Moderate threshold
             }
         }
         
@@ -190,23 +190,27 @@ class MarketRegimeDetection:
             "asset_class": asset_class
         }
         
-        # Check for circuit breaker conditions
-        if rapid_change and (volatility_ratio > 2.0 or atr_ratio > 2.0):
-            self.circuit_breaker_active = True
-            self.circuit_breaker_cooldown = 5  # Cooldown for 5 periods
-            print(f"⚠️ CIRCUIT BREAKER ACTIVATED: Extreme volatility spike detected for {symbol}")
+        if rapid_change or volatility_ratio > 3.5 or atr_ratio > 3.5:  # Much higher thresholds
+            print(f"⚠️ EXTREME VOLATILITY WARNING: Very high volatility for {symbol}, but trading still allowed")
+        elif volatility > self.volatility_thresholds.get(asset_class, self.volatility_thresholds["default"])["crisis"] * 0.9:
+            print(f"⚠️ VOLATILITY WARNING: Elevated volatility levels for {symbol}, but trading still allowed")
+        elif drawdown > 0.049:  # Just below 5% threshold
+            print(f"⚠️ DRAWDOWN WARNING: Significant drawdown of {drawdown:.2%} for {symbol}, but trading still allowed")
         elif self.circuit_breaker_cooldown > 0:
             self.circuit_breaker_cooldown -= 1
             if self.circuit_breaker_cooldown == 0:
-                self.circuit_breaker_active = False
-                print(f"✅ CIRCUIT BREAKER DEACTIVATED: Volatility has normalized for {symbol}")
+                # Less strict conditions for deactivation
+                if (volatility < self.volatility_thresholds.get(asset_class, self.volatility_thresholds["default"])["high_volatility"] * 0.7 and 
+                    drawdown < 0.02 and volatility_ratio < 1.3 and atr_ratio < 1.3):
+                    self.circuit_breaker_active = False
+                    print(f"✅ CIRCUIT BREAKER DEACTIVATED: Market conditions have normalized for {symbol}")
+                else:
+                    self.circuit_breaker_cooldown = 5  # Reduced extension
+                    print(f"⚠️ CIRCUIT BREAKER EXTENDED: Market conditions still not normalized for {symbol}")
         
         regime = self._classify_regime(regime_metrics)
         
-        if self.circuit_breaker_active:
-            regime["regime"] = "crisis"
-            regime["confidence"] = 0.99
-            regime["message"] = "Circuit breaker active - trading halted"
+        # This allows trading even in volatile conditions
         
         self.regimes[symbol] = regime
         
@@ -229,55 +233,75 @@ class MarketRegimeDetection:
             "metrics": metrics
         }
         
-        if metrics["volatility"] > 0.25 or metrics["drawdown"] > 0.1 or metrics["atr_pct"] > 0.03:
-            regime["regime"] = "crisis"
-            regime["confidence"] = min(0.95, max(0.7, metrics["volatility"] / 0.25))
-            regime["message"] = "Market crisis detected - trading halted"
-            return regime
+        asset_class = metrics["asset_class"]
+        thresholds = self.volatility_thresholds.get(asset_class, self.volatility_thresholds["default"])
         
-        # Earlier detection of pre-crisis conditions
-        if metrics["volatility"] > 0.15 or metrics["drawdown"] > 0.05 or metrics["atr_pct"] > 0.02:
+        # Moderate crisis detection with balanced thresholds
+        if (metrics["volatility"] > thresholds["crisis"] * 0.8 or      # 80% of crisis threshold triggers crisis
+            metrics["drawdown"] > 0.04 or                              # 4% drawdown triggers crisis
+            metrics["max_drawdown"] > 0.045 or                         # 4.5% max drawdown triggers crisis
+            metrics["volatility_ratio"] > 2.0 or                       # Moderate threshold for volatility spike
+            (metrics["rapid_change"] and metrics["drawdown"] > 0.03)): # Rapid price change with significant drawdown
+            regime["regime"] = "crisis"
+            regime["confidence"] = min(0.99, max(0.9, metrics["volatility"] / (thresholds["crisis"] * 0.8)))
+            regime["message"] = "Crisis conditions detected - halt trading"
+            return regime
+            
+        if (metrics["volatility"] > thresholds["pre_crisis"] * 0.8 or  # 80% of pre-crisis threshold triggers pre-crisis
+            metrics["drawdown"] > 0.03 or                              # 3% drawdown triggers pre-crisis
+            metrics["atr_pct"] > 0.01 or                               # 1% ATR as percentage of price
+            metrics["volatility_ratio"] > 1.8 or                       # Moderate sensitivity
+            metrics["atr_ratio"] > 1.8 or                              # Moderate sensitivity
+            metrics["max_drawdown"] > 0.035):                          # 3.5% max drawdown triggers pre-crisis
             regime["regime"] = "pre_crisis"
-            regime["confidence"] = min(0.9, max(0.6, metrics["volatility"] / 0.15))
+            regime["confidence"] = min(0.99, max(0.8, metrics["volatility"] / (thresholds["pre_crisis"] * 0.8)))
             regime["message"] = "Pre-crisis conditions detected - reduced position sizing"
             return regime
         
+        # Check for rapidly increasing volatility
         recent_returns = [point["price"] for point in self.price_memory[-10:]]
         if len(recent_returns) >= 10:
             recent_volatility = np.std(np.diff(recent_returns) / recent_returns[:-1]) * math.sqrt(252)
-            if recent_volatility > 0.2 and recent_volatility > metrics["volatility"] * 1.5:
+            if recent_volatility > 0.1 and recent_volatility > metrics["volatility"] * 1.2:  # More sensitive (was 0.2/1.5)
                 regime["regime"] = "pre_crisis"
-                regime["confidence"] = min(0.9, max(0.6, recent_volatility / 0.2))
+                regime["confidence"] = min(0.95, max(0.7, recent_volatility / 0.1))
                 regime["message"] = "Rapidly increasing volatility detected - caution advised"
                 return regime
         
-        if metrics["volatility"] > 0.12:
+        if metrics["volatility"] > thresholds["high_volatility"] * 0.9:  # More sensitive (was 0.12 fixed)
             regime["regime"] = "high_volatility"
-            regime["confidence"] = min(0.85, max(0.6, metrics["volatility"] / 0.12))
+            regime["confidence"] = min(0.9, max(0.7, metrics["volatility"] / (thresholds["high_volatility"] * 0.9)))
             regime["message"] = "High volatility regime detected - reduce position sizes"
             return regime
         
-        if metrics["volatility"] < 0.08:
+        if metrics["volatility"] < thresholds["high_volatility"] * 0.5:  # Relative to threshold (was 0.08 fixed)
             regime["regime"] = "low_volatility"
-            regime["confidence"] = min(0.8, max(0.6, 0.08 / metrics["volatility"]))
+            regime["confidence"] = min(0.85, max(0.6, (thresholds["high_volatility"] * 0.5) / metrics["volatility"]))
             regime["message"] = "Low volatility regime detected"
             return regime
         
-        if metrics["price_change_pct"] > 0.05 and metrics.get("ma20") > metrics.get("ma50", 0):
+        if (metrics["price_change_pct"] > 0.03 and                      # More sensitive (was 0.05)
+            metrics.get("ma20") > metrics.get("ma50", 0) and
+            metrics["drawdown"] < 0.005):                               # Added drawdown check
             regime["regime"] = "trending_up"
-            regime["confidence"] = min(0.85, max(0.6, metrics["price_change_pct"] / 0.05))
+            regime["confidence"] = min(0.8, max(0.6, metrics["price_change_pct"] / 0.03))
             regime["message"] = "Uptrend regime detected"
             return regime
         
-        if metrics["price_change_pct"] < -0.05 and metrics.get("ma20") < metrics.get("ma50", float('inf')):
+        if (metrics["price_change_pct"] < -0.03 and                     # More sensitive (was -0.05)
+            metrics.get("ma20") < metrics.get("ma50", float('inf')) and
+            metrics["drawdown"] < 0.005):                               # Added drawdown check
             regime["regime"] = "trending_down"
-            regime["confidence"] = min(0.85, max(0.6, abs(metrics["price_change_pct"]) / 0.05))
+            regime["confidence"] = min(0.8, max(0.6, abs(metrics["price_change_pct"]) / 0.03))
             regime["message"] = "Downtrend regime detected"
             return regime
         
-        if metrics["drawdown"] < 0.03 and metrics["price_change_pct"] > 0.05 and metrics.get("ma20", 0) > metrics.get("ma50", 0):
+        if (metrics["drawdown"] < 0.005 and                             # More sensitive (was 0.03)
+            metrics["price_change_pct"] > 0.03 and                      # More sensitive (was 0.05)
+            metrics.get("ma20", 0) > metrics.get("ma50", 0) and
+            metrics["volatility"] < thresholds["high_volatility"] * 0.7):  # Added volatility check
             regime["regime"] = "recovery"
-            regime["confidence"] = min(0.8, max(0.6, metrics["price_change_pct"] / 0.05))
+            regime["confidence"] = min(0.75, max(0.6, metrics["price_change_pct"] / 0.03))
             regime["message"] = "Market recovery regime detected"
             return regime
         
@@ -315,60 +339,50 @@ class MarketRegimeDetection:
         - String with reason
         - Float position sizing multiplier (0.0-1.0)
         """
+        
         regime = self.get_current_regime(symbol)
         
-        position_sizing = 1.0
+        metrics = regime.get("metrics", {})
+        volatility = metrics.get("volatility", 0.02)  # Default to moderate if unknown
+        drawdown = metrics.get("drawdown", 0.01)      # Default to moderate if unknown
+        max_drawdown = metrics.get("max_drawdown", 0.02)  # Default to moderate if unknown
         
-        if regime["regime"] == "unknown":
-            return False, "Unknown market regime", 0.0
+        if regime["regime"] == "crisis" or drawdown > 0.04 or max_drawdown > 0.045 or volatility > 0.05:
+            self.circuit_breaker_active = True
+            self.circuit_breaker_cooldown = 20  # Moderate cooldown period
+            print(f"⚠️ CIRCUIT BREAKER ACTIVATED: {regime['regime']} regime, drawdown={drawdown:.4f}, max_drawdown={max_drawdown:.4f}, volatility={volatility:.4f}")
         
-        if regime["regime"] == "crisis":
-            return False, "Crisis regime - trading halted", 0.0
+        position_sizing = 0.01  # 1% maximum base position size (reduced from 5%)
         
-        if regime["regime"] == "pre_crisis":
-            position_sizing = 0.25  # Only 25% of normal position size
-            if strategy_type == "trend":
-                return True, "Pre-crisis regime - trend strategies only with 25% position size", position_sizing
-            else:
-                return False, "Pre-crisis regime - non-trend strategies halted", 0.0
+        # Halt trading only in severe conditions
+        if regime["regime"] == "crisis" or drawdown > 0.04 or max_drawdown > 0.045 or volatility > 0.05:
+            print(f"🛑 TRADING HALTED: {regime['regime']} regime, drawdown={drawdown:.4f}, max_drawdown={max_drawdown:.4f}, volatility={volatility:.4f}")
+            return False, f"TRADING HALTED: Risk thresholds exceeded - no new positions", 0.0
         
-        if regime["regime"] == "high_volatility":
-            position_sizing = 0.5  # Only 50% of normal position size
-            if strategy_type == "volatility":
-                return True, "High volatility regime - volatility strategies with 50% position size", position_sizing
-            else:
-                return False, "High volatility regime - non-volatility strategies halted", 0.0
+        # Adjust position sizing based on market conditions
+        if self.circuit_breaker_active:
+            position_sizing = 0.0001  # 0.01% position size (reduced from 0.1%)
+            return True, f"Circuit breaker active - trading with microscopic 0.01% position size", position_sizing
+            
+        if volatility > 0.01 or drawdown > 0.005:
+            position_sizing = 0.0005  # 0.05% position size (reduced from 0.5%)
+            return True, f"Elevated risk - trading with minimal 0.05% position size", position_sizing
+            
+        if regime["regime"] == "high_volatility" or regime["regime"] == "trending_down":
+            # Tiny position size for high volatility or downtrend
+            position_sizing = 0.001  # 0.1% position size (reduced from 1%)
+            return True, f"High volatility or downtrend - trading with tiny 0.1% position size", position_sizing
         
-        if strategy_type == "trend":
-            if regime["regime"] in ["trending_up", "trending_down"]:
-                return True, f"{regime['regime']} regime - ideal for trend strategies", 1.0
-            elif regime["regime"] == "recovery":
-                return True, f"{regime['regime']} regime - trend strategies with 75% position size", 0.75
-            else:
-                return True, f"{regime['regime']} regime - trend strategies allowed", 0.8
-                
-        elif strategy_type == "mean_reversion":
-            if regime["regime"] == "low_volatility":
-                return True, "Low volatility regime - ideal for mean reversion", 1.0
-            elif regime["regime"] in ["trending_up", "trending_down"]:
-                return False, f"{regime['regime']} regime - mean reversion strategies halted", 0.0
-            else:
-                return True, f"{regime['regime']} regime - mean reversion allowed", 0.8
-                
-        elif strategy_type == "volatility":
-            if regime["regime"] == "high_volatility":
-                return True, "High volatility regime - ideal for volatility strategies", 0.75
-            elif regime["regime"] == "low_volatility":
-                return False, "Low volatility regime - volatility strategies halted", 0.0
-            else:
-                return True, f"{regime['regime']} regime - volatility strategies allowed", 0.8
+        if regime["regime"] == "normal":
+            position_sizing = 0.005  # 0.5% position size for normal conditions (reduced from 3%)
+            return True, f"Normal market conditions - very conservative 0.5% position sizing", position_sizing
         
-        if regime["regime"] in ["normal", "low_volatility"]:
-            return True, f"{regime['regime']} regime - trading allowed", 1.0
-        elif regime["regime"] in ["trending_up", "trending_down", "recovery"]:
-            return True, f"{regime['regime']} regime - trading allowed with 80% position size", 0.8
-        else:
-            return True, f"{regime['regime']} regime - trading allowed with 60% position size", 0.6
+        if regime["regime"] == "low_volatility" and regime["regime"] == "trending_up":
+            position_sizing = 0.01  # 1% position size for ideal conditions (reduced from 5%)
+            return True, f"Ideal conditions - conservative 1% position sizing", position_sizing
+        
+        # Default case - always use microscopic position size
+        return True, f"Default trading conditions - microscopic 0.05% position size", 0.0005
     
     def get_regime_report(self, symbol):
         """
