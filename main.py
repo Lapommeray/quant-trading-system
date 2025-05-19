@@ -1,9 +1,10 @@
 #!/usr/bin/env python3
 """
 Quantum Trading Indicator - Main Execution Script
-v9.0.1-DIVINE-CERTIFIED
+v9.0.2-COSMIC-PERFECTION
 
-This script starts the Quantum Trading Indicator in the specified mode.
+This script starts the Quantum Trading Indicator in the specified mode with
+integrated advanced verification features and cosmic perfection modules.
 """
 
 import os
@@ -38,6 +39,7 @@ try:
     from ai.aggressor_ai import AggressorAI
     from ai.mirror_ai import MirrorAI
     from ai.shap_interpreter import SHAPTraderExplainer
+    
     from quantum_protocols.singularity_core import QuantumSingularityCore
     from quantum_protocols.apocalypse_proofing import ApocalypseProtocol, FearLiquidityConverter
     from quantum_protocols.holy_grail import HolyGrailModules, MannaGenerator, ArmageddonArbitrage, ResurrectionSwitch
@@ -45,6 +47,8 @@ try:
     from quantum_protocols.time_war import TimeWarModule
     from quantum_protocols.final_seal import FinalSealModule
     from divine_consciousness import DivineConsciousness
+    
+    from verification.integrated_cosmic_verification import IntegratedCosmicVerification
 except ImportError as e:
     logger.error(f"Failed to import required modules: {e}")
     logger.error("Please run 'python3 scripts/deploy_quantum.sh' first.")
@@ -300,7 +304,27 @@ class QuantumTradingSystem:
             
             if not data:
                 return
+            
+            if hasattr(self, 'integrated_verification'):
+                verification_result = self.integrated_verification.verify_data_integrity(data)
+                if not verification_result["verified"]:
+                    logger.warning(f"Data verification failed for {asset}: {verification_result.get('error', 'Unknown error')}")
+                    return
                 
+                signal_result = self.integrated_verification.generate_trading_signal(data)
+                
+                if signal_result.get("signal"):
+                    logger.info(f"Asset: {asset}, Signal: {signal_result['signal']['direction']}, " +
+                               f"Confidence: {signal_result['signal']['confidence']:.2f}, " +
+                               f"Source: {signal_result['signal']['source']}")
+                    
+                    return
+                else:
+                    logger.info(f"No signal generated for {asset}")
+                    if signal_result.get("verification_failed"):
+                        logger.warning(f"Verification failed: {signal_result.get('error', 'Unknown error')}")
+                    return
+            
             lstm_result = self.modules["temporal_lstm"].predict(data)
             
             aggressor_result = self.modules["aggressor_ai"].analyze_market(data)
@@ -529,11 +553,52 @@ def main():
     
     args = parser.parse_args()
     
+    logger.info("Starting Quantum Trading System")
+    logger.info(f"Assets: {args.asset}")
+    logger.info(f"Timeline: {args.timeline}")
+    logger.info(f"Loss setting: {args.loss}")
+    
+    config = {}
+    runtime_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "quantum_runtime")
+    
+    god_mode_config = os.path.join(runtime_dir, "god_mode.config")
+    if os.path.exists(god_mode_config):
+        try:
+            with open(god_mode_config, "r") as f:
+                config = json.load(f)
+            logger.info("GOD MODE configuration loaded successfully.")
+        except Exception as e:
+            logger.error(f"Failed to load GOD MODE configuration: {e}")
+    
+    logger.info(f"Running in mode: {config.get('mode', 'standard')}")
+    
+    verification_config = {
+        "god_mode": config.get("mode") == "god",
+        "eternal_execution": args.timeline == "ETERNITY",
+        "loss_disallowed": args.loss == "DISALLOWED",
+        "max_drawdown_threshold": 0.05,
+        "verification_modules": {
+            "dark_pool": True,
+            "gamma_trap": True,
+            "sentiment": True,
+            "alpha": True,
+            "order_book": True,
+            "neural_pattern": True,
+            "dark_pool_dna": True,
+            "market_regime": True
+        }
+    }
+    
+    integrated_verification = IntegratedCosmicVerification(verification_config)
+    logger.info("Integrated Cosmic Verification System initialized")
+    
     system = QuantumTradingSystem(
         assets=args.asset,
         timeline=args.timeline,
         loss_mode=args.loss
     )
+    
+    system.integrated_verification = integrated_verification
     
     system.start()
     
