@@ -1,16 +1,42 @@
 {
-    "events": [
-        {
-            "event_type": "2022-01-01",
-            "max_drawdown": 0.0007379564094573719,
-            "passed": "True",
-            "trades": 54,
-            "final_portfolio_value": 10069.194135647615,
-            "return": 0.006919413564761445
+    "asset": "XAUUSD",
+    "period": "2020-03-01 to 2022-10-01",
+    "slippage_enabled": true,
+    "drawdown_check": true,
+    "dark_pool_enabled": true,
+    "gamma_trap_enabled": true,
+    "sentiment_enabled": true,
+    "alpha_enabled": true,
+    "order_book_enabled": true,
+    "performance": {
+        "initial_capital": 10000.0,
+        "final_capital": 9937.861814941662,
+        "total_return": -0.006213818505833801,
+        "annualized_return": -0.0024071824939551068,
+        "sharpe_ratio": -0.027513932689443445,
+        "win_rate": 0.4444444444444444,
+        "avg_profit": 4.228187984569781,
+        "avg_loss": -2.2285809330621165,
+        "profit_factor": 1.517804598196993,
+        "total_trades": 9
+    },
+    "drawdowns": {
+        "max_drawdown": 0.00859822040766255,
+        "max_drawdown_threshold": 0.05,
+        "passed": "True"
+    },
+    "win_rate": 0.4444444444444444,
+    "win_rate_acceptable": false,
+    "max_drawdown": 0.00859822040766255,
+    "max_drawdown_acceptable": "True",
+    "advanced_metrics": {
+        "summary": "Advanced verification metrics available",
+        "modules_enabled": {
+            "dark_pool": true,
+            "gamma_trap": true,
+            "sentiment": true,
+            "alpha": true,
+            "order_book": true
         }
-    ],
-    "total_tests": 1,
-    "passed_tests": 1,
-    "worst_drawdown": 0.0007379564094573719,
-    "max_loss_event": "2022-01-01"
+    }
 }

@@ -1,14 +1,13 @@
 ========== TRADING COSTS LOG ==========
 
-Timestamp: 2025-05-18T17:29:31.526330
-Total trades: 9
-Average slippage: 3.00 bps
-Worst slippage: 3.00 bps (XAUUSD)
-Average latency: 228.96 ms
-Maximum latency: 313.17 ms
+Timestamp: 2025-05-19T06:29:00.835171
+Total trades: 0
+Average slippage: 0.00 bps
+Worst slippage: 0.00 bps (None)
+Average latency: 0.00 ms
+Maximum latency: 0.00 ms
 
 Average spreads by symbol:
-  XAUUSD: 3.00 bps
 
 ========== DETAILED TRADE COSTS ==========
 
