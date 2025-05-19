@@ -23,6 +23,9 @@ try:
     from core.retail_sentiment import RetailSentimentAnalyzer
     from core.alpha_equation import AlphaEquation
     from core.order_book_reconstruction import OrderBookReconstructor
+    from core.neural_pattern_recognition import NeuralPatternRecognition
+    from core.dark_pool_dna import DarkPoolDNA
+    from core.market_regime_detection import MarketRegimeDetection
     from core.integrated_verification import IntegratedVerification
     from tests.stress_loss_recovery import MarketStressTest
 except ImportError as e:
@@ -33,7 +36,8 @@ except ImportError as e:
 
 class LiveDataVerifier:
     def __init__(self, asset, start_date, end_date, slippage=True, drawdown_check=True,
-                 dark_pool=False, gamma_trap=False, sentiment=False, alpha=False, order_book=False):
+                 dark_pool=False, gamma_trap=False, sentiment=False, alpha=False, order_book=False,
+                 neural_pattern=False, dark_pool_dna=False, market_regime=False):
         """
         Initialize the live data verifier
         
@@ -48,6 +52,9 @@ class LiveDataVerifier:
         - sentiment: Whether to enable retail sentiment analysis
         - alpha: Whether to enable alpha equation analysis
         - order_book: Whether to enable order book reconstruction
+        - neural_pattern: Whether to enable neural pattern recognition
+        - dark_pool_dna: Whether to enable dark pool DNA sequencing
+        - market_regime: Whether to enable market regime detection
         """
         self.asset = asset.replace('/', '')  # Remove slash for file handling
         self.start_date = pd.to_datetime(start_date)
@@ -59,19 +66,25 @@ class LiveDataVerifier:
         self.sentiment = sentiment
         self.alpha = alpha
         self.order_book = order_book
+        self.neural_pattern = neural_pattern
+        self.dark_pool_dna = dark_pool_dna
+        self.market_regime = market_regime
         
         self.fill_engine = FillEngine(slippage_enabled=slippage, order_book_simulation=order_book)
         self.stress_test = MarketStressTest(max_drawdown_threshold=0.05)
         
         # Initialize advanced verification modules if enabled
-        if any([dark_pool, gamma_trap, sentiment, alpha, order_book]):
+        if any([dark_pool, gamma_trap, sentiment, alpha, order_book, neural_pattern, dark_pool_dna, market_regime]):
             self.integrated_verification = IntegratedVerification()
             self.integrated_verification.modules_enabled = {
                 "dark_pool": dark_pool,
                 "gamma_trap": gamma_trap,
                 "sentiment": sentiment,
                 "alpha": alpha,
-                "order_book": order_book
+                "order_book": order_book,
+                "neural_pattern": neural_pattern,
+                "dark_pool_dna": dark_pool_dna,
+                "market_regime": market_regime
             }
         else:
             self.integrated_verification = None
@@ -87,6 +100,9 @@ class LiveDataVerifier:
             'sentiment_enabled': sentiment,
             'alpha_enabled': alpha,
             'order_book_enabled': order_book,
+            'neural_pattern_enabled': neural_pattern,
+            'dark_pool_dna_enabled': dark_pool_dna,
+            'market_regime_enabled': market_regime,
             'trades': [],
             'performance': {},
             'drawdowns': {},
@@ -903,6 +919,12 @@ def main():
                         help='Enable alpha equation analysis')
     parser.add_argument('--order-book', action='store_true',
                         help='Enable order book reconstruction')
+    parser.add_argument('--neural-pattern', action='store_true',
+                        help='Enable neural pattern recognition')
+    parser.add_argument('--dark-pool-dna', action='store_true',
+                        help='Enable dark pool DNA sequencing')
+    parser.add_argument('--market-regime', action='store_true',
+                        help='Enable market regime detection')
     parser.add_argument('--all-advanced', action='store_true',
                         help='Enable all advanced verification features')
     
@@ -914,6 +936,9 @@ def main():
         args.sentiment = True
         args.alpha = True
         args.order_book = True
+        args.neural_pattern = True
+        args.dark_pool_dna = True
+        args.market_regime = True
     
     verifier = LiveDataVerifier(
         asset=args.asset,
@@ -925,7 +950,10 @@ def main():
         gamma_trap=args.gamma_trap,
         sentiment=args.sentiment,
         alpha=args.alpha,
-        order_book=args.order_book
+        order_book=args.order_book,
+        neural_pattern=args.neural_pattern,
+        dark_pool_dna=args.dark_pool_dna,
+        market_regime=args.market_regime
     )
     
     
@@ -962,7 +990,8 @@ def main():
     print(f"  Performance Chart: performance_chart.png")
     
     # Display advanced verification information if enabled
-    if any([args.dark_pool, args.gamma_trap, args.sentiment, args.alpha, args.order_book]):
+    if any([args.dark_pool, args.gamma_trap, args.sentiment, args.alpha, args.order_book, 
+            args.neural_pattern, args.dark_pool_dna, args.market_regime]):
         print("\nAdvanced Verification Features:")
         if args.dark_pool:
             print("  ✅ Dark Pool Liquidity Mapping: Enabled")
@@ -974,6 +1003,12 @@ def main():
             print("  ✅ Alpha Equation Analysis: Enabled")
         if args.order_book:
             print("  ✅ Order Book Reconstruction: Enabled")
+        if args.neural_pattern:
+            print("  ✅ Neural Pattern Recognition: Enabled")
+        if args.dark_pool_dna:
+            print("  ✅ Dark Pool DNA Sequencing: Enabled")
+        if args.market_regime:
+            print("  ✅ Market Regime Detection: Enabled")
     
     win_rate = results['performance']['win_rate']
     if 0.5 <= win_rate <= 0.8:
