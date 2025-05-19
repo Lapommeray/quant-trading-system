@@ -18,6 +18,12 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 try:
     from core.fill_engine import FillEngine
+    from core.dark_pool_mapper import DarkPoolMapper
+    from core.gamma_trap import GammaTrap
+    from core.retail_sentiment import RetailSentimentAnalyzer
+    from core.alpha_equation import AlphaEquation
+    from core.order_book_reconstruction import OrderBookReconstructor
+    from core.integrated_verification import IntegratedVerification
     from tests.stress_loss_recovery import MarketStressTest
 except ImportError as e:
     print(f"Error importing modules: {e}")
@@ -26,7 +32,8 @@ except ImportError as e:
 
 
 class LiveDataVerifier:
-    def __init__(self, asset, start_date, end_date, slippage=True, drawdown_check=True):
+    def __init__(self, asset, start_date, end_date, slippage=True, drawdown_check=True,
+                 dark_pool=False, gamma_trap=False, sentiment=False, alpha=False, order_book=False):
         """
         Initialize the live data verifier
         
@@ -36,15 +43,38 @@ class LiveDataVerifier:
         - end_date: End date for testing (YYYY-MM-DD)
         - slippage: Whether to enable slippage simulation
         - drawdown_check: Whether to check for drawdowns
+        - dark_pool: Whether to enable dark pool liquidity mapping
+        - gamma_trap: Whether to enable gamma trap analysis
+        - sentiment: Whether to enable retail sentiment analysis
+        - alpha: Whether to enable alpha equation analysis
+        - order_book: Whether to enable order book reconstruction
         """
         self.asset = asset.replace('/', '')  # Remove slash for file handling
         self.start_date = pd.to_datetime(start_date)
         self.end_date = pd.to_datetime(end_date)
         self.slippage = slippage
         self.drawdown_check = drawdown_check
+        self.dark_pool = dark_pool
+        self.gamma_trap = gamma_trap
+        self.sentiment = sentiment
+        self.alpha = alpha
+        self.order_book = order_book
         
-        self.fill_engine = FillEngine(slippage_enabled=slippage)
+        self.fill_engine = FillEngine(slippage_enabled=slippage, order_book_simulation=order_book)
         self.stress_test = MarketStressTest(max_drawdown_threshold=0.05)
+        
+        # Initialize advanced verification modules if enabled
+        if any([dark_pool, gamma_trap, sentiment, alpha, order_book]):
+            self.integrated_verification = IntegratedVerification()
+            self.integrated_verification.modules_enabled = {
+                "dark_pool": dark_pool,
+                "gamma_trap": gamma_trap,
+                "sentiment": sentiment,
+                "alpha": alpha,
+                "order_book": order_book
+            }
+        else:
+            self.integrated_verification = None
         
         self.results = {
             'asset': asset,
@@ -52,9 +82,15 @@ class LiveDataVerifier:
             'end_date': end_date,
             'slippage_enabled': slippage,
             'drawdown_check': drawdown_check,
+            'dark_pool_enabled': dark_pool,
+            'gamma_trap_enabled': gamma_trap,
+            'sentiment_enabled': sentiment,
+            'alpha_enabled': alpha,
+            'order_book_enabled': order_book,
             'trades': [],
             'performance': {},
-            'drawdowns': {}
+            'drawdowns': {},
+            'advanced_metrics': {}
         }
     
     def load_data(self, data_path=None):
@@ -458,7 +494,30 @@ class LiveDataVerifier:
                 
                 volume = portfolio_value * 0.1 * confidence * size / raw_price
                 
-                if self.slippage:
+                # Use integrated verification if enabled
+                if self.integrated_verification and any([self.dark_pool, self.gamma_trap, self.sentiment, self.order_book]):
+                    analysis = self.integrated_verification.analyze_symbol(self.asset, raw_price)
+                    
+                    if 'advanced_metrics' not in self.results:
+                        self.results['advanced_metrics'] = {}
+                    
+                    if self.asset not in self.results['advanced_metrics']:
+                        self.results['advanced_metrics'][self.asset] = []
+                    
+                    self.results['advanced_metrics'][self.asset].append(analysis)
+                    
+                    # Execute trade with integrated verification
+                    fill = self.integrated_verification.execute_trade(
+                        symbol=self.asset,
+                        direction=direction,
+                        price=raw_price,
+                        volume=volume
+                    )
+                    fill_price = fill['fill_price']
+                    
+                    fill['timestamp'] = bar['timestamp']
+                    
+                elif self.slippage:
                     fill = self.fill_engine.execute_order(
                         symbol=self.asset,
                         direction=direction,
@@ -735,6 +794,11 @@ class LiveDataVerifier:
             'period': f"{self.start_date.date()} to {self.end_date.date()}",
             'slippage_enabled': self.slippage,
             'drawdown_check': self.drawdown_check,
+            'dark_pool_enabled': self.dark_pool,
+            'gamma_trap_enabled': self.gamma_trap,
+            'sentiment_enabled': self.sentiment,
+            'alpha_enabled': self.alpha,
+            'order_book_enabled': self.order_book,
             'performance': self.results['performance'],
             'drawdowns': self.results['drawdowns'],
             'win_rate': self.results['performance']['win_rate'],
@@ -742,6 +806,18 @@ class LiveDataVerifier:
             'max_drawdown': self.results['drawdowns'].get('max_drawdown', 0),
             'max_drawdown_acceptable': self.results['drawdowns'].get('passed', True)
         }
+        
+        if 'advanced_metrics' in self.results:
+            stress_report['advanced_metrics'] = {
+                'summary': 'Advanced verification metrics available',
+                'modules_enabled': {
+                    'dark_pool': self.dark_pool,
+                    'gamma_trap': self.gamma_trap,
+                    'sentiment': self.sentiment,
+                    'alpha': self.alpha,
+                    'order_book': self.order_book
+                }
+            }
         
         class CustomEncoder(json.JSONEncoder):
             def default(self, obj):
@@ -817,14 +893,39 @@ def main():
     parser.add_argument('--record', type=str, default='trades.csv',
                         help='Output file for trade records (default: trades.csv)')
     
+    parser.add_argument('--dark-pool', action='store_true',
+                        help='Enable dark pool liquidity mapping')
+    parser.add_argument('--gamma-trap', action='store_true',
+                        help='Enable gamma trap analysis')
+    parser.add_argument('--sentiment', action='store_true',
+                        help='Enable retail sentiment analysis')
+    parser.add_argument('--alpha', action='store_true',
+                        help='Enable alpha equation analysis')
+    parser.add_argument('--order-book', action='store_true',
+                        help='Enable order book reconstruction')
+    parser.add_argument('--all-advanced', action='store_true',
+                        help='Enable all advanced verification features')
+    
     args = parser.parse_args()
+    
+    if args.all_advanced:
+        args.dark_pool = True
+        args.gamma_trap = True
+        args.sentiment = True
+        args.alpha = True
+        args.order_book = True
     
     verifier = LiveDataVerifier(
         asset=args.asset,
         start_date=args.start,
         end_date=args.end,
         slippage=args.slippage == 'on',
-        drawdown_check=args.drawdown_check
+        drawdown_check=args.drawdown_check,
+        dark_pool=args.dark_pool,
+        gamma_trap=args.gamma_trap,
+        sentiment=args.sentiment,
+        alpha=args.alpha,
+        order_book=args.order_book
     )
     
     
@@ -860,6 +961,20 @@ def main():
     print(f"  Stress Report: stress_report.json")
     print(f"  Performance Chart: performance_chart.png")
     
+    # Display advanced verification information if enabled
+    if any([args.dark_pool, args.gamma_trap, args.sentiment, args.alpha, args.order_book]):
+        print("\nAdvanced Verification Features:")
+        if args.dark_pool:
+            print("  ✅ Dark Pool Liquidity Mapping: Enabled")
+        if args.gamma_trap:
+            print("  ✅ Gamma Trap Analysis: Enabled")
+        if args.sentiment:
+            print("  ✅ Retail Sentiment Analysis: Enabled")
+        if args.alpha:
+            print("  ✅ Alpha Equation Analysis: Enabled")
+        if args.order_book:
+            print("  ✅ Order Book Reconstruction: Enabled")
+    
     win_rate = results['performance']['win_rate']
     if 0.5 <= win_rate <= 0.8:
         print("\n✅ Win rate is realistic and acceptable")
@@ -872,6 +987,24 @@ def main():
             print(f"✅ Max drawdown ({max_drawdown:.2%}) is below threshold (5%)")
         else:
             print(f"❌ Max drawdown ({max_drawdown:.2%}) exceeds threshold (5%)")
+            
+    # Generate alpha report if enabled
+    if args.alpha and 'trades' in results and results['trades']:
+        try:
+            from core.alpha_equation import AlphaEquation
+            alpha = AlphaEquation()
+            trades_df = pd.DataFrame(results['trades'])
+            alpha_report = alpha.calculate_alpha(trades_df)
+            
+            print("\nAlpha Equation Analysis:")
+            print(f"  Edge Frequency: {alpha_report['edge_frequency']:.2%}")
+            print(f"  Edge Size: {alpha_report['edge_size']:.4f}")
+            print(f"  Error Frequency: {alpha_report['error_frequency']:.2%}")
+            print(f"  Error Cost: {alpha_report['error_cost']:.4f}")
+            print(f"  Expected Profit: {alpha_report['expected_profit']:.4f}")
+            print(f"  Alpha Equation: {alpha_report['alpha_equation']}")
+        except Exception as e:
+            print(f"\nError generating alpha report: {e}")
     
     return results
 

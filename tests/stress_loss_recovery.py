@@ -366,7 +366,7 @@ def simulate_black_swan(event, trading_system=None, max_drawdown_threshold=0.05)
         except ImportError:
             print("Warning: Could not import real trading system. Using mock system.")
             class MockTradingSystem:
-                def __init__(self):
+                def __init__(self, use_advanced_features=True):
                     self.last_prices = []
                     self.last_highs = []
                     self.last_lows = []
@@ -378,6 +378,25 @@ def simulate_black_swan(event, trading_system=None, max_drawdown_threshold=0.05)
                     self.trade_cooldown = 0
                     self.consecutive_down_days = 0
                     self.max_position_size = 0.03  # Reduced max position size to 3% of portfolio
+                    self.recent_volatility_change = 0
+                    
+                    self.use_advanced_features = use_advanced_features
+                    if use_advanced_features:
+                        try:
+                            from core.dark_pool_mapper import DarkPoolMapper
+                            from core.gamma_trap import GammaTrap
+                            from core.retail_sentiment import RetailSentimentAnalyzer
+                            from core.order_book_reconstruction import OrderBookReconstructor
+                            
+                            self.dark_pool = DarkPoolMapper()
+                            self.gamma_trap = GammaTrap()
+                            self.sentiment = RetailSentimentAnalyzer()
+                            self.order_book = OrderBookReconstructor()
+                            
+                            print("✅ Advanced verification modules loaded successfully")
+                        except ImportError as e:
+                            print(f"⚠️ Could not import advanced modules: {e}")
+                            self.use_advanced_features = False
                 
                 def process_bar(self, bar):
                     self.last_prices.append(bar['close'])
@@ -406,20 +425,42 @@ def simulate_black_swan(event, trading_system=None, max_drawdown_threshold=0.05)
                         
                         self.volatility = sum(ranges) / len(ranges) / self.last_prices[-1]
                     
+                    if len(self.last_prices) > 10:
+                        prev_ranges = []
+                        for i in range(len(self.last_highs) - 24, len(self.last_highs) - 14):
+                            if i >= 0:
+                                true_range = max(
+                                    self.last_highs[i] - self.last_lows[i],
+                                    abs(self.last_highs[i] - self.last_prices[i-1]),
+                                    abs(self.last_lows[i] - self.last_prices[i-1])
+                                )
+                                prev_ranges.append(true_range)
+                        
+                        if prev_ranges:
+                            prev_volatility = sum(prev_ranges) / len(prev_ranges) / self.last_prices[-15]
+                            self.recent_volatility_change = (self.volatility / prev_volatility) - 1
+                    
                     self.consecutive_down_days = 0
                     if len(self.last_prices) > 3:
                         for i in range(len(self.last_prices)-3, len(self.last_prices)):
                             if i > 0 and self.last_prices[i] < self.last_prices[i-1]:
                                 self.consecutive_down_days += 1
                     
-                    if self.volatility > 0.008 or self.consecutive_down_days >= 2:
-                        self.market_regime = 'crisis'
-                    elif self.volatility > 0.005:
+                    if self.volatility > 0.03 or self.recent_volatility_change > 0.5:
                         self.market_regime = 'volatile'
-                    elif self.volatility > 0.003:
+                        print(f"VOLATILE MARKET DETECTED: Volatility={self.volatility:.4f}, Change={self.recent_volatility_change:.2f}")
+                    elif self.volatility > 0.05 or self.recent_volatility_change > 0.8:
+                        self.market_regime = 'crisis'
+                        print(f"CRISIS REGIME DETECTED: Volatility={self.volatility:.4f}, Change={self.recent_volatility_change:.2f}")
+                        if self.recent_volatility_change > 1.2:
+                            self.circuit_breaker_active = True
+                            print("⚠️ CIRCUIT BREAKER ACTIVATED: Extreme volatility spike detected")
+                    elif self.volatility > 0.02 or self.recent_volatility_change > 0.3:
                         self.market_regime = 'pre_crisis'
+                        print(f"PRE-CRISIS DETECTED: Volatility={self.volatility:.4f}, Change={self.recent_volatility_change:.2f}")
                     else:
                         self.market_regime = 'normal'
+                        self.circuit_breaker_active = False
                     
                     # More aggressive circuit breaker for extreme volatility
                     if self.volatility > 0.01 or self.consecutive_down_days >= 3:
@@ -453,6 +494,95 @@ def simulate_black_swan(event, trading_system=None, max_drawdown_threshold=0.05)
                             'confidence': 0.9,
                             'size': position_size
                         }
+                    
+                    if self.use_advanced_features and len(self.last_prices) > 5:
+                        try:
+                            signals = []
+                            
+                            dark_pool_signal = self.dark_pool.analyze_dark_pool_signal("BTCUSD", bar['close'])
+                            if dark_pool_signal["direction"]:
+                                signals.append({
+                                    "source": "dark_pool",
+                                    "direction": dark_pool_signal["direction"],
+                                    "confidence": dark_pool_signal["confidence"]
+                                })
+                            
+                            gamma_signal = self.gamma_trap.analyze_gamma_hedging("SPX", bar['close'])
+                            if gamma_signal["direction"]:
+                                signals.append({
+                                    "source": "gamma_trap",
+                                    "direction": gamma_signal["direction"],
+                                    "confidence": gamma_signal["confidence"]
+                                })
+                            
+                            sentiment_signal = self.sentiment.analyze_sentiment("BTCUSD")
+                            if sentiment_signal["direction"]:
+                                signals.append({
+                                    "source": "sentiment",
+                                    "direction": sentiment_signal["direction"],
+                                    "confidence": sentiment_signal["confidence"]
+                                })
+                            
+                            self.order_book.update("BTCUSD", bar['close'])
+                            liquidity = self.order_book.get_liquidity_metrics()
+                            if liquidity["imbalance"] < -0.2:
+                                signals.append({
+                                    "source": "order_book",
+                                    "direction": "BUY",
+                                    "confidence": min(0.7, abs(liquidity["imbalance"]))
+                                })
+                            elif liquidity["imbalance"] > 0.2:
+                                signals.append({
+                                    "source": "order_book",
+                                    "direction": "SELL",
+                                    "confidence": min(0.7, abs(liquidity["imbalance"]))
+                                })
+                            
+                            if signals and not self.circuit_breaker_active:
+                                buy_votes = 0
+                                sell_votes = 0
+                                buy_confidence = 0
+                                sell_confidence = 0
+                                
+                                for signal in signals:
+                                    if signal["direction"] == "BUY":
+                                        buy_votes += 1
+                                        buy_confidence += signal["confidence"]
+                                    elif signal["direction"] == "SELL":
+                                        sell_votes += 1
+                                        sell_confidence += signal["confidence"]
+                                
+                                if buy_votes > sell_votes:
+                                    direction = "BUY"
+                                    confidence = buy_confidence / buy_votes
+                                    self.position = "LONG"
+                                elif sell_votes > buy_votes:
+                                    direction = "SELL"
+                                    confidence = sell_confidence / sell_votes
+                                    self.position = "SHORT"
+                                elif buy_confidence > sell_confidence:
+                                    direction = "BUY"
+                                    confidence = buy_confidence / buy_votes
+                                    self.position = "LONG"
+                                elif sell_confidence > buy_confidence:
+                                    direction = "SELL"
+                                    confidence = sell_confidence / sell_votes
+                                    self.position = "SHORT"
+                                else:
+                                    return None
+                                
+                                self.entry_price = bar['close']
+                                self.trade_cooldown = 3
+                                
+                                return {
+                                    'direction': direction,
+                                    'price': bar['close'],
+                                    'confidence': confidence,
+                                    'size': position_size,
+                                    'source': 'advanced_verification'
+                                }
+                        except Exception as e:
+                            print(f"Error in advanced verification: {e}")
                     
                     import random
                     if random.random() > 0.8 and not self.circuit_breaker_active:
