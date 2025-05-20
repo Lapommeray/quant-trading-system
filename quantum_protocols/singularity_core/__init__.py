@@ -1,1 +1,0 @@
-from .quantum_singularity import QuantumSingularityCore
