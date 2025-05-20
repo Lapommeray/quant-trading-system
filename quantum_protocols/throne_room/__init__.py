@@ -1,1 +1,0 @@
-from .throne_interface import ThroneRoomInterface

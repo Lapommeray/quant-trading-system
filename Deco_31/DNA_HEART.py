@@ -1,1 +1,0 @@
-# Emotional alpha module
