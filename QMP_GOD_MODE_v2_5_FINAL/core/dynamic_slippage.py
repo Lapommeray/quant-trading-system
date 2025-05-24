@@ -39,26 +39,28 @@ class DynamicLiquiditySlippage:
         return default_spreads.get(ticker, self.base_spread_bps)
         
     def get_dynamic_slippage(self, symbol, size, market_conditions):
-        """Calculate slippage based on dynamic market liquidity"""
+        """Calculate slippage based on simulated order book liquidity"""
         base_spread = self.get_spread_bps(symbol)
         
+        # Simulate order book depth and liquidity
+        order_book = self._simulate_order_book(symbol, market_conditions)
+        mid_price = (order_book['best_bid'] + order_book['best_ask']) / 2
+        
+        # Calculate market impact based on order size vs available liquidity
+        available_liquidity = order_book['total_bid_size'] + order_book['total_ask_size']
+        size_impact = min(3.0, size / available_liquidity) if available_liquidity > 0 else 3.0
+        
         volatility_factor = 1.0 + (market_conditions.get('volatility', 0.1) / 0.1)
-        
-        typical_depth = self._get_typical_depth(symbol)
-        size_impact = min(2.0, size / typical_depth)
-        
-        current_hour = market_conditions.get('hour', datetime.now().hour)
-        time_factor = self._get_time_factor(current_hour)
-        
+        time_factor = self._get_time_factor(market_conditions.get('hour', datetime.now().hour))
         news_factor = market_conditions.get('news_factor', 1.0)
         
         dynamic_spread = base_spread * volatility_factor * (1 + size_impact) * time_factor * news_factor
         
         capped_spread = min(dynamic_spread, base_spread * 10)
         
-        self.logger.debug(f"Dynamic slippage for {symbol}: {capped_spread:.2f} bps (base: {base_spread:.2f})")
+        self.logger.debug(f"Dynamic slippage for {symbol}: {capped_spread:.2f} bps (size impact: {size_impact:.2f})")
         
-        return capped_spread / 10000.0  # Convert bps to decimal (1 bps = 0.0001)
+        return capped_spread / 10000.0  # Convert bps to decimal(1 bps = 0.0001)
         
     def _get_typical_depth(self, symbol):
         """Get typical order book depth for a symbol"""
@@ -74,6 +76,21 @@ class DynamicLiquiditySlippage:
         ticker = symbol.split('.')[0] if '.' in symbol else symbol
         
         return default_depths.get(ticker, 1000000)  # Default $1M
+        
+    def _simulate_order_book(self, symbol, market_conditions):
+        """Simulate realistic order book conditions"""
+        base_depth = self._get_typical_depth(symbol)
+        volatility = market_conditions.get('volatility', 0.1)
+        
+        # Reduce liquidity during high volatility
+        liquidity_factor = max(0.2, 1.0 - (volatility - 0.1) * 2)
+        
+        return {
+            'best_bid': 100.0,  # Placeholder - would use real market data
+            'best_ask': 100.05,
+            'total_bid_size': base_depth * liquidity_factor * 0.5,
+            'total_ask_size': base_depth * liquidity_factor * 0.5
+        }
         
     def _get_time_factor(self, hour):
         """Get time-of-day liquidity factor"""

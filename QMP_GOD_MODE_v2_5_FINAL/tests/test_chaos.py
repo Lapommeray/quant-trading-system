@@ -49,7 +49,7 @@ class TestChaosScenarios(unittest.TestCase):
         self.assertLess(position_size, 0.1, "Position size too aggressive under high volatility")
         
     def test_walk_forward_data_leak(self):
-        """Test that walk-forward validation prevents data leakage"""
+        """Test that walk-forward validation prevents data leakage with paranoid checks"""
         from QMP_GOD_MODE_v2_5_FINAL.core.walk_forward_backtest import WalkForwardBacktester
         
         dates = pd.date_range('2024-01-01', periods=300, freq='D')
@@ -75,7 +75,15 @@ class TestChaosScenarios(unittest.TestCase):
         test_indices = set(test_data['1d'].index)
         
         self.assertEqual(len(train_indices.intersection(test_indices)), 0, 
-                       "Data leak detected: train and test sets overlap")
+                       "CRITICAL: Data leak detected - train and test sets overlap")
+        
+        max_train_date = train_data['1d'].index.max()
+        min_test_date = test_data['1d'].index.min()
+        self.assertLess(max_train_date, min_test_date,
+                       "CRITICAL: Train data contains future information relative to test data")
+        
+        self.assertGreaterEqual((min_test_date - max_train_date).days, 1,
+                               "CRITICAL: Insufficient buffer gap between train and test data")
         
     def test_expected_shortfall_calculation(self):
         """Test Expected Shortfall calculation for fat-tail risk"""

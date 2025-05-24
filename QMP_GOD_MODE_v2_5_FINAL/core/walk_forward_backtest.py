@@ -35,9 +35,18 @@ class WalkForwardBacktester:
         return results
         
     def _extract_data_range(self, data, start_date, end_date):
-        """Extract data within date range ensuring no future leakage"""
+        """Extract data within date range using integer indexing to prevent leakage"""
         range_data = {}
         for timeframe, df in data.items():
-            mask = (df.index >= start_date) & (df.index < end_date)
-            range_data[timeframe] = df.loc[mask].copy()
+            try:
+                start_idx = df.index.get_indexer([start_date], method='bfill')[0]
+                end_idx = df.index.get_indexer([end_date], method='ffill')[0]
+                
+                assert end_idx > start_idx, f"Index error: end_idx ({end_idx}) <= start_idx ({start_idx})"
+                
+                range_data[timeframe] = df.iloc[start_idx:end_idx].copy()
+                
+            except (IndexError, KeyError):
+                range_data[timeframe] = pd.DataFrame(columns=df.columns)
+                
         return range_data

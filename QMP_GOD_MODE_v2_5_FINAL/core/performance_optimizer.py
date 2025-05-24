@@ -20,9 +20,10 @@ if NUMBA_AVAILABLE:
     def fast_signal_processing(prices, volumes):
         """Numba-accelerated signal processing"""
         signals = np.empty(len(prices))
+        signals[0] = 0.0  # Initialize first element
         for i in range(1, len(prices)):
             price_momentum = prices[i] > prices[i-1]
-            volume_confirmation = volumes[i] > volumes[i-1] if i > 0 else True
+            volume_confirmation = volumes[i] > volumes[i-1]
             signals[i] = 1.0 if (price_momentum and volume_confirmation) else 0.0
         return signals
 else:
@@ -50,8 +51,8 @@ class PerformanceOptimizer:
             return None
             
         df = history_data['1m']
-        prices = df['Close'].values
-        volumes = df['Volume'].values
+        prices = df['Close'].to_numpy(copy=True)  # Zero-copy if possible
+        volumes = df['Volume'].to_numpy(copy=True)
         
         volatility = fast_volatility_calc(prices)
         signals = fast_signal_processing(prices, volumes)
