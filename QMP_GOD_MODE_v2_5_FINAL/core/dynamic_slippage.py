@@ -39,26 +39,41 @@ class DynamicLiquiditySlippage:
         return default_spreads.get(ticker, self.base_spread_bps)
         
     def get_dynamic_slippage(self, symbol, size, market_conditions):
-        """Calculate slippage based on dynamic market liquidity"""
+        """Calculate slippage based on simulated order book liquidity"""
         base_spread = self.get_spread_bps(symbol)
         
+        # Simulate order book depth and liquidity
+        order_book = self._simulate_order_book(symbol, market_conditions)
+        mid_price = (order_book['best_bid'] + order_book['best_ask']) / 2
+        
+        # Calculate market impact based on order size vs available liquidity
+        available_liquidity = order_book['total_bid_size'] + order_book['total_ask_size']
+        
+        size_ratio = size / available_liquidity if available_liquidity > 0 else 10.0
+        
+        size_impact = min(5.0, np.power(size_ratio, 0.6) * 2.0)
+        
+        direct_size_component = 0.01 * (size / 10000.0)  # 1 bp per 10k units
+        
         volatility_factor = 1.0 + (market_conditions.get('volatility', 0.1) / 0.1)
-        
-        typical_depth = self._get_typical_depth(symbol)
-        size_impact = min(2.0, size / typical_depth)
-        
-        current_hour = market_conditions.get('hour', datetime.now().hour)
-        time_factor = self._get_time_factor(current_hour)
-        
+        time_factor = self._get_time_factor(market_conditions.get('hour', datetime.now().hour))
         news_factor = market_conditions.get('news_factor', 1.0)
+        
+        # Exponential scaling for large orders during high volatility
+        if size_ratio > 0.1 and market_conditions.get('volatility', 0.1) > 0.2:
+            volatility_factor *= (1.0 + size_ratio)
         
         dynamic_spread = base_spread * volatility_factor * (1 + size_impact) * time_factor * news_factor
         
-        capped_spread = min(dynamic_spread, base_spread * 10)
+        dynamic_spread += direct_size_component * base_spread
         
-        self.logger.debug(f"Dynamic slippage for {symbol}: {capped_spread:.2f} bps (base: {base_spread:.2f})")
+        size_cap_factor = 1.0 + (size / 100000.0)  # Scale with order size
+        max_spread = base_spread * (10 + 5 * market_conditions.get('news_factor', 1.0)) * size_cap_factor
+        capped_spread = min(dynamic_spread, max_spread)
         
-        return capped_spread / 10000.0  # Convert bps to decimal (1 bps = 0.0001)
+        self.logger.debug(f"Dynamic slippage for {symbol} (size={size}): {capped_spread:.2f} bps (size impact: {size_impact:.2f}, direct component: {direct_size_component * base_spread:.2f} bps)")
+        
+        return capped_spread / 10000.0  # Convert bps to decimal(1 bps = 0.0001)
         
     def _get_typical_depth(self, symbol):
         """Get typical order book depth for a symbol"""
@@ -75,6 +90,21 @@ class DynamicLiquiditySlippage:
         
         return default_depths.get(ticker, 1000000)  # Default $1M
         
+    def _simulate_order_book(self, symbol, market_conditions):
+        """Simulate realistic order book conditions"""
+        base_depth = self._get_typical_depth(symbol)
+        volatility = market_conditions.get('volatility', 0.1)
+        
+        # Reduce liquidity during high volatility
+        liquidity_factor = max(0.2, 1.0 - (volatility - 0.1) * 2)
+        
+        return {
+            'best_bid': 100.0,  # Placeholder - would use real market data
+            'best_ask': 100.05,
+            'total_bid_size': base_depth * liquidity_factor * 0.5,
+            'total_ask_size': base_depth * liquidity_factor * 0.5
+        }
+        
     def _get_time_factor(self, hour):
         """Get time-of-day liquidity factor"""
         us_market_open = 9  # 9 AM ET
@@ -87,15 +117,17 @@ class DynamicLiquiditySlippage:
         europe_market_close = 11  # 11 AM ET (5 PM CET)
         
         in_us_market = us_market_open <= hour < us_market_close
-        in_asia_market = asia_market_open <= hour or hour < asia_market_close
+        in_asia_market = (asia_market_open <= hour <= 23) or (0 <= hour < asia_market_close)
         in_europe_market = europe_market_open <= hour < europe_market_close
         
         if in_us_market and (in_asia_market or in_europe_market):
             return 1.0  # Maximum liquidity when multiple markets open
-        elif in_us_market or in_asia_market or in_europe_market:
-            return 1.2  # Good liquidity when at least one major market open
+        elif in_us_market:
+            return 1.2  # Good liquidity during US market hours
+        elif in_asia_market or in_europe_market:
+            return 1.4  # Moderate liquidity during other major market hours
         else:
-            return 1.5  # Lower liquidity during off-hours
+            return 1.8  # Lower liquidity during complete off-hours
             
     def calculate_slippage(self, symbol, price, size, side, market_conditions=None):
         """Calculate slippage for a trade"""
