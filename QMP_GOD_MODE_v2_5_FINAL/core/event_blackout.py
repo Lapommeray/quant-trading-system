@@ -1,5 +1,7 @@
 import pandas as pd
+import numpy as np
 from datetime import datetime, timedelta
+import logging
 
 class EventBlackoutManager:
     def __init__(self):
@@ -9,6 +11,20 @@ class EventBlackoutManager:
             "CPI": {"time": "08:30", "duration": 60, "days": [1, 2, 3, 4]}, # Various weekdays
             "GDP": {"time": "08:30", "duration": 45, "days": [1, 2, 3, 4]}
         }
+        self.logger = self._setup_logger()
+        
+    def _setup_logger(self):
+        """Set up logger"""
+        logger = logging.getLogger("EventBlackoutManager")
+        logger.setLevel(logging.INFO)
+        
+        if not logger.handlers:
+            handler = logging.StreamHandler()
+            formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
+            handler.setFormatter(formatter)
+            logger.addHandler(handler)
+        
+        return logger
         
     def is_blackout_period(self, current_time):
         """Check if current time is during a news blackout period"""
@@ -24,10 +40,72 @@ class EventBlackoutManager:
                 end_time = event_time + timedelta(minutes=config["duration"])
                 
                 if event_time <= current_time <= end_time:
+                    self.logger.info(f"Trading blackout due to {event_name} event")
                     return True, event_name
                     
         return False, None
         
     def check_weekend_market(self, current_time):
         """Prevent trading during weekends"""
-        return current_time.weekday() >= 5  # Saturday = 5, Sunday = 6
+        is_weekend = current_time.weekday() >= 5  # Saturday = 5, Sunday = 6
+        if is_weekend:
+            self.logger.info("Weekend trading blackout in effect")
+        return is_weekend
+        
+    def simulate_black_swan_events(self, returns_data):
+        """Simulate black swan events for chaos testing"""
+        black_swan_scenarios = [
+            {'name': 'Flash Crash', 'magnitude': -0.10, 'duration': 5},  # 10% drop in 5 minutes
+            {'name': 'Fed Surprise', 'magnitude': -0.05, 'duration': 30},  # 5% drop in 30 minutes
+            {'name': 'Liquidity Crisis', 'magnitude': -0.15, 'duration': 60},  # 15% drop in 1 hour
+            {'name': 'Circuit Breaker', 'magnitude': -0.07, 'duration': 15}   # 7% drop triggers halt
+        ]
+        
+        results = []
+        for scenario in black_swan_scenarios:
+            stressed_returns = returns_data.copy()
+            
+            shock_magnitude = scenario['magnitude']
+            stressed_returns.iloc[-1] = shock_magnitude
+            
+            portfolio_impact = self.calculate_portfolio_stress(stressed_returns, scenario)
+            results.append({
+                'scenario': scenario['name'],
+                'impact': portfolio_impact,
+                'max_drawdown': portfolio_impact.get('max_drawdown', 0),
+                'recovery_time': scenario['duration']
+            })
+            
+            self.logger.info(f"Black swan simulation: {scenario['name']} - Max drawdown: {portfolio_impact.get('max_drawdown', 0):.2%}")
+            
+        return results
+        
+    def calculate_portfolio_stress(self, returns, scenario):
+        """Calculate portfolio impact under stress scenario"""
+        cumulative_returns = (1 + returns).cumprod()
+        peak = cumulative_returns.expanding().max()
+        drawdown = (cumulative_returns / peak) - 1
+        max_drawdown = drawdown.min()
+        
+        var_95 = np.percentile(returns, 5)
+        es_95 = returns[returns <= var_95].mean() if len(returns[returns <= var_95]) > 0 else var_95
+        
+        recovery_periods = scenario['duration'] * 2  # Estimate recovery time
+        
+        return {
+            'max_drawdown': max_drawdown,
+            'var_95': var_95,
+            'es_95': es_95,
+            'recovery_periods': recovery_periods
+        }
+        
+    def get_crisis_events(self):
+        """Get historical crisis events for testing"""
+        crisis_events = [
+            {'name': '2008 Financial Crisis', 'start_date': '2008-09-15', 'end_date': '2008-10-15', 'max_drop': -0.40},
+            {'name': '2020 COVID Crash', 'start_date': '2020-02-20', 'end_date': '2020-03-23', 'max_drop': -0.35},
+            {'name': '2022 Tech Selloff', 'start_date': '2022-01-03', 'end_date': '2022-06-16', 'max_drop': -0.25},
+            {'name': '2018 December Selloff', 'start_date': '2018-12-01', 'end_date': '2018-12-24', 'max_drop': -0.15}
+        ]
+        
+        return crisis_events

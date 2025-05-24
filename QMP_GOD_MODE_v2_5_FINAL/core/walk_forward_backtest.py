@@ -14,7 +14,7 @@ class WalkForwardBacktester:
         
         while current_date < end_date:
             train_start = current_date - timedelta(days=self.train_days)
-            train_end = current_date
+            train_end = current_date - timedelta(days=1)  # Add 1-day buffer gap
             test_start = current_date
             test_end = min(current_date + timedelta(days=self.test_days), end_date)
             
