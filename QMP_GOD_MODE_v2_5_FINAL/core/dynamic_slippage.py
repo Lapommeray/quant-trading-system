@@ -48,15 +48,22 @@ class DynamicLiquiditySlippage:
         
         # Calculate market impact based on order size vs available liquidity
         available_liquidity = order_book['total_bid_size'] + order_book['total_ask_size']
-        size_impact = min(3.0, size / available_liquidity) if available_liquidity > 0 else 3.0
+        
+        size_ratio = size / available_liquidity if available_liquidity > 0 else 10.0
+        size_impact = min(5.0, np.sqrt(size_ratio) * 2.0)
         
         volatility_factor = 1.0 + (market_conditions.get('volatility', 0.1) / 0.1)
         time_factor = self._get_time_factor(market_conditions.get('hour', datetime.now().hour))
         news_factor = market_conditions.get('news_factor', 1.0)
         
+        # Exponential scaling for large orders during high volatility
+        if size_ratio > 0.1 and market_conditions.get('volatility', 0.1) > 0.2:
+            volatility_factor *= (1.0 + size_ratio)
+        
         dynamic_spread = base_spread * volatility_factor * (1 + size_impact) * time_factor * news_factor
         
-        capped_spread = min(dynamic_spread, base_spread * 10)
+        max_spread = base_spread * (10 + 5 * market_conditions.get('news_factor', 1.0))
+        capped_spread = min(dynamic_spread, max_spread)
         
         self.logger.debug(f"Dynamic slippage for {symbol}: {capped_spread:.2f} bps (size impact: {size_impact:.2f})")
         
