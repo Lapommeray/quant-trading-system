@@ -39,6 +39,7 @@ These quantum finance concepts are integrated with the core sacred-quant modules
 - **100% Win Rate**: Achieves perfect win rate across all market conditions.
 - **0% Maximum Drawdown**: Eliminates drawdowns through quantum risk management.
 - **Infinite Profit Factor**: Achieves theoretical maximum profit factor with no losing trades.
+- **News Event Avoidance**: Prevents trading during news events and only allows trading 30 minutes after any news release.
 
 ### Statistical Validation
 
@@ -79,6 +80,11 @@ analysis = quantum_finance.analyze_market("BTC", market_data)
 
 # Generate trading signal with quantum enhancements
 signal = quantum_finance.generate_trading_signal("BTC", market_data)
+
+# Generate trading signal with news filter (prevents trading during news events)
+from datetime import datetime
+current_time = datetime.now().isoformat()
+signal = quantum_finance.generate_trading_signal("BTC", market_data, current_time=current_time)
 
 # Predict federal outperformance
 outperformance = quantum_finance.predict_federal_outperformance("BTC", market_data, federal_indicators)

@@ -18,6 +18,7 @@ from quantum_finance.quantum_black_scholes import QuantumBlackScholes
 from quantum_finance.quantum_stochastic_calculus import QuantumStochasticProcess
 from quantum_finance.quantum_portfolio_optimization import QuantumPortfolioOptimizer
 from quantum_finance.quantum_risk_measures import QuantumRiskMeasures
+from quantum_finance.news_filter import NewsFilter
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from quant.entropy_shield_quantum import EntropyShieldQuantum
@@ -94,6 +95,11 @@ class QuantumFinanceIntegration:
             volume_mult=self.config.get('volume_mult', 1.5),
             chaos_threshold=self.config.get('chaos_threshold', 2.0),
             hbar=self.config.get('hbar', 0.01)
+        )
+        
+        self.news_filter = NewsFilter(
+            news_data_path=self.config.get('news_data_path', 'covid_test/data/news_events/covid_news_events.json'),
+            min_wait_minutes=self.config.get('min_wait_minutes', 30)
         )
         
         self.history = []
@@ -271,7 +277,7 @@ class QuantumFinanceIntegration:
         
         return results
         
-    def generate_trading_signal(self, symbol, data, account_size=10000, stop_loss_pct=0.02):
+    def generate_trading_signal(self, symbol, data, account_size=10000, stop_loss_pct=0.02, current_time=None):
         """
         Generate trading signal using quantum-enhanced modules
         
@@ -280,6 +286,7 @@ class QuantumFinanceIntegration:
         - data: Market data dictionary with price, volume, etc.
         - account_size: Account size in currency units (default: 10000)
         - stop_loss_pct: Stop loss percentage (default: 0.02 = 2%)
+        - current_time: Current time for news filter check (default: None, uses current time)
         
         Returns:
         - Dictionary with trading signal information
@@ -287,6 +294,15 @@ class QuantumFinanceIntegration:
         if 'close' not in data or len(data['close']) < 30:
             logger.warning(f"Insufficient data for trading signal: {symbol}")
             return {'error': 'Insufficient data for trading signal'}
+            
+        is_safe = self.news_filter.is_safe_to_trade(current_time, symbol)
+        if not is_safe:
+            logger.warning(f"Not safe to trade {symbol} due to recent news events")
+            next_safe_time = self.news_filter.get_next_safe_time(current_time, symbol)
+            return {
+                'error': 'Not safe to trade due to recent news events',
+                'next_safe_time': next_safe_time.isoformat() if next_safe_time else None
+            }
             
         close_prices = np.array(data['close'])
         current_price = close_prices[-1]
