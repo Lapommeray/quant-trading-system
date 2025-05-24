@@ -2,6 +2,10 @@
 from AlgorithmImports import *
 from core.oversoul_integration import QMPOversoulEngine
 from core.alignment_filter import is_fully_aligned
+from core.risk_manager import RiskManager
+from core.event_blackout import EventBlackoutManager
+from core.live_data_manager import LiveDataManager
+from core.performance_optimizer import PerformanceOptimizer
 import pandas as pd
 import os
 import json
@@ -10,6 +14,7 @@ from QuantConnect import Resolution, Market
 from QuantConnect.Algorithm import QCAlgorithm
 from QuantConnect.Data.Consolidators import TradeBarConsolidator
 from QuantConnect.Orders import OrderStatus
+from QuantConnect.Securities import ConstantFeeModel, ConstantSlippageModel
 
 class QMPOverriderUnified(QCAlgorithm):
 
@@ -17,6 +22,11 @@ class QMPOverriderUnified(QCAlgorithm):
         self.SetStartDate(2024, 1, 1)
         self.SetEndDate(2024, 4, 1)
         self.SetCash(100000)
+        
+        self.risk_manager = RiskManager(self)
+        self.event_blackout = EventBlackoutManager()
+        self.live_data_manager = LiveDataManager(self)
+        self.performance_optimizer = PerformanceOptimizer()
 
         # Asset setup
         self.btc = self.AddCrypto("BTCUSD", Resolution.Minute, Market.Binance).Symbol
@@ -26,6 +36,11 @@ class QMPOverriderUnified(QCAlgorithm):
         self.nasdaq = self.AddEquity("QQQ", Resolution.Minute).Symbol
 
         self.symbols = [self.btc, self.eth, self.gold, self.dow, self.nasdaq]
+        
+        for symbol in self.symbols:
+            security = self.Securities[symbol]
+            security.FeeModel = ConstantFeeModel(1.0)  # $1 per trade
+            security.SlippageModel = ConstantSlippageModel(0.0001)  # 1 basis point slippage
         
         self.symbol_data = {}
         for symbol in self.symbols:
@@ -129,25 +144,42 @@ class QMPOverriderUnified(QCAlgorithm):
                 ]).tail(200)
     
     def CheckSignals(self):
-        """Check for trading signals across all symbols"""
+        """Check for trading signals across all symbols with enhanced risk management"""
         now = self.Time.replace(second=0, microsecond=0)
 
         if now.minute % 5 != 0:
+            return
+            
+        is_blackout, event_name = self.event_blackout.is_blackout_period(now)
+        if is_blackout:
+            self.Debug(f"Trading paused due to {event_name} event blackout")
+            return
+            
+        if self.event_blackout.check_weekend_market(now):
             return
             
         for symbol in self.symbols:
             if not all(not df.empty for df in self.symbol_data[symbol]["history_data"].values()):
                 continue
                 
-            is_aligned = is_fully_aligned(
-                now, 
-                self.alignment_df, 
-                self.symbol_data[symbol]["history_data"]
+            is_aligned = self.live_data_manager.get_live_alignment_data(
+                now, symbol, self.symbol_data[symbol]["history_data"]
             )
+            
+            if is_aligned is None:
+                is_aligned = is_fully_aligned(
+                    now, 
+                    self.alignment_df, 
+                    self.symbol_data[symbol]["history_data"]
+                )
             
             if not is_aligned:
                 continue
 
+            optimization_result = self.performance_optimizer.optimize_data_processing(
+                self.symbol_data[symbol]["history_data"]
+            )
+            
             direction, confidence, gate_details, diagnostics = self.symbol_data[symbol]["qmp"].generate_signal(
                 symbol, 
                 self.symbol_data[symbol]["history_data"]
@@ -165,8 +197,15 @@ class QMPOverriderUnified(QCAlgorithm):
                 self.Plot("QMP Signal", str(symbol), 1 if direction == "BUY" else -1)
                 self.Debug(f"{symbol} Signal at {now}: {direction} | Confidence: {confidence:.2f}")
                 
-                position_size = 1.0 * confidence
-                self.SetHoldings(symbol, position_size if direction == "BUY" else -position_size)
+                position_size = self.risk_manager.calculate_position_size(
+                    symbol, confidence, self.symbol_data[symbol]["history_data"]
+                )
+                
+                if position_size > 0:
+                    self.SetHoldings(symbol, position_size if direction == "BUY" else -position_size)
+                    self.Debug(f"Position size for {symbol}: {position_size:.4f}")
+                else:
+                    self.Debug(f"Risk manager rejected trade for {symbol}")
     
     def OnOrderEvent(self, orderEvent):
         """Event handler for order status updates"""
