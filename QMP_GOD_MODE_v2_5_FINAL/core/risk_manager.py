@@ -28,7 +28,12 @@ class RiskManager:
         if avg_loss == 0:
             kelly_fraction = 0.01
         else:
-            kelly_fraction = (win_rate * avg_win - (1 - win_rate) * avg_loss) / avg_win
+            from scipy.stats import gaussian_kde
+            kde = gaussian_kde(returns)
+            var = np.percentile(returns, 5)  # 95% confidence
+            es = returns[returns <= var].mean() if len(returns[returns <= var]) > 0 else avg_loss
+            kelly_fraction = -es / returns.std()  # Fat-tail adjusted Kelly
+            kelly_fraction = max(0.001, min(0.5, kelly_fraction))  # Cap between 0.1% and 50%
             
         vol_scaling = min(1.0, 0.15 / volatility)  # Scale down if vol > 15%
         

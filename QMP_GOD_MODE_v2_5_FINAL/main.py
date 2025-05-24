@@ -6,15 +6,18 @@ from core.risk_manager import RiskManager
 from core.event_blackout import EventBlackoutManager
 from core.live_data_manager import LiveDataManager
 from core.performance_optimizer import PerformanceOptimizer
+from core.dynamic_slippage import DynamicLiquiditySlippage
+from core.async_api_client import AsyncQMPApiClient
 import pandas as pd
 import os
 import json
+import asyncio
 from datetime import timedelta
 from QuantConnect import Resolution, Market
 from QuantConnect.Algorithm import QCAlgorithm
 from QuantConnect.Data.Consolidators import TradeBarConsolidator
 from QuantConnect.Orders import OrderStatus
-from QuantConnect.Securities import ConstantFeeModel, ConstantSlippageModel
+from QuantConnect.Securities import ConstantFeeModel
 
 class QMPOverriderUnified(QCAlgorithm):
 
@@ -37,10 +40,36 @@ class QMPOverriderUnified(QCAlgorithm):
 
         self.symbols = [self.btc, self.eth, self.gold, self.dow, self.nasdaq]
         
+        self.dynamic_slippage_model = DynamicLiquiditySlippage()
+        
         for symbol in self.symbols:
             security = self.Securities[symbol]
             security.FeeModel = ConstantFeeModel(1.0)  # $1 per trade
-            security.SlippageModel = ConstantSlippageModel(0.0001)  # 1 basis point slippage
+            
+            class CustomDynamicSlippageModel:
+                def __init__(self, algorithm, symbol, slippage_model):
+                    self.algorithm = algorithm
+                    self.symbol = symbol
+                    self.slippage_model = slippage_model
+                    
+                def GetSlippageApproximation(self, asset, order):
+                    market_conditions = {
+                        'volatility': 0.1,  # Default volatility
+                        'hour': self.algorithm.Time.hour,
+                        'news_factor': 1.0
+                    }
+                    
+                    slippage = self.slippage_model.calculate_slippage(
+                        str(self.symbol), 
+                        asset.Price, 
+                        abs(order.Quantity), 
+                        "BUY" if order.Quantity > 0 else "SELL",
+                        market_conditions
+                    )
+                    
+                    return slippage / abs(order.Quantity)  # Return per share slippage
+                    
+            security.SlippageModel = CustomDynamicSlippageModel(self, symbol, self.dynamic_slippage_model)
         
         self.symbol_data = {}
         for symbol in self.symbols:
