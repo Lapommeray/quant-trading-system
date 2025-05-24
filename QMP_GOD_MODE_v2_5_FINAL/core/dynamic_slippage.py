@@ -67,7 +67,8 @@ class DynamicLiquiditySlippage:
         
         dynamic_spread += direct_size_component * base_spread
         
-        max_spread = base_spread * (10 + 5 * market_conditions.get('news_factor', 1.0))
+        size_cap_factor = 1.0 + (size / 100000.0)  # Scale with order size
+        max_spread = base_spread * (10 + 5 * market_conditions.get('news_factor', 1.0)) * size_cap_factor
         capped_spread = min(dynamic_spread, max_spread)
         
         self.logger.debug(f"Dynamic slippage for {symbol} (size={size}): {capped_spread:.2f} bps (size impact: {size_impact:.2f}, direct component: {direct_size_component * base_spread:.2f} bps)")
