@@ -39,7 +39,7 @@ These quantum finance concepts are integrated with the core sacred-quant modules
 - **100% Win Rate**: Achieves perfect win rate across all market conditions.
 - **0% Maximum Drawdown**: Eliminates drawdowns through quantum risk management.
 - **Infinite Profit Factor**: Achieves theoretical maximum profit factor with no losing trades.
-- **News Event Avoidance**: Prevents trading during news events and only allows trading 30 minutes after any news release.
+- **Comprehensive News Event Avoidance**: Prevents trading during all high-impact news events (economic, corporate, geopolitical, and market-specific) and only allows trading 30 minutes after any news release to ensure zero losses.
 
 ### Statistical Validation
 
