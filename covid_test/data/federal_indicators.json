@@ -1,0 +1,37 @@
+{
+    "fed_funds_rate": {
+        "name": "Federal Funds Rate",
+        "return": -0.05,
+        "risk": 0.02,
+        "sharpe": -2.5,
+        "description": "Federal Reserve benchmark interest rate"
+    },
+    "treasury_yield": {
+        "name": "10-Year Treasury Yield",
+        "return": -0.02,
+        "risk": 0.03,
+        "sharpe": -0.67,
+        "description": "U.S. 10-Year Treasury Bond Yield"
+    },
+    "federal_reserve_balance": {
+        "name": "Federal Reserve Balance Sheet",
+        "return": 0.01,
+        "risk": 0.01,
+        "sharpe": 1.0,
+        "description": "Federal Reserve Balance Sheet Growth Rate"
+    },
+    "fed_liquidity_index": {
+        "name": "Federal Liquidity Index",
+        "return": -0.03,
+        "risk": 0.04,
+        "sharpe": -0.75,
+        "description": "Composite index of Federal Reserve liquidity measures"
+    },
+    "fed_stress_index": {
+        "name": "Federal Financial Stress Index",
+        "return": -0.08,
+        "risk": 0.06,
+        "sharpe": -1.33,
+        "description": "Federal Reserve measure of financial system stress"
+    }
+}
