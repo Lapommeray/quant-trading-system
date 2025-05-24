@@ -50,7 +50,10 @@ class DynamicLiquiditySlippage:
         available_liquidity = order_book['total_bid_size'] + order_book['total_ask_size']
         
         size_ratio = size / available_liquidity if available_liquidity > 0 else 10.0
-        size_impact = min(5.0, np.sqrt(size_ratio) * 2.0)
+        
+        size_impact = min(5.0, np.power(size_ratio, 0.6) * 2.0)
+        
+        direct_size_component = 0.01 * (size / 10000.0)  # 1 bp per 10k units
         
         volatility_factor = 1.0 + (market_conditions.get('volatility', 0.1) / 0.1)
         time_factor = self._get_time_factor(market_conditions.get('hour', datetime.now().hour))
@@ -62,10 +65,12 @@ class DynamicLiquiditySlippage:
         
         dynamic_spread = base_spread * volatility_factor * (1 + size_impact) * time_factor * news_factor
         
+        dynamic_spread += direct_size_component * base_spread
+        
         max_spread = base_spread * (10 + 5 * market_conditions.get('news_factor', 1.0))
         capped_spread = min(dynamic_spread, max_spread)
         
-        self.logger.debug(f"Dynamic slippage for {symbol}: {capped_spread:.2f} bps (size impact: {size_impact:.2f})")
+        self.logger.debug(f"Dynamic slippage for {symbol} (size={size}): {capped_spread:.2f} bps (size impact: {size_impact:.2f}, direct component: {direct_size_component * base_spread:.2f} bps)")
         
         return capped_spread / 10000.0  # Convert bps to decimal(1 bps = 0.0001)
         
