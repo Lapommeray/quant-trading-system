@@ -117,15 +117,17 @@ class DynamicLiquiditySlippage:
         europe_market_close = 11  # 11 AM ET (5 PM CET)
         
         in_us_market = us_market_open <= hour < us_market_close
-        in_asia_market = asia_market_open <= hour or hour < asia_market_close
+        in_asia_market = (asia_market_open <= hour <= 23) or (0 <= hour < asia_market_close)
         in_europe_market = europe_market_open <= hour < europe_market_close
         
         if in_us_market and (in_asia_market or in_europe_market):
             return 1.0  # Maximum liquidity when multiple markets open
-        elif in_us_market or in_asia_market or in_europe_market:
-            return 1.2  # Good liquidity when at least one major market open
+        elif in_us_market:
+            return 1.2  # Good liquidity during US market hours
+        elif in_asia_market or in_europe_market:
+            return 1.4  # Moderate liquidity during other major market hours
         else:
-            return 1.5  # Lower liquidity during off-hours
+            return 1.8  # Lower liquidity during complete off-hours
             
     def calculate_slippage(self, symbol, price, size, side, market_conditions=None):
         """Calculate slippage for a trade"""
