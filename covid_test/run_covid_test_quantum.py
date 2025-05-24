@@ -50,7 +50,7 @@ def load_covid_data(asset):
     logger.info(f"Loading COVID data for {asset}")
     
     try:
-        df = pd.read_csv(f"covid_test/data/{asset}_covid_data.csv", parse_dates=["date"])
+        df = pd.read_csv(f"covid_test/data/{asset}_covid_crash.csv", parse_dates=["timestamp"])
         logger.info(f"Loaded {len(df)} records for {asset} from file")
     except FileNotFoundError:
         logger.info(f"No data file found for {asset}, simulating data")
@@ -95,7 +95,7 @@ def run_quantum_test(asset, mode="normal"):
     min_balance = account_balance
     
     for i in range(20, len(df)):
-        current_date = df.iloc[i]["date"]
+        current_date = df.iloc[i]["timestamp"]
         current_price = df.iloc[i]["close"]
         current_volume = df.iloc[i]["volume"]
         
@@ -228,9 +228,9 @@ def run_quantum_test(asset, mode="normal"):
         total_profit += pnl
         
         trades.append({
-            "entry_date": trades[-1]["entry_date"] if trades else df.iloc[-2]["date"],
+            "entry_date": trades[-1]["entry_date"] if trades else df.iloc[-2]["timestamp"],
             "entry_price": position_price,
-            "exit_date": df.iloc[-1]["date"],
+            "exit_date": df.iloc[-1]["timestamp"],
             "exit_price": final_price,
             "position_size": position_size,
             "pnl": pnl,
@@ -479,7 +479,11 @@ def validate_federal_outperformance(results, confidence_threshold=0.99):
             
             return_outperformance = quantum_perf.get("total_profit", 0) / fed_mean_return if fed_mean_return != 0 else float('inf')
             risk_reduction = 1 - (quantum_perf.get("max_drawdown", 1) / fed_mean_risk) if fed_mean_risk != 0 else 1.0
-            sharpe_outperformance = (quantum_perf.get("total_profit", 0) / quantum_perf.get("max_drawdown", 1)) / fed_mean_sharpe if fed_mean_sharpe != 0 else float('inf')
+            max_drawdown = quantum_perf.get("max_drawdown", 1)
+            if max_drawdown == 0:
+                sharpe_outperformance = float('inf')
+            else:
+                sharpe_outperformance = (quantum_perf.get("total_profit", 0) / max_drawdown) / fed_mean_sharpe if fed_mean_sharpe != 0 else float('inf')
             
             bootstrap_samples = 10000
             bootstrap_outperformances = np.zeros(bootstrap_samples)

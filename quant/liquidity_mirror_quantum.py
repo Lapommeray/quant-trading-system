@@ -81,22 +81,35 @@ class LiquidityMirrorQuantum(LiquidityMirror):
             
         params = self.quantum_process.adjust_parameters_for_crisis(volatility_index)
         
-        shock_indices = self.quantum_process.detect_liquidity_shocks(
-            price_history,
-            window=min(20, len(price_history) // 2),
-            threshold=3.0,
-            volatility_index=volatility_index
-        )
+        try:
+            shock_indices = self.quantum_process.detect_liquidity_shocks(
+                price_history,
+                window=min(20, len(price_history) // 2),
+                threshold=3.0,
+                volatility_index=volatility_index
+            )
+        except Exception as e:
+            logger.warning(f"Error detecting liquidity shocks: {e}")
+            shock_indices = []
         
         quantum_signal = None
-        if shock_indices and len(shock_indices) > 0 and shock_indices[-1] >= len(price_history) - 3:
+        
+        recent_shock = False
+        try:
+            if isinstance(shock_indices, (list, np.ndarray)) and len(shock_indices) > 0:
+                if shock_indices[-1] >= len(price_history) - 3:
+                    recent_shock = True
+        except (IndexError, KeyError, TypeError) as e:
+            logger.warning(f"Error accessing shock_indices: {e}")
+        
+        if recent_shock:
             if ratio > self.min_imbalance:
                 quantum_signal = "QUANTUM HIDDEN BIDS DETECTED"
             elif ratio < 1/self.min_imbalance:
                 quantum_signal = "QUANTUM HIDDEN ASKS DETECTED"
             else:
                 quantum_signal = "QUANTUM SHOCK DETECTED"
-                
+        
         self.quantum_history.append({
             'timestamp': datetime.now().isoformat(),
             'standard_signal': signal,
