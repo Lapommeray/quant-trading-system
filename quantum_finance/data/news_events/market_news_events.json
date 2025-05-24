@@ -1,0 +1,294 @@
+{
+  "economic_news": {
+    "interest_rates": {
+      "NFP": {
+        "name": "Non-Farm Payrolls",
+        "release_time": "12:30",
+        "release_day": "1st Friday",
+        "source": "BLS",
+        "impact_minutes": 60,
+        "description": "Monthly employment data release by the Bureau of Labor Statistics"
+      },
+      "FOMC": {
+        "name": "FOMC Rate Decision",
+        "release_time": "18:00",
+        "release_day": "Wednesday",
+        "source": "Federal Reserve",
+        "impact_minutes": 90,
+        "description": "Federal Open Market Committee interest rate decision"
+      },
+      "ECB": {
+        "name": "ECB Rate Decision",
+        "release_time": "12:45",
+        "release_day": "Thursday",
+        "source": "ECB",
+        "impact_minutes": 60,
+        "description": "European Central Bank interest rate decision"
+      },
+      "BOE": {
+        "name": "BOE Policy Decision",
+        "release_time": "11:00",
+        "release_day": "Thursday",
+        "source": "Bank of England",
+        "impact_minutes": 30,
+        "description": "Bank of England monetary policy decision"
+      }
+    },
+    "inflation": {
+      "CPI": {
+        "name": "CPI Inflation",
+        "release_time": "12:30",
+        "release_day": "Monthly",
+        "source": "BLS",
+        "impact_minutes": 45,
+        "description": "Consumer Price Index inflation data"
+      },
+      "PPI": {
+        "name": "PPI Inflation",
+        "release_time": "12:30",
+        "release_day": "Monthly",
+        "source": "BLS",
+        "impact_minutes": 30,
+        "description": "Producer Price Index inflation data"
+      }
+    },
+    "gdp": {
+      "GDP": {
+        "name": "GDP Advance Report",
+        "release_time": "12:30",
+        "release_day": "Quarterly",
+        "source": "BEA",
+        "impact_minutes": 30,
+        "description": "Gross Domestic Product advance report"
+      }
+    },
+    "retail": {
+      "RETAIL": {
+        "name": "Retail Sales",
+        "release_time": "12:30",
+        "release_day": "Mid-Month",
+        "source": "Census Bureau",
+        "impact_minutes": 30,
+        "description": "Monthly retail sales data"
+      }
+    },
+    "pmi": {
+      "CAIXIN": {
+        "name": "China Caixin PMI",
+        "release_time": "01:45",
+        "release_day": "Monthly",
+        "source": "Caixin",
+        "impact_minutes": 30,
+        "description": "China Caixin Purchasing Managers' Index"
+      }
+    }
+  },
+  "corporate_news": {
+    "earnings": {
+      "EARNINGS": {
+        "name": "Earnings Calls",
+        "release_time": "Varies",
+        "release_day": "After Close",
+        "source": "SEC EDGAR",
+        "impact_minutes": 60,
+        "description": "Company earnings reports and calls"
+      }
+    },
+    "fda": {
+      "FDA": {
+        "name": "FDA Drug Approvals",
+        "release_time": "Varies",
+        "release_day": "Varies",
+        "source": "FDA",
+        "impact_minutes": 30,
+        "description": "FDA drug approval announcements"
+      }
+    },
+    "mergers": {
+      "MA": {
+        "name": "Mergers & Acquisitions",
+        "release_time": "Varies",
+        "release_day": "Varies",
+        "source": "Reuters, WSJ",
+        "impact_minutes": 45,
+        "description": "Major merger and acquisition announcements"
+      }
+    },
+    "dividends": {
+      "DIV": {
+        "name": "Dividend Announcements",
+        "release_time": "Varies",
+        "release_day": "Varies",
+        "source": "Nasdaq, Yahoo Finance",
+        "impact_minutes": 30,
+        "description": "Company dividend announcements"
+      }
+    },
+    "products": {
+      "PRODUCT": {
+        "name": "Product Launches",
+        "release_time": "Varies",
+        "release_day": "Varies",
+        "source": "Company Press Releases",
+        "impact_minutes": 30,
+        "description": "Major product launch announcements"
+      }
+    }
+  },
+  "geopolitical_events": {
+    "sanctions": {
+      "SANCTIONS": {
+        "name": "US Sanctions Announcements",
+        "release_time": "Varies",
+        "release_day": "Varies",
+        "source": "OFAC",
+        "impact_minutes": 30,
+        "description": "US sanctions announcements"
+      }
+    },
+    "terror": {
+      "TERROR": {
+        "name": "Major Terror Attacks",
+        "release_time": "Varies",
+        "release_day": "Varies",
+        "source": "Reuters",
+        "impact_minutes": 60,
+        "description": "Major terror attacks"
+      }
+    },
+    "elections": {
+      "ELECTION": {
+        "name": "Elections",
+        "release_time": "Varies",
+        "release_day": "Varies",
+        "source": "BBC, Reuters, AP",
+        "impact_minutes": 45,
+        "description": "Major election results"
+      }
+    },
+    "trade": {
+      "TRADE": {
+        "name": "Trade Wars",
+        "release_time": "Varies",
+        "release_day": "Varies",
+        "source": "US Trade Representative",
+        "impact_minutes": 30,
+        "description": "Trade war announcements"
+      }
+    },
+    "disasters": {
+      "DISASTER": {
+        "name": "Natural Disasters",
+        "release_time": "Varies",
+        "release_day": "Varies",
+        "source": "NOAA, USGS",
+        "impact_minutes": 30,
+        "description": "Major natural disaster events"
+      }
+    }
+  },
+  "market_specific": {
+    "stocks": {
+      "SHORT": {
+        "name": "Short Interest Changes",
+        "release_time": "Varies",
+        "release_day": "Varies",
+        "source": "FINRA",
+        "impact_minutes": 30,
+        "description": "Short interest changes"
+      },
+      "ETF": {
+        "name": "ETF Flows",
+        "release_time": "Varies",
+        "release_day": "Varies",
+        "source": "ETF.com, Bloomberg",
+        "impact_minutes": 30,
+        "description": "ETF flow data"
+      },
+      "ANALYST": {
+        "name": "Analyst Upgrades/Downgrades",
+        "release_time": "Varies",
+        "release_day": "Varies",
+        "source": "Zacks, TipRanks",
+        "impact_minutes": 30,
+        "description": "Analyst upgrades and downgrades"
+      }
+    },
+    "crypto": {
+      "LISTING": {
+        "name": "Coin Listing/Delisting",
+        "release_time": "Varies",
+        "release_day": "Varies",
+        "source": "Binance, Coinbase",
+        "impact_minutes": 30,
+        "description": "Cryptocurrency listing and delisting announcements"
+      },
+      "REGULATION": {
+        "name": "Regulatory Crackdowns",
+        "release_time": "Varies",
+        "release_day": "Varies",
+        "source": "CoinDesk, CryptoPanic",
+        "impact_minutes": 30,
+        "description": "Cryptocurrency regulatory announcements"
+      },
+      "FORK": {
+        "name": "Hard Forks",
+        "release_time": "Varies",
+        "release_day": "Varies",
+        "source": "GitHub Repos",
+        "impact_minutes": 30,
+        "description": "Cryptocurrency hard fork events"
+      }
+    },
+    "forex": {
+      "CENTRAL": {
+        "name": "Central Bank Speeches",
+        "release_time": "Varies",
+        "release_day": "Varies",
+        "source": "BOE, Fed, ECB",
+        "impact_minutes": 30,
+        "description": "Central bank speeches"
+      },
+      "CARRY": {
+        "name": "Carry Trade Unwinds",
+        "release_time": "Varies",
+        "release_day": "Varies",
+        "source": "COT Reports",
+        "impact_minutes": 30,
+        "description": "Carry trade unwind events"
+      }
+    }
+  },
+  "sentiment": {
+    "social": {
+      "SOCIAL": {
+        "name": "Social Media",
+        "release_time": "Varies",
+        "release_day": "Varies",
+        "source": "Twitter, Reddit",
+        "impact_minutes": 30,
+        "description": "Major social media trends affecting markets"
+      }
+    },
+    "sentiment": {
+      "SENTIMENT": {
+        "name": "News Sentiment",
+        "release_time": "Varies",
+        "release_day": "Varies",
+        "source": "Bloomberg Terminal, RavenPack",
+        "impact_minutes": 30,
+        "description": "Major shifts in news sentiment"
+      }
+    },
+    "darkpool": {
+      "DARKPOOL": {
+        "name": "Dark Pool Trades",
+        "release_time": "Varies",
+        "release_day": "Varies",
+        "source": "FINRA",
+        "impact_minutes": 30,
+        "description": "Significant dark pool trading activity"
+      }
+    }
+  }
+}

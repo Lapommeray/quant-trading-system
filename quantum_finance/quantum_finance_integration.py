@@ -99,6 +99,7 @@ class QuantumFinanceIntegration:
         
         self.news_filter = NewsFilter(
             news_data_path=self.config.get('news_data_path', 'covid_test/data/news_events/covid_news_events.json'),
+            market_news_path=self.config.get('market_news_path', 'quantum_finance/data/news_events/market_news_events.json'),
             min_wait_minutes=self.config.get('min_wait_minutes', 30)
         )
         
