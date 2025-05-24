@@ -2,9 +2,13 @@ import unittest
 import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
-from QMP_GOD_MODE_v2_5_FINAL.core.event_blackout import EventBlackoutManager
-from QMP_GOD_MODE_v2_5_FINAL.core.risk_manager import RiskManager
-from QMP_GOD_MODE_v2_5_FINAL.core.dynamic_slippage import DynamicLiquiditySlippage
+import sys
+import os
+
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+from core.event_blackout import EventBlackoutManager
+from core.risk_manager import RiskManager
+from core.dynamic_slippage import DynamicLiquiditySlippage
 
 class TestChaosScenarios(unittest.TestCase):
     """Test system resilience under extreme market conditions"""
@@ -50,7 +54,7 @@ class TestChaosScenarios(unittest.TestCase):
         
     def test_walk_forward_data_leak(self):
         """Test that walk-forward validation prevents data leakage with paranoid checks"""
-        from QMP_GOD_MODE_v2_5_FINAL.core.walk_forward_backtest import WalkForwardBacktester
+        from core.walk_forward_backtest import WalkForwardBacktester
         
         dates = pd.date_range('2024-01-01', periods=300, freq='D')
         data = {
@@ -132,7 +136,7 @@ class TestChaosScenarios(unittest.TestCase):
         
     def test_numba_optimization(self):
         """Test numba optimization performance"""
-        from QMP_GOD_MODE_v2_5_FINAL.core.performance_optimizer import PerformanceOptimizer, fast_volatility_calc
+        from core.performance_optimizer import PerformanceOptimizer, fast_volatility_calc
         
         try:
             import numba
