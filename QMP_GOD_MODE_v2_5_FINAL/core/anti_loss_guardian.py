@@ -78,6 +78,9 @@ class AntiLossGuardian:
         if not self.loss_prevention_active:
             return {"allowed": True, "action": "none"}
             
+        if current_positions and all(pos <= 0.05 for pos in current_positions.values()):
+            return {"allowed": True, "action": "none", "risk_multiplier": self.risk_multiplier}
+            
         # Initialize peak portfolio value if not set
         if self.peak_portfolio_value is None:
             self.peak_portfolio_value = portfolio_value
