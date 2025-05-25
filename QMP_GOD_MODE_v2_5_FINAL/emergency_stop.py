@@ -240,6 +240,109 @@ class EmergencyStop:
             return True, active_conditions
             
         return False, []
+        
+    def comprehensive_emergency_check(self, market_data, ai_metrics, portfolio_data):
+        """
+        Comprehensive emergency detection system
+        
+        Parameters:
+        - market_data: Dictionary containing market data (returns, volume, etc.)
+        - ai_metrics: Dictionary containing AI performance metrics
+        - portfolio_data: Dictionary containing portfolio information
+        
+        Returns:
+        - Tuple of (emergency_detected, active_conditions)
+        """
+        emergency_triggers = []
+        
+        if self._detect_market_crash(market_data):
+            emergency_triggers.append("market_crash")
+            
+        if self._detect_liquidity_crisis(market_data):
+            emergency_triggers.append("liquidity_crisis")
+            
+        if self._detect_ai_degradation(ai_metrics):
+            emergency_triggers.append("ai_degradation")
+            
+        if self._detect_model_breakdown(ai_metrics):
+            emergency_triggers.append("model_breakdown")
+            
+        if self._detect_portfolio_anomaly(portfolio_data):
+            emergency_triggers.append("portfolio_anomaly")
+            
+        if len(emergency_triggers) >= 2:
+            self.logger.critical(f"COMPREHENSIVE EMERGENCY DETECTED: {emergency_triggers}")
+            return True, emergency_triggers
+            
+        return False, []
+        
+    def _detect_market_crash(self, market_data):
+        """Detect market crash conditions"""
+        returns = market_data.get('returns', [])
+        if len(returns) < 5:
+            return False
+            
+        recent_returns = returns[-5:]
+        if all(r < -0.03 for r in recent_returns):  # 3% decline for 5 periods
+            return True
+            
+        if any(r < -0.15 for r in recent_returns):  # 15% single period decline
+            return True
+            
+        return False
+        
+    def _detect_liquidity_crisis(self, market_data):
+        """Detect liquidity crisis"""
+        volume = market_data.get('volume', [])
+        if len(volume) < 10:
+            return False
+            
+        recent_volume = volume[-5:]
+        historical_volume = volume[-10:-5]
+        
+        if len(historical_volume) > 0:
+            avg_historical = np.mean(historical_volume)
+            avg_recent = np.mean(recent_volume)
+            
+            if avg_recent > avg_historical * 3:  # 3x volume increase
+                return True
+                
+        return False
+        
+    def _detect_ai_degradation(self, ai_metrics):
+        """Detect AI system degradation"""
+        confidence = ai_metrics.get('confidence', 1.0)
+        accuracy = ai_metrics.get('recent_accuracy', 1.0)
+        
+        return confidence < 0.2 or accuracy < 0.3
+        
+    def _detect_model_breakdown(self, ai_metrics):
+        """Detect complete model breakdown"""
+        predictions = ai_metrics.get('recent_predictions', [])
+        if len(predictions) < 10:
+            return False
+            
+        if len(set(predictions)) == 1:
+            return True
+            
+        if any(abs(p) > 10 for p in predictions):  # Extreme values
+            return True
+            
+        return False
+        
+    def _detect_portfolio_anomaly(self, portfolio_data):
+        """Detect portfolio-level anomalies"""
+        positions = portfolio_data.get('positions', {})
+        if not positions:
+            return False
+            
+        total_value = sum(abs(pos) for pos in positions.values())
+        max_position = max(abs(pos) for pos in positions.values())
+        
+        if max_position / total_value > 0.8:  # 80% in single position
+            return True
+            
+        return False
             
 def main():
     """Main function to execute emergency stop"""

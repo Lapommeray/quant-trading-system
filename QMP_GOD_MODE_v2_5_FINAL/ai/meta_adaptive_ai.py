@@ -458,6 +458,8 @@ class MetaAdaptiveAI:
         if not hasattr(self, 'risk_multiplier'):
             self.risk_multiplier = 1.0
         
+        market_regime = self.detect_market_regime(market_data)
+        
         if volatility > 0.05:  # High volatility regime
             self.risk_multiplier = 0.5  # Reduce risk
             self.algorithm.Debug(f"AI Adaptation: High volatility detected ({volatility:.4f}), reducing risk")
@@ -465,18 +467,129 @@ class MetaAdaptiveAI:
             self.confidence_threshold = 0.9  # Increase caution
             self.algorithm.Debug(f"AI Adaptation: Unusual correlation detected ({correlation:.4f}), increasing confidence threshold")
         
-        if 'returns' in market_data and len(market_data['returns']) > 20:
-            recent_returns = market_data['returns'][-20:]
+        if market_regime == "trending":
+            self.algorithm.Debug(f"AI Adaptation: Trending market detected, optimizing for momentum")
+            if "trend_strength" not in self.feature_sets[self.current_feature_set]:
+                self.feature_sets[self.current_feature_set].append("trend_strength")
+                
+            if "boost" in self.models:
+                self.active_model = "boost"  # GradientBoosting works well for trending markets
+                
+        elif market_regime == "mean_reverting":
+            self.algorithm.Debug(f"AI Adaptation: Mean-reverting market detected, optimizing for reversals")
+            if "mean_reversion_strength" not in self.feature_sets[self.current_feature_set]:
+                self.feature_sets[self.current_feature_set].append("mean_reversion_strength")
+                
+            self.confidence_threshold = max(0.7, self.confidence_threshold)
+                
+        elif market_regime == "high_volatility":
+            self.algorithm.Debug(f"AI Adaptation: High volatility regime detected, increasing caution")
+            self.confidence_threshold = max(0.8, self.confidence_threshold)
             
-            autocorrelation = np.corrcoef(recent_returns[:-1], recent_returns[1:])[0,1]
-            
-            if autocorrelation > 0.3:  # Trending market
-                self.algorithm.Debug(f"AI Adaptation: Trending market detected (autocorrelation: {autocorrelation:.4f})")
-                if "trend_strength" not in self.feature_sets[self.current_feature_set]:
-                    self.feature_sets[self.current_feature_set].append("trend_strength")
-            elif autocorrelation < -0.3:  # Mean-reverting market
-                self.algorithm.Debug(f"AI Adaptation: Mean-reverting market detected (autocorrelation: {autocorrelation:.4f})")
-                if "mean_reversion_strength" not in self.feature_sets[self.current_feature_set]:
-                    self.feature_sets[self.current_feature_set].append("mean_reversion_strength")
+            if "volatility_regime" not in self.feature_sets[self.current_feature_set]:
+                self.feature_sets[self.current_feature_set].append("volatility_regime")
+                
+        elif market_regime == "unknown":
+            # Handle unknown market patterns with future-proof adaptation
+            self._create_feature_set_for_unknown_pattern(market_data)
         
-        self.algorithm.Debug(f"AI Adaptation: Volatility={volatility:.4f}, Correlation={correlation:.4f}, Risk Multiplier={self.risk_multiplier:.2f}")
+        self.algorithm.Debug(f"AI Adaptation: Volatility={volatility:.4f}, Correlation={correlation:.4f}, Risk Multiplier={self.risk_multiplier:.2f}, Regime={market_regime}")
+        
+    def detect_market_regime(self, market_data):
+        """
+        Detect current market regime for adaptive behavior
+        
+        Parameters:
+        - market_data: Dictionary containing market data
+        
+        Returns:
+        - String indicating the detected market regime
+        """
+        if 'returns' not in market_data or len(market_data['returns']) < 20:
+            return "unknown"
+            
+        returns = market_data['returns'][-20:]
+        
+        volatility = np.std(returns)
+        autocorr = np.corrcoef(returns[:-1], returns[1:])[0,1] if len(returns) > 1 else 0
+        
+        trend = np.polyfit(range(len(returns)), returns, 1)[0]
+        trend_strength = abs(trend) / volatility if volatility > 0 else 0
+        
+        mean = np.mean(returns)
+        kurtosis = np.mean((returns - mean)**4) / (volatility**4) if volatility > 0 else 3
+        
+        if volatility > 0.05:
+            return "high_volatility"
+        elif autocorr > 0.3 or trend_strength > 0.7:
+            return "trending"
+        elif autocorr < -0.3:
+            return "mean_reverting"
+        elif kurtosis > 5:  # Fat tails
+            return "fat_tailed"
+        else:
+            return "neutral"
+            
+    def _create_feature_set_for_unknown_pattern(self, market_data):
+        """
+        Create new feature set for unknown market patterns
+        
+        Parameters:
+        - market_data: Dictionary containing market data
+        
+        Returns:
+        - None
+        """
+        # Check if the pattern is truly anomalous
+        if not self._is_anomalous_pattern(market_data):
+            return
+            
+        new_set_name = f"adaptive_{len(self.feature_sets)}"
+        self.feature_sets[new_set_name] = self.feature_sets[self.current_feature_set].copy()
+        
+        self.feature_sets[new_set_name].extend([
+            "pattern_deviation", 
+            "regime_uncertainty",
+            "adaptive_threshold"
+        ])
+        
+        self.algorithm.Debug(f"AI Adaptation: Created new feature set '{new_set_name}' for unknown market pattern")
+        self.current_feature_set = new_set_name
+        
+        self.confidence_threshold = 0.85
+        
+    def _is_anomalous_pattern(self, market_data):
+        """
+        Check if market data contains anomalous patterns
+        
+        Parameters:
+        - market_data: Dictionary containing market data
+        
+        Returns:
+        - Boolean indicating if pattern is anomalous
+        """
+        if 'returns' not in market_data or len(market_data['returns']) < 30:
+            return False
+            
+        returns = market_data['returns'][-30:]
+        
+        mean = np.mean(returns)
+        std = np.std(returns)
+        
+        if std == 0:
+            return False
+            
+        extreme_values = [r for r in returns if abs(r - mean) > 4 * std]
+        if len(extreme_values) >= 3:
+            return True
+            
+        first_half = returns[:15]
+        second_half = returns[15:]
+        
+        first_autocorr = np.corrcoef(first_half[:-1], first_half[1:])[0,1] if len(first_half) > 1 else 0
+        second_autocorr = np.corrcoef(second_half[:-1], second_half[1:])[0,1] if len(second_half) > 1 else 0
+        
+        if abs(first_autocorr - second_autocorr) > 0.6:
+            return True
+            
+        return False
