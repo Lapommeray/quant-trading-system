@@ -22,6 +22,8 @@ class OverSoulDirector:
             'meta_adaptive': True,
             'quantum_sentiment': True,
             'imperceptible_pattern': True,  # New module for detecting patterns humans can't see
+            'market_glitch_detector': True,  # New module for detecting market glitches
+            'advanced_noise_filter': True,  # New module for removing data noise
             
             'btc_offchain': True,
             'fed_jet': True,
@@ -38,6 +40,8 @@ class OverSoulDirector:
             'meta_adaptive': 2,
             'quantum_tremor': 2,
             'imperceptible_pattern': 2, # High priority - human-imperceptible patterns
+            'market_glitch_detector': 2, # High priority - glitch detection
+            'advanced_noise_filter': 3, # Highest priority - data quality
             
             'emotion_dna': 1,           # Standard priority
             'fractal_resonance': 1,
