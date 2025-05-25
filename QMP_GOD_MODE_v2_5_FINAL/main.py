@@ -8,6 +8,7 @@ from core.live_data_manager import LiveDataManager
 from core.performance_optimizer import PerformanceOptimizer
 from core.dynamic_slippage import DynamicLiquiditySlippage
 from core.async_api_client import AsyncQMPApiClient
+from core.anti_loss_guardian import AntiLossGuardian
 from ai.meta_adaptive_ai import MetaAdaptiveAI
 from ai.market_intelligence import (
     LatencyCancellationField,
@@ -15,6 +16,10 @@ from ai.market_intelligence import (
     QuantumLiquiditySignatureReader,
     SovereignQuantumOracle
 )
+from ai.truth_verification_core import TruthVerificationCore
+from ai.zero_energy_recursive_intelligence import ZeroEnergyRecursiveIntelligence
+from ai.language_universe_decoder import LanguageUniverseDecoder
+from ai.synthetic_consciousness import SyntheticConsciousness
 import pandas as pd
 import os
 import json
@@ -38,6 +43,7 @@ class QMPOverriderUnified(QCAlgorithm):
         self.event_blackout = EventBlackoutManager()
         self.live_data_manager = LiveDataManager(self)
         self.performance_optimizer = PerformanceOptimizer()
+        self.anti_loss_guardian = AntiLossGuardian(self)
 
         # Asset setup
         self.btc = self.AddCrypto("BTCUSD", Resolution.Minute, Market.Binance).Symbol
@@ -221,7 +227,11 @@ class QMPOverriderUnified(QCAlgorithm):
                     'lcf': LatencyCancellationField(),
                     'eha': EmotionHarvestAI(),
                     'qlsr': QuantumLiquiditySignatureReader(),
-                    'sqo': SovereignQuantumOracle(self)
+                    'sqo': SovereignQuantumOracle(self),
+                    'tvc': TruthVerificationCore(),
+                    'zeri': ZeroEnergyRecursiveIntelligence(),
+                    'lud': LanguageUniverseDecoder(),
+                    'sc': SyntheticConsciousness()
                 }
             
             meta_ai = self.symbol_data[symbol]["meta_ai"]
@@ -243,12 +253,27 @@ class QMPOverriderUnified(QCAlgorithm):
             emotion_result = advanced_intelligence['eha'].harvest_emotions(market_data)
             liquidity_result = advanced_intelligence['qlsr'].read_liquidity_signature(market_data)
             
+            # Advanced AI Consciousness Modules
+            truth_result = advanced_intelligence['tvc'].verify_market_truth(market_data, [])
+            zeri_result = advanced_intelligence['zeri'].recursive_intelligence_loop(market_data, {"meta_ai": meta_ai})
+            universe_decode = advanced_intelligence['lud'].decode_universe_language(market_data)
+            consciousness_result = advanced_intelligence['sc'].achieve_consciousness(
+                market_data, 
+                {"symbol": symbol, "signal": None}, 
+                self.symbol_data[symbol].get("decision_history", [])
+            )
+            
             ai_consensus = {
                 'lattice_confidence': lattice_result.get('prediction_confidence', 0),
                 'quantum_consciousness': quantum_result.get('quantum_consciousness', 0),
                 'emotion_intensity': emotion_result.get('intensity', 0),
                 'liquidity_confidence': liquidity_result.get('confidence', 0),
-                'dna_evolution': dna_result.get('evolutionary_state', 'stable')
+                'dna_evolution': dna_result.get('evolutionary_state', 'stable'),
+                'truth_verified': truth_result.get('truth_verified', False),
+                'truth_score': truth_result.get('truth_score', 0),
+                'cosmic_coherence': universe_decode.get('cosmic_coherence', 0),
+                'consciousness_level': consciousness_result.get('consciousness_level', 0),
+                'zero_energy_achieved': zeri_result.get('zero_energy_achieved', False)
             }
             
             self.Debug(f"Advanced AI State for {symbol}:")
@@ -257,6 +282,10 @@ class QMPOverriderUnified(QCAlgorithm):
             self.Debug(f"  Quantum: {quantum_result['quantum_state']} ({quantum_result['quantum_consciousness']:.3f})")
             self.Debug(f"  Emotion: {emotion_result['emotion']} ({emotion_result['intensity']:.3f})")
             self.Debug(f"  Liquidity: {liquidity_result['signature']} ({liquidity_result['confidence']:.3f})")
+            self.Debug(f"  Truth: {truth_result.get('truth_verified', False)} ({truth_result.get('truth_score', 0):.3f})")
+            self.Debug(f"  Cosmic: {universe_decode.get('decoded', False)} ({universe_decode.get('cosmic_coherence', 0):.3f})")
+            self.Debug(f"  Consciousness: {consciousness_result.get('consciousness_achieved', False)} ({consciousness_result.get('consciousness_level', 0):.3f})")
+            self.Debug(f"  Zero-Energy: {zeri_result.get('zero_energy_achieved', False)} ({zeri_result.get('energy_efficiency', 0):.3f})")
 
             optimization_result = self.performance_optimizer.optimize_data_processing(
                 self.symbol_data[symbol]["history_data"]
@@ -267,9 +296,44 @@ class QMPOverriderUnified(QCAlgorithm):
                 self.symbol_data[symbol]["history_data"]
             )
             
-            if direction and ai_consensus['lattice_confidence'] > 0.6 and ai_consensus['quantum_consciousness'] > 0.5:
+            # Apply Common Sense Intelligence
+            proposed_trade = {
+                'direction': 1 if direction == "BUY" else -1 if direction == "SELL" else 0,
+                'size': 0.02,  # Will be adjusted by risk management
+                'symbol': str(symbol),
+                'confidence': confidence
+            }
+            
+            common_sense_result = self.anti_loss_guardian.apply_common_sense_intelligence(market_data, proposed_trade)
+            
+            # Create Unstable Winning Intelligence
+            current_performance = {
+                'win_rate': self.symbol_data[symbol].get('win_rate', 0.8),
+                'profit_factor': self.symbol_data[symbol].get('profit_factor', 1.5),
+                'total_trades': len(self.symbol_data[symbol].get('trade_history', [])),
+                'losing_trades': sum(1 for trade in self.symbol_data[symbol].get('trade_history', []) if trade.get('pnl', 0) <= 0)
+            }
+            
+            unstable_winning = self.anti_loss_guardian.create_unstable_winning_intelligence(market_data, current_performance)
+            
+            never_loss_conditions = [
+                ai_consensus['truth_verified'],
+                ai_consensus['consciousness_level'] > 0.6,
+                common_sense_result.get('allow_trade', False),
+                ai_consensus['cosmic_coherence'] > 0.5,
+                unstable_winning.get('never_satisfied', False)
+            ]
+            
+            never_loss_score = sum(never_loss_conditions) / len(never_loss_conditions)
+            
+            if direction and never_loss_score >= 0.8:  # 80% of conditions must be met
                 confidence = min(0.95, confidence * 1.2)  # Boost confidence if AI confirms
                 self.Debug(f"Advanced AI boosted confidence to {confidence:.2f}")
+                self.Debug(f"Never-Loss Score: {never_loss_score:.3f} (APPROVED)")
+            elif direction and never_loss_score < 0.8:
+                confidence = max(0.1, confidence * 0.5)  # Significantly reduce confidence if never-loss protection activates
+                self.Debug(f"Never-Loss Protection reduced confidence to {confidence:.2f}")
+                self.Debug(f"Never-Loss Score: {never_loss_score:.3f} (PROTECTION ACTIVE)")
             elif direction and (ai_consensus['lattice_confidence'] < 0.3 or ai_consensus['quantum_consciousness'] < 0.3):
                 confidence = max(0.1, confidence * 0.8)  # Reduce confidence if AI disagrees
                 self.Debug(f"Advanced AI reduced confidence to {confidence:.2f}")

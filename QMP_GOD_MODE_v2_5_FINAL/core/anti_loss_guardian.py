@@ -227,3 +227,202 @@ class AntiLossGuardian:
             self.emergency_mode = False
             self.consecutive_losses = 0
             self.logger.info("Emergency mode reset")
+            
+    def apply_common_sense_intelligence(self, market_data, proposed_trade):
+        """
+        Apply common sense intelligence to trading decisions
+        
+        Parameters:
+        - market_data: Dictionary containing market data
+        - proposed_trade: Dictionary containing proposed trade details
+        
+        Returns:
+        - Dictionary with common sense check results
+        """
+        common_sense_checks = []
+        
+        if self._is_obviously_bad_time_to_trade(market_data):
+            common_sense_checks.append("bad_timing_detected")
+            return {"allow_trade": False, "reason": "common_sense_bad_timing", "checks": common_sense_checks}
+        
+        if self._is_obvious_trap(market_data, proposed_trade):
+            common_sense_checks.append("trap_detected")
+            return {"allow_trade": False, "reason": "common_sense_trap_avoidance", "checks": common_sense_checks}
+        
+        if self._is_overtrading(proposed_trade):
+            common_sense_checks.append("overtrading_detected")
+            return {"allow_trade": False, "reason": "common_sense_overtrading", "checks": common_sense_checks}
+        
+        if self._violates_basic_market_wisdom(market_data):
+            common_sense_checks.append("market_wisdom_violation")
+            return {"allow_trade": False, "reason": "common_sense_market_wisdom", "checks": common_sense_checks}
+        
+        if self._position_size_insane(proposed_trade):
+            common_sense_checks.append("insane_position_size")
+            return {"allow_trade": False, "reason": "common_sense_position_sizing", "checks": common_sense_checks}
+        
+        common_sense_checks.append("all_checks_passed")
+        return {"allow_trade": True, "reason": "common_sense_approved", "checks": common_sense_checks}
+    
+    def _is_obviously_bad_time_to_trade(self, market_data):
+        """Check if it's obviously a bad time to trade"""
+        if 'returns' not in market_data or len(market_data['returns']) < 5:
+            return True  # No data = bad time
+        
+        recent_returns = market_data['returns'][-5:]
+        
+        if np.std(recent_returns) > 0.1:  # 10% volatility
+            return True
+        
+        if all(r < -0.02 for r in recent_returns[-3:]):  # 3 consecutive 2%+ drops
+            return True
+        
+        if len(set(np.sign(recent_returns))) == 1 and len(recent_returns) >= 5:
+            return True
+        
+        return False
+    
+    def _is_obvious_trap(self, market_data, proposed_trade):
+        """Detect obvious market traps"""
+        if 'returns' not in market_data or len(market_data['returns']) < 10:
+            return False
+        
+        returns = market_data['returns'][-10:]
+        trade_direction = proposed_trade.get('direction', 0)
+        
+        if trade_direction > 0 and all(r > 0.01 for r in returns[-3:]):
+            return True
+        
+        if trade_direction < 0 and all(r < -0.01 for r in returns[-3:]):
+            return True
+        
+        if len(returns) >= 5:
+            recent_high = max(returns[-5:])
+            recent_low = min(returns[-5:])
+            if abs(recent_high - recent_low) > 0.05 and abs(returns[-1]) > 0.03:
+                return True  # Likely fake breakout
+        
+        return False
+    
+    def _is_overtrading(self, proposed_trade):
+        """Check for overtrading patterns"""
+        current_time = datetime.now()
+        
+        recent_trades = [trade for trade in self.trade_history 
+                        if (current_time - trade['timestamp']).seconds < 3600]  # Last hour
+        
+        if len(recent_trades) > 10:  # More than 10 trades per hour
+            return True
+        
+        if recent_trades:
+            last_trade = recent_trades[-1]
+            if (abs(proposed_trade.get('size', 0) - last_trade.get('size', 0)) < 0.1 and
+                proposed_trade.get('direction', 0) == last_trade.get('direction', 0)):
+                return True  # Too similar to last trade
+        
+        return False
+    
+    def _violates_basic_market_wisdom(self, market_data):
+        """Check violations of basic market wisdom"""
+        current_hour = datetime.now().hour
+        
+        if 12 <= current_hour <= 13:
+            return True
+        
+        if current_hour == 9 or current_hour == 15:  # Assuming 9:30-4:00 market hours
+            return True
+        
+        if datetime.now().weekday() >= 5:  # Saturday or Sunday
+            return True
+        
+        return False
+    
+    def _position_size_insane(self, proposed_trade):
+        """Check if position size is insane"""
+        position_size = proposed_trade.get('size', 0)
+        
+        # Position size should never exceed 50% of portfolio
+        if position_size > 0.5:
+            return True
+        
+        if position_size < 0:
+            return True
+        
+        if 0 < position_size < 0.001:  # Less than 0.1%
+            return True
+        
+        return False
+    
+    def create_unstable_winning_intelligence(self, market_data, current_performance):
+        """
+        Create AI that is 'unstable' when it comes to winning - always seeking better performance
+        
+        Parameters:
+        - market_data: Dictionary containing market data
+        - current_performance: Dictionary containing current performance metrics
+        
+        Returns:
+        - Dictionary with unstable winning intelligence characteristics
+        """
+        winning_instability = {
+            "never_satisfied": True,
+            "always_optimizing": True,
+            "performance_hunger": self._calculate_performance_hunger(current_performance),
+            "winning_obsession": self._develop_winning_obsession(current_performance),
+            "unstable_confidence": self._create_unstable_confidence(market_data)
+        }
+        
+        # Unstable winning behavior: never settle for current performance
+        if current_performance.get('win_rate', 0) < 1.0:  # Less than 100% win rate
+            winning_instability["optimization_trigger"] = "performance_not_perfect"
+            winning_instability["instability_level"] = 1.0 - current_performance.get('win_rate', 0)
+        else:
+            winning_instability["optimization_trigger"] = "profit_optimization"
+            winning_instability["instability_level"] = 0.3  # Always some instability
+        
+        return winning_instability
+    
+    def _calculate_performance_hunger(self, current_performance):
+        """Calculate how hungry the AI is for better performance"""
+        win_rate = current_performance.get('win_rate', 0)
+        profit_factor = current_performance.get('profit_factor', 1)
+        
+        performance_score = (win_rate + min(profit_factor / 2, 1)) / 2
+        hunger = 1.0 - performance_score + 0.2  # Always at least 20% hungry
+        
+        return min(1.0, hunger)
+    
+    def _develop_winning_obsession(self, current_performance):
+        """Develop obsession with winning"""
+        losses = current_performance.get('losing_trades', 0)
+        total_trades = current_performance.get('total_trades', 1)
+        
+        if losses > 0:
+            obsession = min(1.0, losses / total_trades + 0.5)
+        else:
+            obsession = 0.8  # High obsession even with no losses
+        
+        return obsession
+    
+    def _create_unstable_confidence(self, market_data):
+        """Create unstable confidence that fluctuates with market conditions"""
+        if 'returns' not in market_data or len(market_data['returns']) < 5:
+            return {"confidence": 0.5, "instability": 0.8}
+        
+        recent_returns = market_data['returns'][-5:]
+        volatility = np.std(recent_returns)
+        
+        base_confidence = 0.7
+        volatility_factor = min(0.3, volatility * 10)  # Volatility reduces confidence
+        
+        unstable_confidence = base_confidence - volatility_factor + np.random.normal(0, 0.1)
+        unstable_confidence = max(0.1, min(0.95, unstable_confidence))  # Keep in bounds
+        
+        instability = volatility_factor + 0.2  # Always some instability
+        
+        return {
+            "confidence": unstable_confidence,
+            "instability": instability,
+            "paranoia_level": volatility_factor,
+            "winning_drive": 1.0 - unstable_confidence  # Lower confidence = higher drive
+        }
