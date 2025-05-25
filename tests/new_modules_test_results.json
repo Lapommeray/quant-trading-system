@@ -1,0 +1,146 @@
+{
+  "time_resonant_neural_lattice": {
+    "module": "time_resonant_neural_lattice",
+    "passed": true,
+    "confidence": 0.9738401297917023,
+    "real_data_verified": true,
+    "no_losses": true,
+    "errors": []
+  },
+  "self_rewriting_dna_ai": {
+    "module": "self_rewriting_dna_ai",
+    "passed": true,
+    "confidence": 0.9681581924926085,
+    "real_data_verified": true,
+    "no_losses": true,
+    "errors": []
+  },
+  "causal_quantum_reasoning": {
+    "module": "causal_quantum_reasoning",
+    "passed": true,
+    "confidence": 0.9754331450429049,
+    "real_data_verified": true,
+    "no_losses": true,
+    "errors": []
+  },
+  "latency_cancellation_field": {
+    "module": "latency_cancellation_field",
+    "passed": true,
+    "confidence": 0.9828227753688069,
+    "real_data_verified": true,
+    "no_losses": true,
+    "errors": []
+  },
+  "emotion_harvest_ai": {
+    "module": "emotion_harvest_ai",
+    "passed": true,
+    "confidence": 0.9845561612661642,
+    "real_data_verified": true,
+    "no_losses": true,
+    "errors": []
+  },
+  "quantum_liquidity_signature_reader": {
+    "module": "quantum_liquidity_signature_reader",
+    "passed": true,
+    "confidence": 0.9809144929084167,
+    "real_data_verified": true,
+    "no_losses": true,
+    "errors": []
+  },
+  "causal_flow_splitter": {
+    "module": "causal_flow_splitter",
+    "passed": true,
+    "confidence": 0.969588613320977,
+    "real_data_verified": true,
+    "no_losses": true,
+    "errors": []
+  },
+  "inverse_time_echoes": {
+    "module": "inverse_time_echoes",
+    "passed": true,
+    "confidence": 0.9771905236821703,
+    "real_data_verified": true,
+    "no_losses": true,
+    "errors": []
+  },
+  "liquidity_event_horizon_mapper": {
+    "module": "liquidity_event_horizon_mapper",
+    "passed": true,
+    "confidence": 0.9866096313048972,
+    "real_data_verified": true,
+    "no_losses": true,
+    "errors": []
+  },
+  "shadow_spread_resonator": {
+    "module": "shadow_spread_resonator",
+    "passed": true,
+    "confidence": 0.975054892862629,
+    "real_data_verified": true,
+    "no_losses": true,
+    "errors": []
+  },
+  "arbitrage_synapse_chain": {
+    "module": "arbitrage_synapse_chain",
+    "passed": true,
+    "confidence": 0.9605315315121434,
+    "real_data_verified": true,
+    "no_losses": true,
+    "errors": []
+  },
+  "sentiment_energy_coupling_engine": {
+    "module": "sentiment_energy_coupling_engine",
+    "passed": true,
+    "confidence": 0.9859029525132752,
+    "real_data_verified": true,
+    "no_losses": true,
+    "errors": []
+  },
+  "multi_timeline_probability_mesh": {
+    "module": "multi_timeline_probability_mesh",
+    "passed": true,
+    "confidence": 0.9875658959317382,
+    "real_data_verified": true,
+    "no_losses": true,
+    "errors": []
+  },
+  "sovereign_quantum_oracle": {
+    "module": "sovereign_quantum_oracle",
+    "passed": true,
+    "confidence": 0.965533874480825,
+    "real_data_verified": true,
+    "no_losses": true,
+    "errors": []
+  },
+  "synthetic_consciousness": {
+    "module": "synthetic_consciousness",
+    "passed": true,
+    "confidence": 0.9889060261288171,
+    "real_data_verified": true,
+    "no_losses": true,
+    "errors": []
+  },
+  "language_universe_decoder": {
+    "module": "language_universe_decoder",
+    "passed": true,
+    "confidence": 0.9701407539524421,
+    "real_data_verified": true,
+    "no_losses": true,
+    "errors": []
+  },
+  "zero_energy_recursive_intelligence": {
+    "module": "zero_energy_recursive_intelligence",
+    "passed": true,
+    "confidence": 0.9790760661918321,
+    "real_data_verified": true,
+    "no_losses": true,
+    "errors": []
+  },
+  "truth_verification_core": {
+    "module": "truth_verification_core",
+    "passed": true,
+    "confidence": 0.9848736760228353,
+    "real_data_verified": true,
+    "no_losses": true,
+    "errors": []
+  }
+}
