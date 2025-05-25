@@ -152,9 +152,12 @@ class TestQuantConnectIntegration(unittest.TestCase):
                 anti_loss_check = self.anti_loss.check_anti_loss_conditions(portfolio_value, self.algorithm.Portfolio)
                 
                 if anti_loss_check["allowed"] and prediction is not None:
-                    if prediction > 0.7:
+                    prediction_signal = prediction.get("signal", "NEUTRAL") if isinstance(prediction, dict) else prediction
+                    prediction_confidence = prediction.get("confidence", 0.0) if isinstance(prediction, dict) else abs(prediction) if prediction else 0.0
+                    
+                    if prediction_signal == "BUY" or (isinstance(prediction, (int, float)) and prediction > 0.7):
                         self.algorithm.SetHoldings("SPY", 0.8)
-                    elif prediction < -0.7:
+                    elif prediction_signal == "SELL" or (isinstance(prediction, (int, float)) and prediction < -0.7):
                         self.algorithm.SetHoldings("SPY", -0.3)
             
             ai_metrics = {

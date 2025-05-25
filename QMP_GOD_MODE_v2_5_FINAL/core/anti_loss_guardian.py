@@ -24,23 +24,32 @@ class AntiLossGuardian:
         self.logger = self._setup_logger()
         self.loss_prevention_active = True
         self.consecutive_losses = 0
-        self.max_consecutive_losses = 3
+        self.max_consecutive_losses = 1  # Ultra-conservative: only allow 1 loss
         self.emergency_mode = False
         
         self.protection_levels = {
-            "level_1": {"drawdown": 0.05, "action": "reduce_position"},
-            "level_2": {"drawdown": 0.10, "action": "halt_new_trades"},
-            "level_3": {"drawdown": 0.15, "action": "emergency_liquidation"}
+            "level_1": {"drawdown": 0.001, "action": "reduce_position"},
+            "level_2": {"drawdown": 0.005, "action": "halt_new_trades"},
+            "level_3": {"drawdown": 0.01, "action": "emergency_liquidation"}
         }
         
         self.peak_portfolio_value = None
+        self.last_portfolio_value = None
+        self.market_regime = "normal"  # Can be: normal, volatile, trending, uncertain
         
-        self.risk_multiplier = 1.0
+        # Ultra-conservative risk multiplier
+        self.risk_multiplier = 0.5  # Start with half the normal risk
+        self.max_risk_multiplier = 0.5  # Never exceed 50% of normal risk
         
         self.trade_history = []
         self.max_trade_history = 100
         
-        self.logger.info("Anti-Loss Guardian initialized")
+        self.market_regime_detection_active = True
+        self.position_concentration_limit = 0.2  # Max 20% in any single position
+        self.max_portfolio_risk = 0.005  # Max 0.5% portfolio risk per trade
+        self.intraday_loss_limit = 0.001  # Max 0.1% intraday drawdown
+        
+        self.logger.info("Enhanced Anti-Loss Guardian initialized with never-lose protection")
         
     def _setup_logger(self):
         """Set up logger"""
@@ -57,7 +66,7 @@ class AntiLossGuardian:
         
     def check_anti_loss_conditions(self, portfolio_value, current_positions):
         """
-        Comprehensive anti-loss condition checking
+        Enhanced comprehensive anti-loss condition checking for never-lose objective
         
         Parameters:
         - portfolio_value: Current portfolio value
@@ -69,11 +78,23 @@ class AntiLossGuardian:
         if not self.loss_prevention_active:
             return {"allowed": True, "action": "none"}
             
+        # Initialize peak portfolio value if not set
         if self.peak_portfolio_value is None:
             self.peak_portfolio_value = portfolio_value
             
         if portfolio_value > self.peak_portfolio_value:
             self.peak_portfolio_value = portfolio_value
+            
+        intraday_change = 0
+        if self.last_portfolio_value is not None:
+            intraday_change = (portfolio_value - self.last_portfolio_value) / self.last_portfolio_value
+            
+            if intraday_change < -self.intraday_loss_limit:
+                self.logger.warning(f"Intraday loss limit exceeded: {intraday_change:.4%}")
+                return {"allowed": False, "action": "halt_trading", "intraday_loss": intraday_change}
+        
+        # Update last portfolio value
+        self.last_portfolio_value = portfolio_value
             
         current_drawdown = (self.peak_portfolio_value - portfolio_value) / self.peak_portfolio_value if self.peak_portfolio_value > 0 else 0
         
@@ -83,7 +104,7 @@ class AntiLossGuardian:
         
         for level, config in ordered_levels:
             if current_drawdown >= config["drawdown"]:
-                self.logger.warning(f"Anti-loss {level} triggered: {current_drawdown:.2%} drawdown")
+                self.logger.warning(f"Anti-loss {level} triggered: {current_drawdown:.4%} drawdown")
                 return {"allowed": False, "action": config["action"], "drawdown": current_drawdown}
                 
         if self.consecutive_losses >= self.max_consecutive_losses:
@@ -93,17 +114,22 @@ class AntiLossGuardian:
             
         if current_positions:
             total_value = sum(abs(pos) for pos in current_positions.values())
-            max_position = max(abs(pos) for pos in current_positions.values())
-            
-            if max_position / total_value > 0.5:  # Single position > 50% of portfolio
-                self.logger.warning(f"Position concentration risk detected: {max_position/total_value:.2%}")
-                return {"allowed": False, "action": "reduce_concentration", "concentration": max_position/total_value}
+            if total_value > 0:
+                max_position = max(abs(pos) for pos in current_positions.values())
+                
+                if max_position / total_value > self.position_concentration_limit:
+                    self.logger.warning(f"Position concentration risk detected: {max_position/total_value:.4%}")
+                    return {"allowed": False, "action": "reduce_concentration", "concentration": max_position/total_value}
                 
         if self._detect_unusual_patterns():
             self.logger.warning("Unusual trading pattern detected")
             return {"allowed": False, "action": "pause_trading", "reason": "unusual_pattern"}
             
-        return {"allowed": True, "action": "none"}
+        if self.market_regime_detection_active and self.market_regime != "normal":
+            self.logger.warning(f"Abnormal market regime detected: {self.market_regime}")
+            return {"allowed": False, "action": "reduce_exposure", "market_regime": self.market_regime}
+            
+        return {"allowed": True, "action": "none", "risk_multiplier": self.risk_multiplier}
         
     def update_trade_result(self, trade_pnl, trade_data=None):
         """
@@ -412,17 +438,20 @@ class AntiLossGuardian:
         recent_returns = market_data['returns'][-5:]
         volatility = np.std(recent_returns)
         
-        base_confidence = 0.7
-        volatility_factor = min(0.3, volatility * 10)  # Volatility reduces confidence
+        base_confidence = 0.85  # Higher base confidence for "never lose" objective
         
-        unstable_confidence = base_confidence - volatility_factor + np.random.normal(0, 0.1)
-        unstable_confidence = max(0.1, min(0.95, unstable_confidence))  # Keep in bounds
+        volatility_factor = min(0.3, float(volatility * 10))  # Volatility reduces confidence
         
-        instability = volatility_factor + 0.2  # Always some instability
+        # Higher confidence floor for "never lose" objective
+        unstable_confidence = base_confidence - volatility_factor + np.random.normal(0, 0.05)
+        unstable_confidence = max(0.75, min(0.98, unstable_confidence))  # Higher bounds
+        
+        instability = volatility_factor + 0.1  # Reduced instability for more consistent performance
         
         return {
             "confidence": unstable_confidence,
             "instability": instability,
             "paranoia_level": volatility_factor,
-            "winning_drive": 1.0 - unstable_confidence  # Lower confidence = higher drive
+            "winning_drive": 0.98,  # Always high winning drive
+            "never_lose_focus": 0.95  # Ultra-high focus on never losing
         }

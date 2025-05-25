@@ -273,14 +273,14 @@ class ModelConfidenceTracker:
             "moving_avg": moving_avg
         }
     
-    def needs_retraining(self, model_name, confidence_threshold=0.7, performance_threshold=0.6, trend_window=10):
+    def needs_retraining(self, model_name, confidence_threshold=0.85, performance_threshold=0.8, trend_window=10):
         """
-        Check if a model needs retraining.
+        Check if a model needs retraining with super high confidence requirements.
         
         Parameters:
         - model_name: Name of the model
-        - confidence_threshold: Threshold for confidence
-        - performance_threshold: Threshold for performance
+        - confidence_threshold: Threshold for confidence (increased to 0.85 for super high confidence)
+        - performance_threshold: Threshold for performance (increased to 0.8 for super high confidence)
         - trend_window: Window size for trend analysis
         
         Returns:
@@ -290,17 +290,23 @@ class ModelConfidenceTracker:
         
         performance_trend = self.get_performance_trend(model_name, trend_window)
         
+        # More aggressive retraining triggers for super high confidence
         if confidence_trend["current"] < confidence_threshold:
             return True
         
         if performance_trend["current"] < performance_threshold:
             return True
         
-        if confidence_trend["trend"] == "decreasing" and confidence_trend["slope"] < -0.05:
+        if confidence_trend["trend"] == "decreasing" and confidence_trend["slope"] < -0.02:
             return True
         
-        if performance_trend["trend"] == "decreasing" and performance_trend["slope"] < -0.05:
+        if performance_trend["trend"] == "decreasing" and performance_trend["slope"] < -0.02:
             return True
+        
+        if "history" in confidence_trend and len(confidence_trend["history"]) >= 5:
+            recent_confidences = confidence_trend["history"][-5:]
+            if np.std(recent_confidences) > 0.1:  # High variance indicates instability
+                return True
         
         return False
     

@@ -51,7 +51,7 @@ class MetaAdaptiveAI:
         self.performance_history = {model_name: [] for model_name in self.models.keys()}
         self.feature_importance = {}
         self.evolution_stage = 1  # Starts at stage 1 (basic)
-        self.confidence_threshold = 0.65
+        self.confidence_threshold = 0.85  # Increased from 0.65 for super high confidence
         self.min_samples_for_training = 30
         self.last_evolution_check = None
         self.evolution_check_interval = timedelta(days=1)
@@ -103,13 +103,13 @@ class MetaAdaptiveAI:
         - Dictionary containing prediction results
         """
         if not self.is_trained:
-            return {"signal": "NEUTRAL", "confidence": 0.0, "model": None}
+            return {"signal": "NEUTRAL", "confidence": 0.0, "model": None, "high_confidence": False}
         
         feature_list = self.feature_sets[self.current_feature_set]
         available_features = [f for f in feature_list if f in features]
         
         if len(available_features) < len(feature_list) * 0.7:  # Need at least 70% of features
-            return {"signal": "NEUTRAL", "confidence": 0.0, "model": None}
+            return {"signal": "NEUTRAL", "confidence": 0.0, "model": None, "high_confidence": False}
         
         X = np.array([[features[f] for f in available_features]])
         X_scaled = self.scaler.transform(X)
@@ -140,15 +140,18 @@ class MetaAdaptiveAI:
                     signal = "NEUTRAL"
                     confidence = 1.0 - abs(confidence - 0.5) * 2  # Rescale confidence for NEUTRAL
             
+            # Super high confidence requirement - only generate signals with very high confidence
             if confidence < self.confidence_threshold:
                 signal = "NEUTRAL"
+                confidence = min(confidence, 0.5)  # Cap neutral confidence
             
             return {
                 "signal": signal,
                 "confidence": confidence,
                 "model": self.active_model,
                 "evolution_stage": self.evolution_stage,
-                "feature_set": self.current_feature_set
+                "feature_set": self.current_feature_set,
+                "high_confidence": confidence >= self.confidence_threshold
             }
             
         except Exception as e:

@@ -61,14 +61,15 @@ class TruthVerificationCore:
                 truth_score += 0.25
                 verification_tests.append("volume_price_truth_verified")
         
-        truth_verified = truth_score >= 0.75
+        truth_verified = truth_score >= 0.95
         
         verification_result = {
             "truth_verified": truth_verified,
             "truth_score": truth_score,
             "verification_tests": verification_tests,
             "cosmic_alignment": self._calculate_cosmic_alignment(returns),
-            "confidence": min(1.0, truth_score + 0.1)
+            "confidence": min(1.0, truth_score + 0.05),  # Reduced confidence boost
+            "high_confidence": truth_score >= 0.95
         }
         
         self.verification_history.append({
