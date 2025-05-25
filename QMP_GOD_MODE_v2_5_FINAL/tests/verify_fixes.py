@@ -71,7 +71,7 @@ def test_walk_forward_no_leakage():
 
 def test_fat_tail_risk():
     """Test fat-tail risk management with Expected Shortfall"""
-    from core.risk_manager import RiskManager
+    from core.fat_tail import FatTailRiskManager
     
     logger.info("Testing fat-tail risk management...")
     
@@ -79,11 +79,11 @@ def test_fat_tail_risk():
     
     fat_tail_returns = np.random.standard_t(df=3, size=1000) * 0.01 + 0.001
     
-    risk_manager = RiskManager()
+    risk_manager = FatTailRiskManager()
     
-    normal_kelly = risk_manager.calculate_kelly_fraction(pd.Series(normal_returns))
+    normal_kelly = risk_manager.kelly_criterion(pd.Series(normal_returns))
     
-    fat_tail_kelly = risk_manager.calculate_kelly_fraction(pd.Series(fat_tail_returns))
+    fat_tail_kelly = risk_manager.kelly_criterion_fat_tail(pd.Series(fat_tail_returns))
     
     if fat_tail_kelly >= normal_kelly:
         logger.error("❌ CRITICAL: Fat-tail Kelly not more conservative than normal Kelly")
@@ -94,7 +94,7 @@ def test_fat_tail_risk():
         np.random.normal(-0.05, 0.03, 20)  # Crash period
     ])
     
-    crash_kelly = risk_manager.calculate_kelly_fraction(pd.Series(crash_returns))
+    crash_kelly = risk_manager.kelly_criterion_fat_tail(pd.Series(crash_returns))
     
     if crash_kelly > 0.2:
         logger.error(f"❌ CRITICAL: Crash Kelly too aggressive: {crash_kelly:.4f}")
