@@ -21,6 +21,7 @@ class OverSoulDirector:
             'invisible_data': True,
             'meta_adaptive': True,
             'quantum_sentiment': True,
+            'imperceptible_pattern': True,  # New module for detecting patterns humans can't see
             
             'btc_offchain': True,
             'fed_jet': True,
@@ -36,6 +37,7 @@ class OverSoulDirector:
             'future_shadow': 2,         # High priority - predictive
             'meta_adaptive': 2,
             'quantum_tremor': 2,
+            'imperceptible_pattern': 2, # High priority - human-imperceptible patterns
             
             'emotion_dna': 1,           # Standard priority
             'fractal_resonance': 1,

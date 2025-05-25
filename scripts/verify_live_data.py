@@ -255,16 +255,24 @@ class DataVerifier:
     """Data verification to ensure 100% real market data"""
     
     def __init__(self, strict_mode: bool = True):
-        """Initialize the data verifier"""
+        """Initialize the enhanced data verifier with super high quality requirements"""
         self.strict_mode = strict_mode
         self.verification_history = []
         self.verification_stats = {
             "total_checks": 0,
             "passed_checks": 0,
             "failed_checks": 0,
-            "verification_rate": 0.0
+            "verification_rate": 0.0,
+            "data_quality_score": 0.0,  # New metric for data quality
+            "high_quality_rate": 0.0    # Percentage of data that meets high quality standards
         }
-        logger.info(f"Initialized DataVerifier with strict_mode={strict_mode}")
+        
+        self.min_quality_threshold = 0.95  # Only accept data with 95%+ quality score
+        self.max_timestamp_deviation = 30 * 1000  # 30 seconds in milliseconds (reduced from minutes)
+        self.cross_exchange_validation = True  # Enable cross-exchange validation
+        self.max_cross_exchange_deviation = 0.001  # Maximum 0.1% deviation between exchanges
+        
+        logger.info(f"Initialized Enhanced DataVerifier with strict_mode={strict_mode} and min_quality_threshold={self.min_quality_threshold}")
     
     def verify_ticker_data(self, data: Dict, symbol: str, exchange: str) -> Tuple[bool, str]:
         """Verify ticker data authenticity"""
@@ -380,22 +388,32 @@ class DataVerifier:
         return True, "Data verified as authentic"
     
     def run_nuclear_verification(self) -> bool:
-        """Run comprehensive verification on all data sources"""
-        logger.info("Running nuclear verification...")
+        """Run comprehensive verification on all data sources with super high quality requirements"""
+        logger.info("Running enhanced nuclear verification with super high quality requirements...")
         
         if not self.verification_history:
             logger.warning("No verification history available")
             return False
         
-        if self.verification_stats["verification_rate"] < 0.95:
+        if self.verification_stats["verification_rate"] < 0.98:
             logger.warning(f"Verification rate below threshold: {self.verification_stats['verification_rate']}")
             return False
+            
+        # New: Check data quality score
+        if self.verification_stats.get("data_quality_score", 0) < self.min_quality_threshold:
+            logger.warning(f"Data quality score below threshold: {self.verification_stats.get('data_quality_score', 0)}")
+            return False
+            
+        if self.verification_stats.get("high_quality_rate", 0) < 0.95:
+            logger.warning(f"High quality rate below threshold: {self.verification_stats.get('high_quality_rate', 0)}")
+            return False
         
-        logger.info("Nuclear verification passed")
+        logger.info("Enhanced nuclear verification passed with super high quality standards")
         return True
     
     def get_verification_stats(self) -> Dict:
         """Get verification statistics"""
+        return self.verification_stats
     def verify_against_reference(self, data, reference_data, tolerance=0.005):
         """Verify data authenticity by comparing with external reference source"""
         self.verification_stats["total_checks"] += 1
