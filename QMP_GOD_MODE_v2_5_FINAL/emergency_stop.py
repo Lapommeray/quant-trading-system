@@ -168,6 +168,10 @@ class EmergencyStop:
         
     def _record_action(self, action_name, data):
         """Record an action in the snapshot directory"""
+        if self.dry_run:
+            self.logger.info(f"Dry run: would record action {action_name} with data {data}")
+            return
+            
         action_file = os.path.join(self.snapshot_dir, f"{action_name}.json")
         with open(action_file, "w") as f:
             json.dump({
