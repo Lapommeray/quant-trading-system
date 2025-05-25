@@ -26,18 +26,44 @@ class OverSoulDirector:
             'fed_jet': True,
             'spoofing': True,
             'stress': True,
-            'port_activity': True
+            'port_activity': True,
+            
+            'time_resonant_neural_lattice': True,
+            'self_rewriting_dna_ai': True,
+            'causal_quantum_reasoning': True,
+            'latency_cancellation_field': True,
+            'emotion_harvest_ai': True,
+            'quantum_liquidity_signature': True,
+            'causal_flow_splitter': True,
+            'inverse_time_echoes': True,
+            'liquidity_event_horizon': True,
+            'shadow_spread_resonator': True,
+            'arbitrage_synapse_chain': True,
+            'sentiment_energy_coupling': True,
+            'multi_timeline_probability': True,
+            'sovereign_quantum_oracle': True,
+            'synthetic_consciousness': True,
+            'language_universe_decoder': True,
+            'zero_energy_recursive': True,
+            'truth_verification_core': True
         }
         
         self.module_tiers = {
-            'black_swan_protector': 3,  # Highest priority - safety
-            'compliance': 3,            # Regulatory compliance
+            'black_swan_protector': 3,  
+            'compliance': 3,            
+            'truth_verification_core': 3,  # Verify signals against manipulation
+            'sovereign_quantum_oracle': 3, # Supreme market reality manipulation
             
-            'future_shadow': 2,         # High priority - predictive
+            'future_shadow': 2,         
             'meta_adaptive': 2,
             'quantum_tremor': 2,
+            'time_resonant_neural_lattice': 2, # Precognition via data harmonics
+            'causal_quantum_reasoning': 2,     # Understanding why things happen
+            'synthetic_consciousness': 2,      # True market awareness
+            'language_universe_decoder': 2,    # Underlying source code of markets
+            'multi_timeline_probability': 2,   # Multiple future paths
             
-            'emotion_dna': 1,           # Standard priority
+            'emotion_dna': 1,           
             'fractal_resonance': 1,
             'intention_decoder': 1,
             'timeline_fork': 1,
@@ -47,6 +73,17 @@ class OverSoulDirector:
             'human_lag': 1,
             'invisible_data': 1,
             'quantum_sentiment': 1,
+            'self_rewriting_dna_ai': 1,        # Self-evolving code
+            'latency_cancellation_field': 1,   # Erases exchange latency
+            'emotion_harvest_ai': 1,           # Detects emotion microbursts
+            'quantum_liquidity_signature': 1,  # Detects market maker fingerprints
+            'causal_flow_splitter': 1,         # Separates cause from noise
+            'inverse_time_echoes': 1,          # Mirrored future movements
+            'liquidity_event_horizon': 1,      # Liquidity zone gravity
+            'shadow_spread_resonator': 1,      # Micro spread anomalies
+            'arbitrage_synapse_chain': 1,      # Self-healing arbitrage
+            'sentiment_energy_coupling': 1,    # Social sentiment to volatility
+            'zero_energy_recursive': 1,        # Zero-input learning
             
             'btc_offchain': 1,
             'fed_jet': 1,
