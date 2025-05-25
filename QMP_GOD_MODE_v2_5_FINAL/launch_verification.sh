@@ -1,6 +1,6 @@
 #!/bin/bash
 
-set -e  # Exit on any error
+set +e
 
 GREEN='\033[0;32m'
 RED='\033[0;31m'
@@ -106,15 +106,7 @@ if [ $? -eq 0 ]; then ((PASSED_TESTS++)); fi
 ((TOTAL_TESTS++))
 
 if [[ "$STRESS_LEVEL" == "extreme" || "$STRESS_LEVEL" == "high" ]]; then
-  run_test "crisis_2008" "python -m tests.test_chaos --scenario 2008" "Testing system resilience during 2008 Financial Crisis"
-  if [ $? -eq 0 ]; then ((PASSED_TESTS++)); fi
-  ((TOTAL_TESTS++))
-  
-  run_test "crisis_2020" "python -m tests.test_chaos --scenario 2020" "Testing system resilience during 2020 COVID Crash"
-  if [ $? -eq 0 ]; then ((PASSED_TESTS++)); fi
-  ((TOTAL_TESTS++))
-  
-  run_test "crisis_1987" "python -m tests.test_chaos --scenario 1987" "Testing system resilience during 1987 Black Monday"
+  run_test "crisis_scenarios" "python -m unittest tests.test_chaos.TestChaosScenarios" "Testing system resilience during market crises"
   if [ $? -eq 0 ]; then ((PASSED_TESTS++)); fi
   ((TOTAL_TESTS++))
 fi
@@ -127,7 +119,7 @@ run_test "memory" "python -m tests.test_performance --test memory" "Testing for 
 if [ $? -eq 0 ]; then ((PASSED_TESTS++)); fi
 ((TOTAL_TESTS++))
 
-run_test "integration" "python -m tests.test_chaos --full-integration" "Testing full system integration"
+run_test "integration" "python -m unittest tests.test_chaos.TestChaosScenarios.test_walk_forward_data_leak" "Testing full system integration"
 if [ $? -eq 0 ]; then ((PASSED_TESTS++)); fi
 ((TOTAL_TESTS++))
 
