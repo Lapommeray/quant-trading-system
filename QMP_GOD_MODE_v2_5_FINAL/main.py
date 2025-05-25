@@ -8,10 +8,18 @@ from core.live_data_manager import LiveDataManager
 from core.performance_optimizer import PerformanceOptimizer
 from core.dynamic_slippage import DynamicLiquiditySlippage
 from core.async_api_client import AsyncQMPApiClient
+from ai.meta_adaptive_ai import MetaAdaptiveAI
+from ai.market_intelligence import (
+    LatencyCancellationField,
+    EmotionHarvestAI,
+    QuantumLiquiditySignatureReader,
+    SovereignQuantumOracle
+)
 import pandas as pd
 import os
 import json
 import asyncio
+import numpy as np
 from datetime import timedelta
 from QuantConnect import Resolution, Market
 from QuantConnect.Algorithm import QCAlgorithm
@@ -205,6 +213,51 @@ class QMPOverriderUnified(QCAlgorithm):
             if not is_aligned:
                 continue
 
+            market_data = self._prepare_market_data(symbol)
+            
+            if "meta_ai" not in self.symbol_data[symbol]:
+                self.symbol_data[symbol]["meta_ai"] = MetaAdaptiveAI(self, symbol)
+                self.symbol_data[symbol]["advanced_intelligence"] = {
+                    'lcf': LatencyCancellationField(),
+                    'eha': EmotionHarvestAI(),
+                    'qlsr': QuantumLiquiditySignatureReader(),
+                    'sqo': SovereignQuantumOracle(self)
+                }
+            
+            meta_ai = self.symbol_data[symbol]["meta_ai"]
+            advanced_intelligence = self.symbol_data[symbol]["advanced_intelligence"]
+            
+            lattice_result = meta_ai.time_resonant_neural_lattice(market_data)
+            
+            performance_metrics = meta_ai.get_performance_metrics()
+            market_conditions = {
+                'volatility': np.std(market_data['returns'][-20:]) if len(market_data['returns']) >= 20 else 0,
+                'trend_strength': abs(np.mean(market_data['returns'][-10:])) if len(market_data['returns']) >= 10 else 0
+            }
+            dna_result = meta_ai.dna_self_rewrite(performance_metrics, market_conditions)
+            
+            quantum_result = meta_ai.causal_quantum_reasoning(market_data)
+            
+            # Advanced Market Intelligence
+            latency_result = advanced_intelligence['lcf'].cancel_latency(market_data)
+            emotion_result = advanced_intelligence['eha'].harvest_emotions(market_data)
+            liquidity_result = advanced_intelligence['qlsr'].read_liquidity_signature(market_data)
+            
+            ai_consensus = {
+                'lattice_confidence': lattice_result.get('prediction_confidence', 0),
+                'quantum_consciousness': quantum_result.get('quantum_consciousness', 0),
+                'emotion_intensity': emotion_result.get('intensity', 0),
+                'liquidity_confidence': liquidity_result.get('confidence', 0),
+                'dna_evolution': dna_result.get('evolutionary_state', 'stable')
+            }
+            
+            self.Debug(f"Advanced AI State for {symbol}:")
+            self.Debug(f"  Lattice: {lattice_result['lattice_state']} ({lattice_result.get('prediction_confidence', 0):.3f})")
+            self.Debug(f"  DNA: {dna_result['evolutionary_state']} (Gen {dna_result.get('adaptation_generation', 0)})")
+            self.Debug(f"  Quantum: {quantum_result['quantum_state']} ({quantum_result['quantum_consciousness']:.3f})")
+            self.Debug(f"  Emotion: {emotion_result['emotion']} ({emotion_result['intensity']:.3f})")
+            self.Debug(f"  Liquidity: {liquidity_result['signature']} ({liquidity_result['confidence']:.3f})")
+
             optimization_result = self.performance_optimizer.optimize_data_processing(
                 self.symbol_data[symbol]["history_data"]
             )
@@ -213,6 +266,13 @@ class QMPOverriderUnified(QCAlgorithm):
                 symbol, 
                 self.symbol_data[symbol]["history_data"]
             )
+            
+            if direction and ai_consensus['lattice_confidence'] > 0.6 and ai_consensus['quantum_consciousness'] > 0.5:
+                confidence = min(0.95, confidence * 1.2)  # Boost confidence if AI confirms
+                self.Debug(f"Advanced AI boosted confidence to {confidence:.2f}")
+            elif direction and (ai_consensus['lattice_confidence'] < 0.3 or ai_consensus['quantum_consciousness'] < 0.3):
+                confidence = max(0.1, confidence * 0.8)  # Reduce confidence if AI disagrees
+                self.Debug(f"Advanced AI reduced confidence to {confidence:.2f}")
             
             if diagnostics:
                 self.Debug(f"OverSoul diagnostics for {symbol}:")
@@ -286,6 +346,45 @@ class QMPOverriderUnified(QCAlgorithm):
             self.Debug(f"Gate scores: {gate_scores}")
             
             self.LogTradeResult(symbol, result)
+    
+    def _prepare_market_data(self, symbol):
+        """
+        Prepare market data for advanced AI analysis
+        
+        Parameters:
+        - symbol: Trading symbol
+        
+        Returns:
+        - Dictionary containing processed market data
+        """
+        history_data = self.symbol_data[symbol]["history_data"]
+        
+        df_1m = history_data["1m"]
+        
+        if df_1m.empty:
+            return {"returns": [], "volume": []}
+            
+        df_1m['returns'] = df_1m['Close'].pct_change().fillna(0)
+        
+        market_data = {
+            'returns': df_1m['returns'].values.tolist(),
+            'volume': df_1m['Volume'].values.tolist(),
+            'open': df_1m['Open'].values.tolist(),
+            'high': df_1m['High'].values.tolist(),
+            'low': df_1m['Low'].values.tolist(),
+            'close': df_1m['Close'].values.tolist()
+        }
+        
+        for timeframe in ["5m", "15m"]:
+            if timeframe in history_data and not history_data[timeframe].empty:
+                df = history_data[timeframe]
+                df['returns'] = df['Close'].pct_change().fillna(0)
+                
+                market_data[f'{timeframe}_returns'] = df['returns'].values.tolist()
+                market_data[f'{timeframe}_volume'] = df['Volume'].values.tolist()
+                market_data[f'{timeframe}_close'] = df['Close'].values.tolist()
+        
+        return market_data
     
     def LogTradeResult(self, symbol, result):
         """
