@@ -99,6 +99,10 @@ class EmergencyStop:
         """Create a snapshot of the current system state"""
         self.logger.info("Creating system snapshot...")
         
+        if self.dry_run:
+            self.logger.info("Dry run: would create system snapshot with memory, process, and market data")
+            return
+        
         try:
             import psutil
             memory_info = psutil.virtual_memory()._asdict()
@@ -155,6 +159,10 @@ class EmergencyStop:
         """Lock the trading system to prevent further trading"""
         self.logger.info(f"Locking trading system with code: {code}")
         
+        if self.dry_run:
+            self.logger.info(f"Dry run: would lock trading system with code {code}")
+            return
+            
         lock_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "trading.lock")
         with open(lock_file, "w") as f:
             f.write(f"EMERGENCY STOP ACTIVATED\n")
@@ -182,6 +190,10 @@ class EmergencyStop:
             
     def _write_summary(self, code, elapsed_time):
         """Write summary of emergency stop procedure"""
+        if self.dry_run:
+            self.logger.info(f"Dry run: would write emergency stop summary with code {code} and elapsed time {elapsed_time:.2f}s")
+            return
+            
         summary_file = os.path.join(self.snapshot_dir, "emergency_stop_summary.txt")
         with open(summary_file, "w") as f:
             f.write("EMERGENCY STOP SUMMARY\n")
