@@ -208,6 +208,39 @@ class EmergencyStop:
             f.write("4. Locked trading system\n\n")
             f.write("To resume trading, remove the trading.lock file and restart the system.\n")
             
+    def ai_driven_emergency_check(self, market_data, ai_metrics):
+        """
+        AI-driven emergency detection using advanced pattern recognition
+        
+        Parameters:
+        - market_data: Dictionary containing market data (returns, volume, etc.)
+        - ai_metrics: Dictionary containing AI performance metrics
+        
+        Returns:
+        - Tuple of (emergency_detected, active_conditions)
+        """
+        volatility = np.std(market_data.get('returns', [0])[-20:]) if 'returns' in market_data and len(market_data['returns']) >= 20 else 0
+        mean_reversion = np.mean(market_data.get('returns', [0])[-5:]) if 'returns' in market_data and len(market_data['returns']) >= 5 else 0
+        
+        ai_confidence = ai_metrics.get('confidence', 1.0)
+        model_accuracy = ai_metrics.get('recent_accuracy', 1.0)
+        
+        # Emergency triggers
+        emergency_conditions = {
+            "extreme_volatility": volatility > 0.1,  # 10% volatility
+            "sustained_losses": mean_reversion < -0.05,  # 5% sustained decline
+            "ai_confidence_loss": ai_confidence < 0.3,  # Low AI confidence
+            "model_breakdown": model_accuracy < 0.4  # Model failure
+        }
+        
+        active_conditions = [k for k, v in emergency_conditions.items() if v]
+        
+        if len(active_conditions) >= 2:  # Multiple conditions trigger emergency
+            self.logger.critical(f"AI Emergency Detection: {active_conditions}")
+            return True, active_conditions
+            
+        return False, []
+            
 def main():
     """Main function to execute emergency stop"""
     parser = argparse.ArgumentParser(description="Emergency Stop for QMP Trading System")
