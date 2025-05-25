@@ -2,6 +2,8 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 import logging
+import asyncio
+import aiohttp
 
 class EventBlackoutManager:
     def __init__(self):
@@ -9,9 +11,29 @@ class EventBlackoutManager:
             "NFP": {"time": "08:30", "duration": 30, "days": [4]},  # Friday 8:30 AM EST
             "FOMC": {"time": "14:00", "duration": 120, "days": [2]}, # Wednesday 2:00 PM EST  
             "CPI": {"time": "08:30", "duration": 60, "days": [1, 2, 3, 4]}, # Various weekdays
-            "GDP": {"time": "08:30", "duration": 45, "days": [1, 2, 3, 4]}
+            "GDP": {"time": "08:30", "duration": 45, "days": [1, 2, 3, 4]},
+            "RETAIL_SALES": {"time": "08:30", "duration": 30, "days": [1, 2, 3, 4]}, # Mid-month
+            
+            "ECB_RATE": {"time": "12:45", "duration": 60, "days": [3]}, # Thursday
+            "BOE_POLICY": {"time": "11:00", "duration": 30, "days": [3]}, # Thursday
+            "CHINA_PMI": {"time": "01:45", "duration": 30, "days": [0, 1, 2, 3, 4]}, # Monthly
+            
+            "EARNINGS_CALLS": {"time": "20:00", "duration": 60, "days": [0, 1, 2, 3, 4]}, # After close
+            "FDA_APPROVALS": {"time": "16:00", "duration": 30, "days": [0, 1, 2, 3, 4]},
+            
+            "US_SANCTIONS": {"time": "14:00", "duration": 45, "days": [0, 1, 2, 3, 4]},
+            "TERROR_ATTACKS": {"time": "00:00", "duration": 60, "days": [0, 1, 2, 3, 4, 5, 6]}, # Any time
         }
+        
+        self.external_apis = {
+            "who_rss": "https://www.who.int/feeds/entity/csr/don/en/rss.xml",
+            "usgs_earthquakes": "https://earthquake.usgs.gov/fdsnws/event/1/query?format=geojson&minmagnitude=7",
+            "nasa_space_weather": "https://api.nasa.gov/DONKI/FLR",
+            "reuters_crisis": "https://www.reuters.com/pf/api/v3/content/fetch/crisis-tracker"
+        }
+        
         self.logger = self._setup_logger()
+        self.black_swan_detector = None  # Will be set externally
         
     def _setup_logger(self):
         """Set up logger"""
@@ -26,10 +48,44 @@ class EventBlackoutManager:
         
         return logger
         
-    def is_blackout_period(self, current_time):
-        """Check if current time is during a news blackout period"""
+    async def is_blackout_period(self, current_time):
+        """Check if current time is during a news blackout period or black swan event"""
         for event_name, config in self.blackout_events.items():
             if current_time.weekday() in config["days"]:
+                if config["time"] == "variable":
+                    continue
+                    
+                event_time = current_time.replace(
+                    hour=int(config["time"].split(":")[0]),
+                    minute=int(config["time"].split(":")[1]),
+                    second=0,
+                    microsecond=0
+                )
+                
+                end_time = event_time + timedelta(minutes=config["duration"])
+                
+                if event_time <= current_time <= end_time:
+                    self.logger.info(f"Trading blackout due to {event_name} event")
+                    return True, event_name
+        
+        if self.black_swan_detector is not None:
+            try:
+                black_swan_detected = await self.black_swan_detector.global_risk_check()
+                if black_swan_detected:
+                    self.logger.critical("BLACK SWAN EVENT DETECTED - TRADING HALTED")
+                    return True, "BLACK_SWAN_EVENT"
+            except Exception as e:
+                self.logger.error(f"Error checking black swan events: {e}")
+                    
+        return False, None
+        
+    def is_blackout_period_sync(self, current_time):
+        """Synchronous version of is_blackout_period for backward compatibility"""
+        for event_name, config in self.blackout_events.items():
+            if current_time.weekday() in config["days"]:
+                if config["time"] == "variable":
+                    continue
+                    
                 event_time = current_time.replace(
                     hour=int(config["time"].split(":")[0]),
                     minute=int(config["time"].split(":")[1]),
@@ -44,6 +100,11 @@ class EventBlackoutManager:
                     return True, event_name
                     
         return False, None
+        
+    def set_black_swan_detector(self, detector):
+        """Set the black swan detector for real-time monitoring"""
+        self.black_swan_detector = detector
+        self.logger.info("Black swan detector connected to event blackout manager")
         
     def check_weekend_market(self, current_time):
         """Prevent trading during weekends"""
