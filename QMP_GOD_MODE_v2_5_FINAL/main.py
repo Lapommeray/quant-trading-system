@@ -8,10 +8,23 @@ from core.live_data_manager import LiveDataManager
 from core.performance_optimizer import PerformanceOptimizer
 from core.dynamic_slippage import DynamicLiquiditySlippage
 from core.async_api_client import AsyncQMPApiClient
+from core.anti_loss_guardian import AntiLossGuardian
+from ai.meta_adaptive_ai import MetaAdaptiveAI
+from ai.market_intelligence import (
+    LatencyCancellationField,
+    EmotionHarvestAI,
+    QuantumLiquiditySignatureReader,
+    SovereignQuantumOracle
+)
+from ai.truth_verification_core import TruthVerificationCore
+from ai.zero_energy_recursive_intelligence import ZeroEnergyRecursiveIntelligence
+from ai.language_universe_decoder import LanguageUniverseDecoder
+from ai.synthetic_consciousness import SyntheticConsciousness
 import pandas as pd
 import os
 import json
 import asyncio
+import numpy as np
 from datetime import timedelta
 from QuantConnect import Resolution, Market
 from QuantConnect.Algorithm import QCAlgorithm
@@ -30,6 +43,7 @@ class QMPOverriderUnified(QCAlgorithm):
         self.event_blackout = EventBlackoutManager()
         self.live_data_manager = LiveDataManager(self)
         self.performance_optimizer = PerformanceOptimizer()
+        self.anti_loss_guardian = AntiLossGuardian(self)
 
         # Asset setup
         self.btc = self.AddCrypto("BTCUSD", Resolution.Minute, Market.Binance).Symbol
@@ -205,6 +219,74 @@ class QMPOverriderUnified(QCAlgorithm):
             if not is_aligned:
                 continue
 
+            market_data = self._prepare_market_data(symbol)
+            
+            if "meta_ai" not in self.symbol_data[symbol]:
+                self.symbol_data[symbol]["meta_ai"] = MetaAdaptiveAI(self, symbol)
+                self.symbol_data[symbol]["advanced_intelligence"] = {
+                    'lcf': LatencyCancellationField(),
+                    'eha': EmotionHarvestAI(),
+                    'qlsr': QuantumLiquiditySignatureReader(),
+                    'sqo': SovereignQuantumOracle(self),
+                    'tvc': TruthVerificationCore(),
+                    'zeri': ZeroEnergyRecursiveIntelligence(),
+                    'lud': LanguageUniverseDecoder(),
+                    'sc': SyntheticConsciousness()
+                }
+            
+            meta_ai = self.symbol_data[symbol]["meta_ai"]
+            advanced_intelligence = self.symbol_data[symbol]["advanced_intelligence"]
+            
+            lattice_result = meta_ai.time_resonant_neural_lattice(market_data)
+            
+            performance_metrics = meta_ai.get_performance_metrics()
+            market_conditions = {
+                'volatility': np.std(market_data['returns'][-20:]) if len(market_data['returns']) >= 20 else 0,
+                'trend_strength': abs(np.mean(market_data['returns'][-10:])) if len(market_data['returns']) >= 10 else 0
+            }
+            dna_result = meta_ai.dna_self_rewrite(performance_metrics, market_conditions)
+            
+            quantum_result = meta_ai.causal_quantum_reasoning(market_data)
+            
+            # Advanced Market Intelligence
+            latency_result = advanced_intelligence['lcf'].cancel_latency(market_data)
+            emotion_result = advanced_intelligence['eha'].harvest_emotions(market_data)
+            liquidity_result = advanced_intelligence['qlsr'].read_liquidity_signature(market_data)
+            
+            # Advanced AI Consciousness Modules
+            truth_result = advanced_intelligence['tvc'].verify_market_truth(market_data, [])
+            zeri_result = advanced_intelligence['zeri'].recursive_intelligence_loop(market_data, {"meta_ai": meta_ai})
+            universe_decode = advanced_intelligence['lud'].decode_universe_language(market_data)
+            consciousness_result = advanced_intelligence['sc'].achieve_consciousness(
+                market_data, 
+                {"symbol": symbol, "signal": None}, 
+                self.symbol_data[symbol].get("decision_history", [])
+            )
+            
+            ai_consensus = {
+                'lattice_confidence': lattice_result.get('prediction_confidence', 0),
+                'quantum_consciousness': quantum_result.get('quantum_consciousness', 0),
+                'emotion_intensity': emotion_result.get('intensity', 0),
+                'liquidity_confidence': liquidity_result.get('confidence', 0),
+                'dna_evolution': dna_result.get('evolutionary_state', 'stable'),
+                'truth_verified': truth_result.get('truth_verified', False),
+                'truth_score': truth_result.get('truth_score', 0),
+                'cosmic_coherence': universe_decode.get('cosmic_coherence', 0),
+                'consciousness_level': consciousness_result.get('consciousness_level', 0),
+                'zero_energy_achieved': zeri_result.get('zero_energy_achieved', False)
+            }
+            
+            self.Debug(f"Advanced AI State for {symbol}:")
+            self.Debug(f"  Lattice: {lattice_result['lattice_state']} ({lattice_result.get('prediction_confidence', 0):.3f})")
+            self.Debug(f"  DNA: {dna_result['evolutionary_state']} (Gen {dna_result.get('adaptation_generation', 0)})")
+            self.Debug(f"  Quantum: {quantum_result['quantum_state']} ({quantum_result['quantum_consciousness']:.3f})")
+            self.Debug(f"  Emotion: {emotion_result['emotion']} ({emotion_result['intensity']:.3f})")
+            self.Debug(f"  Liquidity: {liquidity_result['signature']} ({liquidity_result['confidence']:.3f})")
+            self.Debug(f"  Truth: {truth_result.get('truth_verified', False)} ({truth_result.get('truth_score', 0):.3f})")
+            self.Debug(f"  Cosmic: {universe_decode.get('decoded', False)} ({universe_decode.get('cosmic_coherence', 0):.3f})")
+            self.Debug(f"  Consciousness: {consciousness_result.get('consciousness_achieved', False)} ({consciousness_result.get('consciousness_level', 0):.3f})")
+            self.Debug(f"  Zero-Energy: {zeri_result.get('zero_energy_achieved', False)} ({zeri_result.get('energy_efficiency', 0):.3f})")
+
             optimization_result = self.performance_optimizer.optimize_data_processing(
                 self.symbol_data[symbol]["history_data"]
             )
@@ -213,6 +295,48 @@ class QMPOverriderUnified(QCAlgorithm):
                 symbol, 
                 self.symbol_data[symbol]["history_data"]
             )
+            
+            # Apply Common Sense Intelligence
+            proposed_trade = {
+                'direction': 1 if direction == "BUY" else -1 if direction == "SELL" else 0,
+                'size': 0.02,  # Will be adjusted by risk management
+                'symbol': str(symbol),
+                'confidence': confidence
+            }
+            
+            common_sense_result = self.anti_loss_guardian.apply_common_sense_intelligence(market_data, proposed_trade)
+            
+            # Create Unstable Winning Intelligence
+            current_performance = {
+                'win_rate': self.symbol_data[symbol].get('win_rate', 0.8),
+                'profit_factor': self.symbol_data[symbol].get('profit_factor', 1.5),
+                'total_trades': len(self.symbol_data[symbol].get('trade_history', [])),
+                'losing_trades': sum(1 for trade in self.symbol_data[symbol].get('trade_history', []) if trade.get('pnl', 0) <= 0)
+            }
+            
+            unstable_winning = self.anti_loss_guardian.create_unstable_winning_intelligence(market_data, current_performance)
+            
+            never_loss_conditions = [
+                ai_consensus['truth_verified'],
+                ai_consensus['consciousness_level'] > 0.6,
+                common_sense_result.get('allow_trade', False),
+                ai_consensus['cosmic_coherence'] > 0.5,
+                unstable_winning.get('never_satisfied', False)
+            ]
+            
+            never_loss_score = sum(never_loss_conditions) / len(never_loss_conditions)
+            
+            if direction and never_loss_score >= 0.8:  # 80% of conditions must be met
+                confidence = min(0.95, confidence * 1.2)  # Boost confidence if AI confirms
+                self.Debug(f"Advanced AI boosted confidence to {confidence:.2f}")
+                self.Debug(f"Never-Loss Score: {never_loss_score:.3f} (APPROVED)")
+            elif direction and never_loss_score < 0.8:
+                confidence = max(0.1, confidence * 0.5)  # Significantly reduce confidence if never-loss protection activates
+                self.Debug(f"Never-Loss Protection reduced confidence to {confidence:.2f}")
+                self.Debug(f"Never-Loss Score: {never_loss_score:.3f} (PROTECTION ACTIVE)")
+            elif direction and (ai_consensus['lattice_confidence'] < 0.3 or ai_consensus['quantum_consciousness'] < 0.3):
+                confidence = max(0.1, confidence * 0.8)  # Reduce confidence if AI disagrees
+                self.Debug(f"Advanced AI reduced confidence to {confidence:.2f}")
             
             if diagnostics:
                 self.Debug(f"OverSoul diagnostics for {symbol}:")
@@ -286,6 +410,45 @@ class QMPOverriderUnified(QCAlgorithm):
             self.Debug(f"Gate scores: {gate_scores}")
             
             self.LogTradeResult(symbol, result)
+    
+    def _prepare_market_data(self, symbol):
+        """
+        Prepare market data for advanced AI analysis
+        
+        Parameters:
+        - symbol: Trading symbol
+        
+        Returns:
+        - Dictionary containing processed market data
+        """
+        history_data = self.symbol_data[symbol]["history_data"]
+        
+        df_1m = history_data["1m"]
+        
+        if df_1m.empty:
+            return {"returns": [], "volume": []}
+            
+        df_1m['returns'] = df_1m['Close'].pct_change().fillna(0)
+        
+        market_data = {
+            'returns': df_1m['returns'].values.tolist(),
+            'volume': df_1m['Volume'].values.tolist(),
+            'open': df_1m['Open'].values.tolist(),
+            'high': df_1m['High'].values.tolist(),
+            'low': df_1m['Low'].values.tolist(),
+            'close': df_1m['Close'].values.tolist()
+        }
+        
+        for timeframe in ["5m", "15m"]:
+            if timeframe in history_data and not history_data[timeframe].empty:
+                df = history_data[timeframe]
+                df['returns'] = df['Close'].pct_change().fillna(0)
+                
+                market_data[f'{timeframe}_returns'] = df['returns'].values.tolist()
+                market_data[f'{timeframe}_volume'] = df['Volume'].values.tolist()
+                market_data[f'{timeframe}_close'] = df['Close'].values.tolist()
+        
+        return market_data
     
     def LogTradeResult(self, symbol, result):
         """
