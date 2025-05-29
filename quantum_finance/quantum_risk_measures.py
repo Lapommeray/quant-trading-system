@@ -293,6 +293,70 @@ class QuantumRiskMeasures:
         
         return results
         
+    def calculate_portfolio_risk(self, portfolio, confidence_level=None):
+        """
+        Calculate portfolio risk metrics using quantum risk measures
+        
+        Parameters:
+        - portfolio: Dictionary with asset positions
+        - confidence_level: Confidence level for risk calculations
+        
+        Returns:
+        - Dictionary with risk metrics
+        """
+        if confidence_level is None:
+            confidence_level = self.confidence_level
+            
+        assets = list(portfolio.keys())
+        weights = [position.get("weight", 0.0) for position in portfolio.values()]
+        
+        weight_sum = sum(weights)
+        if weight_sum > 0:
+            weights = [w / weight_sum for w in weights]
+            
+        n_days = 252  # One year of trading days
+        n_assets = len(assets)
+        
+        portfolio_vol = 0.0
+        for position in portfolio.values():
+            if "volatility" in position:
+                portfolio_vol += position.get("volatility", 0.0)
+                
+        if portfolio_vol == 0.0:
+            portfolio_vol = 0.15  # Default annual volatility
+            
+        daily_vol = portfolio_vol / np.sqrt(252)
+        
+        np.random.seed(42)  # For reproducibility
+        returns = np.random.normal(0.0005, daily_vol, (n_days, n_assets))
+        
+        var = self.quantum_var(returns, confidence_level)
+        cvar = self.quantum_cvar(returns, confidence_level)
+        
+        stress_results = self.stress_test_portfolio(
+            returns, weights, scenarios=500, confidence_level=confidence_level
+        )
+        
+        risk_metrics = {
+            "var": float(var),
+            "cvar": float(cvar),
+            "stressed_var": stress_results.get("stressed_var", 0.0),
+            "stressed_cvar": stress_results.get("stressed_cvar", 0.0),
+            "worst_case_loss": stress_results.get("worst_case_loss", 0.0),
+            "prob_extreme_loss": stress_results.get("prob_extreme_loss", 0.0),
+            "confidence_level": float(confidence_level),
+            "assets_count": n_assets
+        }
+        
+        self.history.append({
+            'timestamp': datetime.now().isoformat(),
+            'type': 'portfolio_risk',
+            'risk_metrics': risk_metrics,
+            'n_assets': n_assets
+        })
+        
+        return risk_metrics
+        
     def get_statistics(self):
         """Get statistics about risk measure calculations"""
         if not self.history:

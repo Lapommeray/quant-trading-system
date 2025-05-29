@@ -33,7 +33,7 @@ logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler("covid_test/covid_test_quantum.log"),
+        logging.FileHandler("covid_test_quantum.log"),
         logging.StreamHandler()
     ]
 )
@@ -102,12 +102,13 @@ def run_quantum_test(asset, mode="normal"):
         current_price = df.iloc[i]["close"]
         current_volume = df.iloc[i]["volume"]
         
-        hist_prices = df.iloc[i-20:i+1]["close"].values
-        hist_volumes = df.iloc[i-20:i+1]["volume"].values
-        hist_highs = df.iloc[i-20:i+1]["high"].values
-        hist_lows = df.iloc[i-20:i+1]["low"].values
+        hist_prices = np.array(df.iloc[i-20:i+1]["close"].values, dtype=np.float64)
+        hist_volumes = np.array(df.iloc[i-20:i+1]["volume"].values, dtype=np.float64)
+        hist_highs = np.array(df.iloc[i-20:i+1]["high"].values, dtype=np.float64)
+        hist_lows = np.array(df.iloc[i-20:i+1]["low"].values, dtype=np.float64)
         
-        hist_returns = np.diff(np.log(hist_prices))
+        valid_prices = np.maximum(hist_prices, np.array([0.0001] * len(hist_prices)))
+        hist_returns = np.diff(np.log(valid_prices))
         
         atr = legba_crossroads.calculate_atr(hist_highs, hist_lows, hist_prices)
         
@@ -147,7 +148,7 @@ def run_quantum_test(asset, mode="normal"):
         
         current_datetime = pd.to_datetime(current_date)
         signal_result = quantum_finance.generate_trading_signal(
-            asset, data, account_balance, stop_loss_pct=0.02,
+            asset, data, int(account_balance), stop_loss_pct=0.02,
             current_time=current_datetime.isoformat()
         )
         

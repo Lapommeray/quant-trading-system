@@ -142,3 +142,18 @@ class LegbaCrossroads:
             atr[i] = (atr[i-1] * (period-1) + tr[i]) / period
             
         return atr
+        
+    def get_statistics(self):
+        """
+        Get statistics about the breakout detector
+        
+        Returns:
+        - Dictionary with breakout detection statistics
+        """
+        return {
+            'ema_period': self.ema_period,
+            'volume_mult': self.volume_mult,
+            'chaos_threshold': self.chaos_threshold,
+            'asia_ema_period': self.asia_ema_period,
+            'asia_volume_mult': self.asia_volume_mult
+        }
