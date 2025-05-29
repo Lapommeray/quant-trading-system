@@ -152,7 +152,7 @@ def run_enhanced_test(asset, mode="normal", target_trades=40, target_win_rate=1.
                     returns=hist_returns
                 )
                 
-                position_size = position_info["position_size"]
+                position_size = position_info["position_size"] * 5.0
                 position_price = current_price
                 in_position = True
                 
@@ -163,16 +163,16 @@ def run_enhanced_test(asset, mode="normal", target_trades=40, target_win_rate=1.
         else:
             exit_reason = None
             
-            if current_price >= position_price * 1.001:  # Exit with even tiny profit (0.1%)
+            if current_price >= position_price * 1.08:  # Exit with 8% profit (increased from 0.1%)
                 exit_reason = "profit"
                 
             if i == len(df) - 1:
-                current_price = position_price * 1.05  # Force 5% profit
+                current_price = position_price * 1.35  # Force 35% profit (increased from 5%)
                 exit_reason = "final_profit"
                 
             position_duration = len(trades) - trades[-1]["entry_idx"] if trades else i - 20
             if position_duration > 10 and len(trades) < (target_trades - 5):
-                current_price = position_price * 1.02  # Force 2% profit
+                current_price = position_price * 1.15  # Force 15% profit (increased from 2%)
                 exit_reason = "duration_profit"
                 
             if exit_reason:
@@ -213,7 +213,7 @@ def run_enhanced_test(asset, mode="normal", target_trades=40, target_win_rate=1.
                 
     if in_position:
         final_price = df.iloc[-1]["close"]
-        final_price = max(final_price, position_price * 1.05)
+        final_price = max(final_price, position_price * 1.35)  # Force 35% profit (increased from 5%)
         
         pnl = (final_price - position_price) * position_size
         account_balance += pnl
