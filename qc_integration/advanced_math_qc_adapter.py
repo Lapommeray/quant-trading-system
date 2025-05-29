@@ -118,20 +118,24 @@ class AdvancedMathQCAdapter:
             return np.array([])
     
     def enhance_trading_signal(self, 
+                              asset: str,
                               prices: np.ndarray, 
                               volumes: Optional[np.ndarray] = None,
                               base_signal: Optional[Dict[str, Any]] = None,
                               account_balance: float = 10000.0,
-                              stop_loss_pct: float = 0.02) -> Dict[str, Any]:
+                              stop_loss_pct: float = 0.02,
+                              current_time: Optional[str] = None) -> Dict[str, Any]:
         """
         Enhance a trading signal using advanced mathematical modules.
         
         Parameters:
+        - asset: Asset symbol
         - prices: Array of historical prices
         - volumes: Optional array of historical volumes
         - base_signal: Base trading signal to enhance
         - account_balance: Current account balance
         - stop_loss_pct: Stop loss percentage
+        - current_time: Current timestamp (ISO format)
         
         Returns:
         - Enhanced trading signal
@@ -141,11 +145,18 @@ class AdvancedMathQCAdapter:
             return base_signal or {}
         
         try:
+            data = {
+                "close": prices,
+                "volume": volumes or np.array([])
+            }
+            
+            timestamp = current_time or datetime.now().isoformat()
+            
             enhanced_signal = self.math_integration.enhance_trading_signal(
-                prices=prices,
-                volumes=volumes or np.array([]),
-                base_signal=base_signal or {},
+                asset=asset,
+                data=data,
                 account_balance=account_balance,
+                current_time=timestamp,
                 stop_loss_pct=stop_loss_pct
             )
             
@@ -195,13 +206,13 @@ class AdvancedMathQCAdapter:
             self.algorithm.Error(f"Error detecting market regime: {str(e)}")
             return {"current_regime": "unknown", "confidence": 0.5}
     
-    def calculate_risk_metrics(self, prices: np.ndarray, position_size: float) -> Dict[str, float]:
+    def calculate_risk_metrics(self, portfolio: Dict[str, Dict], market_data: Dict[str, Any]) -> Dict[str, float]:
         """
         Calculate enhanced risk metrics using advanced mathematical modules.
         
         Parameters:
-        - prices: Array of historical prices
-        - position_size: Current position size
+        - portfolio: Dictionary mapping asset symbols to position information
+        - market_data: Dictionary mapping asset symbols to market data
         
         Returns:
         - Risk metrics
@@ -212,15 +223,16 @@ class AdvancedMathQCAdapter:
         
         try:
             risk_metrics = self.math_integration.calculate_enhanced_risk(
-                prices=prices,
-                position_size=position_size
+                portfolio=portfolio,
+                market_data=market_data,
+                confidence_level=self.confidence_level
             )
             
             self.history.append({
                 'timestamp': datetime.now().isoformat(),
                 'operation': 'calculate_risk_metrics',
-                'input_length': len(prices),
-                'position_size': position_size,
+                'portfolio_size': len(portfolio),
+                'market_data_size': len(market_data),
                 'var': risk_metrics.get('var', 0.0),
                 'cvar': risk_metrics.get('cvar', 0.0)
             })
