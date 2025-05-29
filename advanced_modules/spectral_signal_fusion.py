@@ -1,8 +1,8 @@
 import numpy as np
 from scipy.signal import hilbert
-from typing import Dict, List
+from typing import Dict, List, Tuple, Union
 from dataclasses import dataclass
-import talib  # Technical analysis library
+import ta  # Technical analysis library
 
 @dataclass
 class SpectralComponents:
@@ -26,15 +26,19 @@ class SpectralSignalFusion:
         prob = hist / hist.sum()
         return -np.sum(prob * np.log2(prob + 1e-10))  # Add small epsilon
 
-    def _analyze_volatility(self, prices: List[float]) -> float:
+    def _analyze_volatility(self, prices: List[List[float]]) -> float:
         """Multi-timeframe volatility analysis"""
-        atr = talib.ATR(
-            np.array([x[2] for x in prices]),  # High
-            np.array([x[3] for x in prices]),  # Low
-            np.array([x[4] for x in prices]),  # Close
-            timeperiod=14
-        )
-        return atr[-1] / prices[-1][4]  # Normalized ATR
+        import pandas as pd
+        df = pd.DataFrame({
+            'high': [x[2] for x in prices],
+            'low': [x[3] for x in prices],
+            'close': [x[4] for x in prices]
+        })
+        
+        atr_indicator = ta.volatility.AverageTrueRange(high=df['high'], low=df['low'], close=df['close'], window=14)
+        atr = atr_indicator.average_true_range().iloc[-1]
+        
+        return atr / prices[-1][4]  # Normalized ATR
 
     def fuse_signals(self, asset_type: str, components: SpectralComponents) -> float:
         """Fuses three signal layers into unified output"""

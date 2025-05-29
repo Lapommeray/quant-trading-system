@@ -508,7 +508,7 @@ class TopologicalDataAnalysis:
     
     
     def detect_market_regimes(self, returns: np.ndarray, 
-                             volumes: np.ndarray = None,
+                             volumes: Optional[np.ndarray] = None,
                              window_size: int = 50) -> Dict:
         """
         Detect market regimes using topological features

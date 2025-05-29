@@ -122,12 +122,17 @@ def run_enhanced_test(asset, mode="normal", target_trades=40, target_win_rate=1.
         
         current_datetime = pd.to_datetime(current_date)
         
+        hist_prices_array = np.array(hist_prices)
+        hist_volumes_array = np.array(hist_volumes) if hist_volumes is not None else None
+        
         market_regime = math_integration.detect_enhanced_market_regime(
-            hist_prices, hist_volumes, window_size=20
+            hist_prices_array, hist_volumes_array, window_size=20
         )
         
+        data_np = {k: np.array(v) for k, v in data.items()}
+        
         enhanced_signal = math_integration.enhance_trading_signal(
-            asset, data, float(account_balance), current_datetime.isoformat(),
+            asset, data_np, float(account_balance), current_datetime.isoformat(),
             stop_loss_pct=0.02
         )
         
@@ -143,7 +148,8 @@ def run_enhanced_test(asset, mode="normal", target_trades=40, target_win_rate=1.
         trade_opportunities.append(trade_opportunity)
         
         if not in_position:
-            if enhanced_signal.get("confidence", 0) > 0.8 or len(trades) < (target_trades / 2):
+            confidence = float(enhanced_signal.get("confidence", 0)) if isinstance(enhanced_signal.get("confidence"), str) else enhanced_signal.get("confidence", 0)
+            if confidence > 0.8 or len(trades) < (target_trades / 2):
                 position_info = entropy_shield.position_size_quantum(
                     market_regime.get("confidence", 0.5),
                     account_balance,
@@ -156,9 +162,10 @@ def run_enhanced_test(asset, mode="normal", target_trades=40, target_win_rate=1.
                 position_price = current_price
                 in_position = True
                 
+                confidence_val = float(enhanced_signal.get('confidence', 0)) if isinstance(enhanced_signal.get('confidence'), str) else enhanced_signal.get('confidence', 0)
                 logger.info(f"{current_date}: Entered {asset} position at {position_price:.2f}, "
                            f"size: {position_size:.2f}, balance: {account_balance:.2f}, "
-                           f"confidence: {enhanced_signal.get('confidence', 0):.2f}")
+                           f"confidence: {confidence_val:.2f}")
                 
         else:
             exit_reason = None

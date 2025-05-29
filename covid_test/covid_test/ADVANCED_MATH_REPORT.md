@@ -10,7 +10,7 @@ This report presents the performance of the advanced mathematical modules during
 |-------|--------|-------|
 | SPX | Win Rate | 100.00% |
 | SPX | Profit Factor | ∞ |
-| SPX | Total Profit | 234.74% |
+| SPX | Total Profit | 231.46% |
 | SPX | Total Trades | 40 |
 | | | |
 | BTC | Win Rate | 100.00% |

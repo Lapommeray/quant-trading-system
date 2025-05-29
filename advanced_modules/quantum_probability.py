@@ -265,7 +265,7 @@ class QuantumProbability:
         
         return result
     
-    def calculate_non_ergodic_kelly(self, returns: np.ndarray, quantum_state: Optional[np.ndarray] = None) -> Dict:
+    def calculate_non_ergodic_kelly(self, returns: np.ndarray, quantum_state: Optional[Union[np.ndarray, Dict]] = None) -> Dict:
         """
         Calculate non-ergodic Kelly criterion using quantum state information
         
@@ -316,7 +316,7 @@ class QuantumProbability:
             'timestamp': datetime.now().isoformat(),
             'operation': 'calculate_non_ergodic_kelly',
             'returns_shape': returns.shape if hasattr(returns, 'shape') else None,
-            'quantum_state_shape': quantum_state.shape if quantum_state is not None and hasattr(quantum_state, 'shape') else None,
+            'quantum_state_shape': quantum_state.shape if quantum_state is not None and isinstance(quantum_state, np.ndarray) else None,
             'result': result
         })
         
