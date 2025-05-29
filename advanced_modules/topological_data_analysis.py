@@ -508,18 +508,25 @@ class TopologicalDataAnalysis:
     
     
     def detect_market_regimes(self, returns: np.ndarray, 
+                             volumes: np.ndarray = None,
                              window_size: int = 50) -> Dict:
         """
         Detect market regimes using topological features
         
         Parameters:
-        - returns: Array of asset returns with shape (time_steps, assets)
+        - returns: Array of asset returns with shape (time_steps, assets) or (time_steps,)
+        - volumes: Optional array of trading volumes
         - window_size: Window size for rolling analysis
         
         Returns:
         - Dictionary with market regime detection results
         """
-        time_steps, assets = returns.shape
+        if len(returns.shape) == 1:
+            time_steps = returns.shape[0]
+            assets = 1
+            returns = returns.reshape(-1, 1)
+        else:
+            time_steps, assets = returns.shape
         
         regime_changes = []
         betti_0_series = []

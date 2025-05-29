@@ -107,7 +107,7 @@ def run_enhanced_test(asset, mode="normal", target_trades=40, target_win_rate=1.
         hist_highs = df.iloc[i-20:i+1]["high"].values
         hist_lows = df.iloc[i-20:i+1]["low"].values
         
-        hist_returns = np.diff(np.log(hist_prices))
+        hist_returns = np.diff(np.log(hist_prices.astype(np.float64)))
         
         atr = legba_crossroads.calculate_atr(hist_highs, hist_lows, hist_prices)
         

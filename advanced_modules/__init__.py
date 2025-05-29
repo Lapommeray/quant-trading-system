@@ -60,7 +60,7 @@ from .quantum_code_generator import QuantumCodeGenerator
 from .anti_stuck import AntiStuck
 from .time_resonant_neural_lattice import TimeResonantNeuralLattice
 from .self_rewriting_dna_ai import SelfRewritingDNAAI
-from .causal_quantum_reasoning import CausalQuantumReasoning
+from .causal_quantum_reasoning import CausalQuantumReasoningEngine as CausalQuantumReasoning
 from .latency_cancellation_field import LatencyCancellationField
 from .emotion_harvest_ai import EmotionHarvestAI
 from .quantum_liquidity_signature_reader import QuantumLiquiditySignatureReader
@@ -85,6 +85,8 @@ from .quantum_probability import QuantumProbability
 from .topological_data_analysis import TopologicalDataAnalysis
 from .measure_theory import MeasureTheory
 from .rough_path_theory import RoughPathTheory
+from .mathematical_integration_layer import MathematicalIntegrationLayer
+from .meta_conscious_routing_layer import MetaConsciousRoutingLayer
 
 __all__ = [
     'HumanLagExploit',
@@ -126,5 +128,7 @@ __all__ = [
     'QuantumProbability',
     'TopologicalDataAnalysis',
     'MeasureTheory',
-    'RoughPathTheory'
+    'RoughPathTheory',
+    'MathematicalIntegrationLayer',
+    'MetaConsciousRoutingLayer'
 ]

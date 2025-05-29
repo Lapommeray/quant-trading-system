@@ -20,6 +20,7 @@ from typing import Dict, List, Tuple, Union, Optional, Any, Callable
 import logging
 from datetime import datetime
 import json
+import math
 import matplotlib.pyplot as plt
 from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
@@ -220,7 +221,7 @@ class AdvancedStochasticCalculus:
             else:  # put
                 bs_price = K * np.exp(-r_k * T) * stats.norm.cdf(-d2) - S0 * stats.norm.cdf(-d1)
             
-            poisson_prob = np.exp(-lambda_prime * T) * (lambda_prime * T)**k / np.math.factorial(k)
+            poisson_prob = np.exp(-lambda_prime * T) * (lambda_prime * T)**k / math.factorial(k)
             
             price += poisson_prob * bs_price
         
@@ -377,7 +378,7 @@ class AdvancedStochasticCalculus:
         
         return fbm
     
-    def estimate_hurst_exponent(self, time_series: np.ndarray, max_lag: int = None) -> float:
+    def estimate_hurst_exponent(self, time_series: np.ndarray, max_lag: Optional[int] = None) -> float:
         """
         Estimate Hurst exponent using rescaled range (R/S) analysis
         
@@ -676,6 +677,72 @@ class AdvancedStochasticCalculus:
         
         return prices, volatilities
     
+    def calibrate_rough_volatility_model(self, prices: np.ndarray) -> Dict:
+        """
+        Calibrate rough volatility model parameters from historical prices
+        
+        Parameters:
+        - prices: Historical price series
+        
+        Returns:
+        - Dictionary with calibrated parameters
+        """
+        if len(prices) < 10:
+            logger.warning(f"Insufficient data for rough volatility calibration. Need at least 10 points, got {len(prices)}")
+            return {
+                'H': self.hurst_parameter,
+                'rho': -0.7,
+                'xi': 0.3,
+                'eta': 0.2,
+                'confidence': 0.5
+            }
+            
+        log_returns = np.diff(np.log(prices))
+        
+        # Estimate Hurst parameter
+        H = self.estimate_hurst_exponent(log_returns)
+        
+        rolling_vol = pd.Series(log_returns).rolling(window=5).std().dropna().values
+        
+        if len(rolling_vol) > 0:
+            xi = float(np.std(rolling_vol.astype(np.float64))) / float(np.mean(rolling_vol.astype(np.float64)))
+        else:
+            xi = 0.3  # Default value
+        
+        if len(rolling_vol) > 5:
+            vol_changes = np.diff(rolling_vol.astype(np.float64))
+            return_changes = log_returns[5:]
+            
+            if len(vol_changes) > 0 and len(return_changes) > 0 and len(vol_changes) == len(return_changes):
+                rho = np.corrcoef(vol_changes, return_changes)[0, 1]
+                if np.isnan(rho):
+                    rho = -0.7  # Default value
+            else:
+                rho = -0.7  # Default value
+        else:
+            rho = -0.7  # Default value
+            
+        eta = np.std(log_returns)
+        
+        confidence = min(0.99, 0.5 + len(prices) / 200)
+        
+        result = {
+            'H': float(H),
+            'rho': float(rho),
+            'xi': float(xi),
+            'eta': float(eta),
+            'confidence': float(confidence)
+        }
+        
+        self.history.append({
+            'timestamp': datetime.now().isoformat(),
+            'operation': 'calibrate_rough_volatility_model',
+            'prices_length': len(prices),
+            'result': result
+        })
+        
+        return result
+        
     def get_statistics(self) -> Dict:
         """
         Get statistics about advanced stochastic calculus usage
