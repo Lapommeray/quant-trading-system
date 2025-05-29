@@ -74,6 +74,11 @@ class MathematicalIntegrationLayer:
         self.pure_math = PureMathFoundation(precision=precision)
         self.math_computation = MathComputationInterface(precision=precision)
         self.stochastic_calculus = AdvancedStochasticCalculus(precision=precision)
+        if not hasattr(self.stochastic_calculus, 'calibrate_rough_volatility_model'):
+            from importlib import reload
+            import advanced_modules.advanced_stochastic_calculus as asc
+            reload(asc)
+            self.stochastic_calculus = asc.AdvancedStochasticCalculus(precision=precision)
         self.quantum_probability = QuantumProbability(precision=precision)
         self.topological_data = TopologicalDataAnalysis(precision=precision)
         self.measure_theory = MeasureTheory(precision=precision, confidence_level=confidence_level)
@@ -185,10 +190,10 @@ class MathematicalIntegrationLayer:
         )
         
         non_ergodic_kelly = self.quantum_probability.calculate_non_ergodic_kelly(
-            returns, quantum_state
+            returns, risk_free_rate=0.0
         )
         
-        path = np.column_stack((prices[-20:], volumes[-20:])) if len(volumes) >= 20 else prices[-20:].reshape(-1, 1)
+        path = np.column_stack((prices[-20:], volumes[-20:])) if volumes is not None and len(volumes) >= 20 else np.array(prices[-20:]).reshape(-1, 1)
         signature = self.rough_path_theory.compute_path_signature(path)
         
         density = self.measure_theory.kernel_density_estimation(returns)
@@ -197,7 +202,7 @@ class MathematicalIntegrationLayer:
         
         enhanced_signal = base_signal.copy() if isinstance(base_signal, dict) else {}
         
-        enhanced_signal.update({
+        for key, value in {
             "market_regime": market_regimes.get("current_regime", "unknown"),
             "regime_confidence": market_regimes.get("confidence", 0.5),
             "non_ergodic_kelly": non_ergodic_kelly.get("optimal_fraction", 0.0),
@@ -205,7 +210,8 @@ class MathematicalIntegrationLayer:
             "rough_volatility": vol_model.get("volatility", 0.0),
             "hurst_parameter": vol_model.get("hurst", self.hurst_parameter),
             "confidence_level": self.confidence_level
-        })
+        }.items():
+            enhanced_signal[key] = value
         
         if "direction" not in enhanced_signal or enhanced_signal.get("direction") is None:
             enhanced_signal["direction"] = market_regimes.get("signal", 0)
@@ -244,7 +250,7 @@ class MathematicalIntegrationLayer:
     
     def calculate_enhanced_risk(self, portfolio: Dict[str, Dict], 
                                market_data: Dict[str, pd.DataFrame],
-                               confidence_level: float = None) -> Dict:
+                               confidence_level: float = 0.99) -> Dict:
         """
         Calculate enhanced risk metrics using advanced mathematics
         
@@ -392,7 +398,7 @@ class MathematicalIntegrationLayer:
         regimes = [
             tda_regime.get("current_regime", "unknown"),
             quantum_regime.get("regime", "unknown"),
-            "bullish" if sig_strategy.get("signals", [0])[-1] > 0 else "bearish"
+            "bullish" if sig_strategy.get("signals", [0]) and sig_strategy.get("signals", [0])[-1] > 0 else "bearish"
         ]
         
         regime_counts = {}
@@ -412,7 +418,7 @@ class MathematicalIntegrationLayer:
             "confidence": confidence,
             "tda_regime": tda_regime.get("current_regime", "unknown"),
             "quantum_regime": quantum_regime.get("regime", "unknown"),
-            "signature_signal": sig_strategy.get("signals", [0])[-1],
+            "signature_signal": sig_strategy.get("signals", [0])[-1] if sig_strategy.get("signals", [0]) else 0,
             "regime_counts": regime_counts,
             "window_size": window_size
         }

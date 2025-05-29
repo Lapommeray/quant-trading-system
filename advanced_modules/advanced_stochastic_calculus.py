@@ -220,7 +220,7 @@ class AdvancedStochasticCalculus:
             else:  # put
                 bs_price = K * np.exp(-r_k * T) * stats.norm.cdf(-d2) - S0 * stats.norm.cdf(-d1)
             
-            poisson_prob = np.exp(-lambda_prime * T) * (lambda_prime * T)**k / np.math.factorial(k)
+            poisson_prob = np.exp(-lambda_prime * T) * (lambda_prime * T)**k / np.math.factorial(k) if k < 20 else 0
             
             price += poisson_prob * bs_price
         
@@ -675,6 +675,84 @@ class AdvancedStochasticCalculus:
         })
         
         return prices, volatilities
+    
+    def calibrate_rough_volatility_model(self, prices: np.ndarray) -> Dict:
+        """
+        Calibrate rough volatility model parameters from historical prices
+        
+        Parameters:
+        - prices: Historical price series
+        
+        Returns:
+        - Dictionary with calibrated parameters
+        """
+        if prices is None or len(prices) < 10:
+            logger.warning("Insufficient data for rough volatility calibration")
+            return {
+                'H': self.hurst_parameter,
+                'rho': -0.7,
+                'xi': 0.3,
+                'eta': 0.2,
+                'confidence': 0.5
+            }
+            
+        try:
+            log_returns = np.diff(np.log(prices))
+            
+            # Estimate Hurst parameter
+            H = self.estimate_hurst_exponent(log_returns)
+            
+            # Calculate realized volatility
+            realized_vol = np.std(log_returns)
+            
+            # Estimate volatility of volatility
+            vol_windows = []
+            for i in range(5, len(log_returns), 5):
+                vol_windows.append(np.std(log_returns[max(0, i-10):i]))
+            
+            xi = np.std(vol_windows) / np.mean(vol_windows) if len(vol_windows) > 1 else 0.3
+            
+            if len(vol_windows) > 1:
+                vol_changes = np.diff(vol_windows)
+                if len(vol_changes) > 0 and len(log_returns) > len(vol_changes):
+                    returns_subset = log_returns[:len(vol_changes)]
+                    rho = np.corrcoef(returns_subset, vol_changes)[0, 1]
+                else:
+                    rho = -0.7  # Default negative correlation
+            else:
+                rho = -0.7
+            
+            H = np.clip(H, 0.01, 0.99)
+            rho = np.clip(rho, -0.99, 0.99)
+            xi = np.clip(xi, 0.01, 2.0)
+            eta = realized_vol
+            
+            result = {
+                'H': float(H),
+                'rho': float(rho),
+                'xi': float(xi),
+                'eta': float(eta),
+                'confidence': 0.8
+            }
+            
+            self.history.append({
+                'timestamp': datetime.now().isoformat(),
+                'operation': 'calibrate_rough_volatility_model',
+                'prices_length': len(prices),
+                'result': result
+            })
+            
+            return result
+            
+        except Exception as e:
+            logger.warning(f"Error in rough volatility calibration: {str(e)}")
+            return {
+                'H': self.hurst_parameter,
+                'rho': -0.7,
+                'xi': 0.3,
+                'eta': 0.2,
+                'confidence': 0.5
+            }
     
     def get_statistics(self) -> Dict:
         """
