@@ -519,6 +519,11 @@ class TopologicalDataAnalysis:
         Returns:
         - Dictionary with market regime detection results
         """
+        returns = np.asarray(returns)
+        
+        if len(returns.shape) == 1:
+            returns = returns.reshape(-1, 1)
+            
         time_steps, assets = returns.shape
         
         regime_changes = []
@@ -607,6 +612,11 @@ class TopologicalDataAnalysis:
         Returns:
         - Dictionary with trading signals
         """
+        returns = np.asarray(returns)
+        
+        if len(returns.shape) == 1:
+            returns = returns.reshape(-1, 1)
+            
         time_steps, assets = returns.shape
         
         if time_steps < lookback:

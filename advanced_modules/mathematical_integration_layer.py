@@ -23,6 +23,7 @@ import json
 import matplotlib.pyplot as plt
 import sys
 import os
+import mpmath
 
 logging.basicConfig(
     level=logging.INFO,
@@ -162,7 +163,7 @@ class MathematicalIntegrationLayer:
         - Enhanced trading signal
         """
         base_signal = self.quantum_finance.generate_trading_signal(
-            asset, data, account_balance, stop_loss_pct, current_time
+            asset, data, int(account_balance), stop_loss_pct, current_time
         )
         
         prices = data.get("close", [])
@@ -177,18 +178,19 @@ class MathematicalIntegrationLayer:
         returns = np.diff(np.log(prices))
         
         market_regimes = self.topological_data.detect_market_regimes(
-            prices, volumes, window_size=20
+            returns, window_size=20
         )
         
         quantum_state = self.quantum_probability.create_market_quantum_state(
-            returns, n_qubits=5
+            returns, volumes if volumes is not None and len(volumes) > 0 else None
         )
         
         non_ergodic_kelly = self.quantum_probability.calculate_non_ergodic_kelly(
             returns, quantum_state
         )
         
-        path = np.column_stack((prices[-20:], volumes[-20:])) if len(volumes) >= 20 else prices[-20:].reshape(-1, 1)
+        prices_array = np.asarray(prices[-20:])
+        path = np.column_stack((prices_array, np.asarray(volumes[-20:]))) if len(volumes) >= 20 else prices_array.reshape(-1, 1)
         signature = self.rough_path_theory.compute_path_signature(path)
         
         density = self.measure_theory.kernel_density_estimation(returns)
@@ -197,7 +199,7 @@ class MathematicalIntegrationLayer:
         
         enhanced_signal = base_signal.copy() if isinstance(base_signal, dict) else {}
         
-        enhanced_signal.update({
+        for k, v in {
             "market_regime": market_regimes.get("current_regime", "unknown"),
             "regime_confidence": market_regimes.get("confidence", 0.5),
             "non_ergodic_kelly": non_ergodic_kelly.get("optimal_fraction", 0.0),
@@ -205,14 +207,15 @@ class MathematicalIntegrationLayer:
             "rough_volatility": vol_model.get("volatility", 0.0),
             "hurst_parameter": vol_model.get("hurst", self.hurst_parameter),
             "confidence_level": self.confidence_level
-        })
+        }.items():
+            enhanced_signal[k] = v
         
         if "direction" not in enhanced_signal or enhanced_signal.get("direction") is None:
             enhanced_signal["direction"] = market_regimes.get("signal", 0)
             
         if "position_size" not in enhanced_signal or enhanced_signal.get("position_size") is None:
             kelly_fraction = non_ergodic_kelly.get("optimal_fraction", 0.0)
-            enhanced_signal["position_size"] = account_balance * max(0.0, min(1.0, kelly_fraction))
+            enhanced_signal["position_size"] = str(account_balance * max(0.0, min(1.0, kelly_fraction)))
             
         if "stop_loss" not in enhanced_signal or enhanced_signal.get("stop_loss") is None:
             rough_vol = vol_model.get("volatility", 0.0)
@@ -222,12 +225,12 @@ class MathematicalIntegrationLayer:
             rough_vol = vol_model.get("volatility", 0.0)
             enhanced_signal["take_profit"] = prices[-1] * (1.0 + max(stop_loss_pct * 2, rough_vol * 2))
             
-        enhanced_signal["confidence"] = max(
-            enhanced_signal.get("confidence", 0.0),
-            market_regimes.get("confidence", 0.0),
-            non_ergodic_kelly.get("confidence", 0.0),
-            self.confidence_level
-        )
+        enhanced_signal["confidence"] = str(max(
+            float(enhanced_signal.get("confidence", 0.0)),
+            float(market_regimes.get("confidence", 0.0)),
+            float(non_ergodic_kelly.get("confidence", 0.0)),
+            float(self.confidence_level)
+        ))
         
         self.history.append({
             'timestamp': datetime.now().isoformat(),
@@ -244,7 +247,7 @@ class MathematicalIntegrationLayer:
     
     def calculate_enhanced_risk(self, portfolio: Dict[str, Dict], 
                                market_data: Dict[str, pd.DataFrame],
-                               confidence_level: float = None) -> Dict:
+                               confidence_level: Optional[float] = None) -> Dict:
         """
         Calculate enhanced risk metrics using advanced mathematics
         
@@ -268,7 +271,9 @@ class MathematicalIntegrationLayer:
         for asset in assets:
             if asset in market_data and not market_data[asset].empty:
                 prices = market_data[asset]["close"].values
-                returns_data[asset] = np.diff(np.log(prices))
+                prices_array = np.asarray(prices)
+                if len(prices_array) > 1:
+                    returns_data[asset] = np.diff(np.log(prices_array.astype(float)))
                 
         if not returns_data:
             logger.warning("No returns data available for risk enhancement")
@@ -347,7 +352,7 @@ class MathematicalIntegrationLayer:
         return enhanced_risk
     
     
-    def detect_enhanced_market_regime(self, prices: np.ndarray, volumes: np.ndarray = None,
+    def detect_enhanced_market_regime(self, prices: np.ndarray, volumes: Optional[np.ndarray] = None,
                                      window_size: int = 20) -> Dict:
         """
         Detect market regime using advanced mathematics
@@ -366,12 +371,15 @@ class MathematicalIntegrationLayer:
             
         returns = np.diff(np.log(prices))
         
-        tda_regime = self.topological_data.detect_market_regimes(
-            prices, volumes, window_size=window_size
-        )
+        if len(returns) > 0:
+            tda_regime = self.topological_data.detect_market_regimes(
+                returns, window_size
+            )
+        else:
+            tda_regime = {"current_regime": "unknown", "confidence": 0.0}
         
         quantum_state = self.quantum_probability.create_market_quantum_state(
-            returns, n_qubits=5
+            returns, volumes if volumes is not None and len(volumes) > 0 else None
         )
         
         quantum_regime = self.quantum_probability.detect_market_regime_quantum(

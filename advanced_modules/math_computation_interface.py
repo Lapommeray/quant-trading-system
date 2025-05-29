@@ -13,6 +13,7 @@ supporting the quantum trading system with rigorous mathematical capabilities.
 
 import numpy as np
 import sympy as sp
+import mpmath
 from sympy import symbols, solve, simplify, expand, factor, integrate, diff, Matrix
 import subprocess
 import tempfile
@@ -42,8 +43,8 @@ class MathComputationInterface:
     """
     
     def __init__(self, precision: int = 64, use_mathematica: bool = False, 
-                 use_matlab: bool = False, mathematica_path: str = None, 
-                 matlab_path: str = None):
+                 use_matlab: bool = False, mathematica_path: Optional[str] = None, 
+                 matlab_path: Optional[str] = None):
         """
         Initialize Mathematical Computation Interface
         
@@ -59,7 +60,7 @@ class MathComputationInterface:
         self.use_matlab = use_matlab
         self.history = []
         
-        sp.mpmath.mp.dps = precision
+        mpmath.mp.dps = precision
         
         if use_mathematica and mathematica_path is None:
             self.mathematica_path = self._detect_mathematica_path()
@@ -394,7 +395,7 @@ class MathComputationInterface:
                 temp_filename = f.name
                 
             result = subprocess.run(
-                [self.mathematica_path, "-script", temp_filename],
+                [str(self.mathematica_path) if self.mathematica_path else "", "-script", temp_filename],
                 capture_output=True,
                 text=True,
                 timeout=30
@@ -445,7 +446,7 @@ class MathComputationInterface:
                 temp_filename = f.name
                 
             result = subprocess.run(
-                [self.matlab_path, "-batch", f"run('{temp_filename}')"],
+                [str(self.matlab_path) if self.matlab_path else "", "-batch", f"run('{temp_filename}')"],
                 capture_output=True,
                 text=True,
                 timeout=30

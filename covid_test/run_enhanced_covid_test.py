@@ -37,14 +37,14 @@ from advanced_modules.measure_theory import MeasureTheory
 from advanced_modules.rough_path_theory import RoughPathTheory
 from advanced_modules.mathematical_integration_layer import MathematicalIntegrationLayer
 
-from covid_test.covid_data_simulator import simulate_crash
-from covid_test.run_covid_test_quantum import load_covid_data, ASSETS, ACCOUNT_SIZE, TEST_START_DATE, TEST_END_DATE
+from covid_data_simulator import simulate_crash
+from run_covid_test_quantum import load_covid_data, ASSETS, ACCOUNT_SIZE, TEST_START_DATE, TEST_END_DATE
 
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
     handlers=[
-        logging.FileHandler("covid_test/enhanced_covid_test.log"),
+        logging.FileHandler("enhanced_covid_test.log"),
         logging.StreamHandler()
     ]
 )
@@ -102,12 +102,13 @@ def run_enhanced_test(asset, mode="normal", target_trades=40, target_win_rate=1.
         current_price = df.iloc[i]["close"]
         current_volume = df.iloc[i]["volume"]
         
-        hist_prices = df.iloc[i-20:i+1]["close"].values
-        hist_volumes = df.iloc[i-20:i+1]["volume"].values
-        hist_highs = df.iloc[i-20:i+1]["high"].values
-        hist_lows = df.iloc[i-20:i+1]["low"].values
+        hist_prices = np.array(df.iloc[i-20:i+1]["close"].values, dtype=np.float64)
+        hist_volumes = np.array(df.iloc[i-20:i+1]["volume"].values, dtype=np.float64)
+        hist_highs = np.array(df.iloc[i-20:i+1]["high"].values, dtype=np.float64)
+        hist_lows = np.array(df.iloc[i-20:i+1]["low"].values, dtype=np.float64)
         
-        hist_returns = np.diff(np.log(hist_prices))
+        valid_prices = np.maximum(hist_prices, np.array([0.0001] * len(hist_prices)))
+        hist_returns = np.diff(np.log(valid_prices))
         
         atr = legba_crossroads.calculate_atr(hist_highs, hist_lows, hist_prices)
         
@@ -143,7 +144,7 @@ def run_enhanced_test(asset, mode="normal", target_trades=40, target_win_rate=1.
         trade_opportunities.append(trade_opportunity)
         
         if not in_position:
-            if enhanced_signal.get("confidence", 0) > 0.8 or len(trades) < (target_trades / 2):
+            if float(enhanced_signal.get("confidence", 0)) > 0.8 or len(trades) < (target_trades / 2):
                 position_info = entropy_shield.position_size_quantum(
                     market_regime.get("confidence", 0.5),
                     account_balance,
@@ -158,7 +159,7 @@ def run_enhanced_test(asset, mode="normal", target_trades=40, target_win_rate=1.
                 
                 logger.info(f"{current_date}: Entered {asset} position at {position_price:.2f}, "
                            f"size: {position_size:.2f}, balance: {account_balance:.2f}, "
-                           f"confidence: {enhanced_signal.get('confidence', 0):.2f}")
+                           f"confidence: {float(enhanced_signal.get('confidence', 0)):.2f}")
                 
         else:
             exit_reason = None

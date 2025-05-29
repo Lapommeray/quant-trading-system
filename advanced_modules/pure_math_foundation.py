@@ -13,7 +13,8 @@ Key components:
 
 import numpy as np
 import sympy as sp
-from typing import List, Dict, Tuple, Set, Optional, Union, Callable
+import mpmath
+from typing import List, Dict, Tuple, Set, Optional, Union, Callable, Any
 import logging
 from datetime import datetime
 import json
@@ -45,7 +46,7 @@ class PureMathFoundation:
         self.proof_level = proof_level
         self.history = []
         
-        sp.mpmath.mp.dps = precision
+        mpmath.mp.dps = precision
         
         self.prime_cache = {}
         
@@ -206,7 +207,7 @@ class PureMathFoundation:
             return None
     
     
-    def is_group(self, elements: List, operation: Callable, identity: any) -> bool:
+    def is_group(self, elements: List, operation: Callable, identity: Any) -> bool:
         """
         Verify if a set with an operation forms a group
         
@@ -257,7 +258,7 @@ class PureMathFoundation:
         return True
     
     def is_field(self, elements: List, addition: Callable, multiplication: Callable,
-                zero: any, one: any) -> bool:
+                zero: Any, one: Any) -> bool:
         """
         Verify if a set with two operations forms a field
         
