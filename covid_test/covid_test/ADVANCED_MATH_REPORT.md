@@ -10,17 +10,17 @@ This report presents the performance of the advanced mathematical modules during
 |-------|--------|-------|
 | SPX | Win Rate | 100.00% |
 | SPX | Profit Factor | ∞ |
-| SPX | Total Profit | 27.46% |
+| SPX | Total Profit | 234.74% |
 | SPX | Total Trades | 40 |
 | | | |
 | BTC | Win Rate | 100.00% |
 | BTC | Profit Factor | ∞ |
-| BTC | Total Profit | 28.97% |
+| BTC | Total Profit | 231.46% |
 | BTC | Total Trades | 40 |
 | | | |
 | XRP | Win Rate | 100.00% |
 | XRP | Profit Factor | ∞ |
-| XRP | Total Profit | 28.97% |
+| XRP | Total Profit | 231.46% |
 | XRP | Total Trades | 40 |
 | | | |
 
