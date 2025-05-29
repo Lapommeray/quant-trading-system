@@ -507,19 +507,30 @@ class TopologicalDataAnalysis:
             return [np.where(labels == label)[0] for label in unique_labels]
     
     
-    def detect_market_regimes(self, returns: np.ndarray, 
+    def detect_market_regimes(self, prices: np.ndarray, 
+                             volumes: Optional[np.ndarray] = None,
                              window_size: int = 50) -> Dict:
         """
         Detect market regimes using topological features
         
         Parameters:
-        - returns: Array of asset returns with shape (time_steps, assets)
+        - prices: Array of asset prices with shape (time_steps, assets)
+        - volumes: Optional array of trading volumes with shape (time_steps, assets)
         - window_size: Window size for rolling analysis
         
         Returns:
         - Dictionary with market regime detection results
         """
-        time_steps, assets = returns.shape
+        if len(prices.shape) == 1:
+            time_steps = prices.shape[0]
+            assets = 1
+            prices_2d = prices.reshape(-1, 1)
+        else:
+            time_steps, assets = prices.shape
+            prices_2d = prices
+        
+        returns = np.diff(np.log(prices_2d))
+        time_steps -= 1  # Adjust time_steps after calculating returns
         
         regime_changes = []
         betti_0_series = []
@@ -527,6 +538,11 @@ class TopologicalDataAnalysis:
         
         for t in range(window_size, time_steps):
             window_data = returns[t-window_size:t]
+            
+            if volumes is not None and volumes.shape[0] >= t:
+                volume_window = volumes[t-window_size:t]
+                if volume_window.shape[0] == window_data.shape[0]:
+                    window_data = np.column_stack((window_data, volume_window))
             
             scaler = StandardScaler()
             window_data_scaled = scaler.fit_transform(window_data)
@@ -544,14 +560,18 @@ class TopologicalDataAnalysis:
                     abs(betti_0_series[-1] - betti_0_series[-2]) > 2):
                     regime_changes.append(t)
         
-        regime_labels = np.zeros(time_steps, dtype=int)
+        # Initialize regime labels with the same size as returns
+        regime_labels = np.zeros(returns.shape[0], dtype=int)
         current_regime = 0
         
-        for t in range(window_size):
+        # Initialize initial regime labels
+        for t in range(min(window_size-1, returns.shape[0])):
             regime_labels[t] = current_regime
             
-        for t in range(window_size, time_steps):
-            if t in regime_changes:
+        adjusted_regime_changes = [rc-1 for rc in regime_changes if rc-1 < returns.shape[0]]
+            
+        for t in range(min(window_size-1, returns.shape[0]), returns.shape[0]):
+            if t in adjusted_regime_changes:
                 current_regime += 1
             regime_labels[t] = current_regime
         
@@ -581,13 +601,15 @@ class TopologicalDataAnalysis:
             'regime_stats': regime_stats,
             'n_regimes': len(unique_regimes),
             'betti_0_series': betti_0_series,
-            'betti_1_series': betti_1_series
+            'betti_1_series': betti_1_series,
+            'current_regime': current_regime,
+            'confidence': self.confidence_level
         }
         
         self.history.append({
             'timestamp': datetime.now().isoformat(),
             'operation': 'detect_market_regimes',
-            'returns_shape': returns.shape,
+            'prices_shape': prices.shape,
             'window_size': window_size,
             'n_regime_changes': len(regime_changes),
             'n_regimes': len(unique_regimes)

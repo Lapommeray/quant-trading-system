@@ -13,6 +13,7 @@ Key components:
 
 import numpy as np
 import sympy as sp
+import mpmath
 from typing import List, Dict, Tuple, Set, Optional, Union, Callable
 import logging
 from datetime import datetime
@@ -45,7 +46,7 @@ class PureMathFoundation:
         self.proof_level = proof_level
         self.history = []
         
-        sp.mpmath.mp.dps = precision
+        mpmath.mp.dps = precision
         
         self.prime_cache = {}
         

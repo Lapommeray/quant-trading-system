@@ -83,29 +83,48 @@ class QuantumProbability:
         Returns:
         - Density matrix representing quantum state
         """
-        if normalize:
-            returns = (returns - np.mean(returns, axis=0)) / np.std(returns, axis=0)
-        
-        cov_matrix = np.cov(returns, rowvar=False)
-        
-        eigenvalues, eigenvectors = np.linalg.eigh(cov_matrix)
-        eigenvalues = np.maximum(eigenvalues, 0)  # Ensure non-negative eigenvalues
-        
-        density_matrix = eigenvectors @ np.diag(eigenvalues) @ eigenvectors.T
+        if returns.size == 0 or len(returns.shape) < 2:
+            logger.warning(f"Insufficient data for density matrix creation: shape={returns.shape}, size={returns.size}")
+            return np.eye(2, dtype=complex)
+            
+        if returns.shape[0] < 2 or returns.shape[1] < 1:
+            logger.warning(f"Insufficient samples for density matrix: shape={returns.shape}")
+            return np.eye(max(2, returns.shape[1]), dtype=complex)
         
         if normalize:
-            density_matrix = density_matrix / np.trace(density_matrix)
+            std_dev = np.std(returns, axis=0)
+            std_dev = np.where(std_dev < 1e-10, 1.0, std_dev)
+            returns = (returns - np.mean(returns, axis=0)) / std_dev
         
-        self.history.append({
-            'timestamp': datetime.now().isoformat(),
-            'operation': 'create_density_matrix',
-            'returns_shape': returns.shape,
-            'density_matrix_shape': density_matrix.shape,
-            'eigenvalues_min': float(min(eigenvalues)),
-            'eigenvalues_max': float(max(eigenvalues))
-        })
-        
-        return density_matrix
+        try:
+            cov_matrix = np.cov(returns, rowvar=False)
+            
+            if cov_matrix.size <= 1:
+                logger.warning("Covariance matrix too small, using fallback")
+                return np.eye(max(2, returns.shape[1]), dtype=complex)
+                
+            eigenvalues, eigenvectors = np.linalg.eigh(cov_matrix)
+            eigenvalues = np.maximum(eigenvalues, 0)  # Ensure non-negative eigenvalues
+            
+            density_matrix = eigenvectors @ np.diag(eigenvalues) @ eigenvectors.T
+            
+            if normalize and np.trace(density_matrix) > 0:
+                density_matrix = density_matrix / np.trace(density_matrix)
+            
+            self.history.append({
+                'timestamp': datetime.now().isoformat(),
+                'operation': 'create_density_matrix',
+                'returns_shape': returns.shape,
+                'density_matrix_shape': density_matrix.shape,
+                'eigenvalues_min': float(np.min(eigenvalues)) if eigenvalues.size > 0 else 0.0,
+                'eigenvalues_max': float(np.max(eigenvalues)) if eigenvalues.size > 0 else 0.0
+            })
+            
+            return density_matrix
+            
+        except Exception as e:
+            logger.warning(f"Error in density matrix creation: {str(e)}")
+            return np.eye(max(2, returns.shape[1]), dtype=complex)
     
     def quantum_measurement(self, density_matrix: np.ndarray, 
                            observable: np.ndarray) -> Tuple[float, np.ndarray]:
@@ -195,13 +214,33 @@ class QuantumProbability:
         Compare time averages vs. ensemble averages to detect non-ergodicity
         
         Parameters:
-        - returns: Array of asset returns with shape (time_steps, assets)
+        - returns: Array of asset returns with shape (time_steps, assets) or (time_steps,)
         - window_size: Window size for time averaging (default: 20)
         
         Returns:
         - Dictionary with non-ergodicity metrics
         """
+        if returns is None or returns.size == 0:
+            return {
+                'mean_difference': 0.0,
+                'variance_ratio': 1.0,
+                'ergodicity_breaking': 0.0,
+                'non_ergodicity_index': 0.0,
+                'is_ergodic': True
+            }
+            
+        if len(returns.shape) == 1:
+            returns = returns.reshape(-1, 1)
+            
         time_steps, assets = returns.shape
+        if time_steps < window_size + 1:
+            return {
+                'mean_difference': 0.0,
+                'variance_ratio': 1.0,
+                'ergodicity_breaking': 0.0,
+                'non_ergodicity_index': 0.0,
+                'is_ergodic': True
+            }
         
         ensemble_means = np.mean(returns, axis=1)
         ensemble_vars = np.var(returns, axis=1)
@@ -252,29 +291,95 @@ class QuantumProbability:
         Returns:
         - Dictionary with Kelly allocations and non-ergodic adjustments
         """
+        return self.calculate_non_ergodic_kelly(returns, risk_free_rate, time_horizon)
+        
+    def calculate_non_ergodic_kelly(self, returns: np.ndarray, risk_free_rate: Union[float, Dict] = 0.0,
+                                  time_horizon: int = 252) -> Dict:
+        """
+        Calculate Kelly criterion under non-ergodic conditions
+        
+        Parameters:
+        - returns: Array of asset returns
+        - risk_free_rate: Risk-free rate (default: 0.0) or dict with rate information
+        - time_horizon: Investment time horizon in days (default: 252)
+        
+        Returns:
+        - Dictionary with Kelly allocations and non-ergodic adjustments
+        """
+        if returns is None or returns.size == 0:
+            return {
+                'kelly_weights': [0.0],
+                'is_ergodic': True,
+                'non_ergodicity_index': 0.0,
+                'expected_growth_rate': 0.0,
+                'optimal_fraction': 0.0,
+                'confidence': 0.5
+            }
+            
+        if isinstance(risk_free_rate, dict):
+            rf_rate = risk_free_rate.get('rate', 0.0)
+            if not isinstance(rf_rate, (int, float)):
+                rf_rate = 0.0
+        else:
+            rf_rate = float(risk_free_rate)
+            
         mean_returns = np.mean(returns, axis=0)
-        cov_matrix = np.cov(returns, rowvar=False)
+        
+        try:
+            cov_matrix = np.cov(returns, rowvar=False)
+            if cov_matrix.size == 0 or np.isnan(cov_matrix).any():
+                raise ValueError("Invalid covariance matrix")
+        except Exception as e:
+            logger.warning(f"Covariance matrix calculation error: {e}, using fallback")
+            if len(returns.shape) > 1 and returns.shape[1] > 1:
+                cov_matrix = np.diag(np.var(returns, axis=0))
+            else:
+                cov_matrix = np.array([[np.var(returns)]])
         
         non_ergodic_metrics = self.time_average_vs_ensemble_average(returns)
         is_ergodic = non_ergodic_metrics['is_ergodic']
         
-        excess_returns = mean_returns - risk_free_rate
-        kelly_weights_ergodic = np.linalg.solve(cov_matrix, excess_returns)
+        if np.isscalar(mean_returns):
+            mean_returns = np.array([mean_returns])
+            
+        # Calculate excess returns
+        excess_returns = mean_returns - rf_rate
         
-        if not is_ergodic:
-            growth_rates = np.log(1 + returns)
-            time_avg_growth = np.mean(growth_rates, axis=0)
+        if np.isscalar(excess_returns):
+            excess_returns = np.array([excess_returns])
             
-            non_ergodic_factor = non_ergodic_metrics['non_ergodicity_index']
-            adjusted_returns = time_avg_growth * (1 - non_ergodic_factor) + mean_returns * non_ergodic_factor
+        try:
+            if not isinstance(cov_matrix, np.ndarray) or cov_matrix.ndim < 2 or cov_matrix.shape[0] == 0 or cov_matrix.shape[1] == 0:
+                raise ValueError("Covariance matrix has invalid dimensions")
+                
+            if len(excess_returns.shape) == 0:  # 0-dimensional array
+                excess_returns = np.array([float(excess_returns)])
+                cov_matrix = np.array([[1.0]])
+            elif cov_matrix.shape[0] != excess_returns.shape[0]:
+                raise ValueError(f"Dimension mismatch: cov_matrix {cov_matrix.shape}, excess_returns {excess_returns.shape}")
+                
+            kelly_weights_ergodic = np.linalg.solve(cov_matrix, excess_returns)
             
-            excess_returns_adjusted = adjusted_returns - risk_free_rate
-            kelly_weights_non_ergodic = np.linalg.solve(cov_matrix, excess_returns_adjusted)
-            
-            scaling_factor = 1.0 - 0.5 * non_ergodic_factor
-            kelly_weights = kelly_weights_non_ergodic * scaling_factor
-        else:
-            kelly_weights = kelly_weights_ergodic
+            if not is_ergodic:
+                growth_rates = np.log(1 + returns)
+                time_avg_growth = np.mean(growth_rates, axis=0)
+                
+                if np.isscalar(time_avg_growth):
+                    time_avg_growth = np.array([time_avg_growth])
+                
+                non_ergodic_factor = non_ergodic_metrics['non_ergodicity_index']
+                adjusted_returns = time_avg_growth * (1 - non_ergodic_factor) + mean_returns * non_ergodic_factor
+                
+                excess_returns_adjusted = adjusted_returns - rf_rate
+                kelly_weights_non_ergodic = np.linalg.solve(cov_matrix, excess_returns_adjusted)
+                
+                scaling_factor = 1.0 - 0.5 * non_ergodic_factor
+                kelly_weights = kelly_weights_non_ergodic * scaling_factor
+            else:
+                kelly_weights = kelly_weights_ergodic
+        except Exception as e:
+            logger.warning(f"Error in Kelly calculation: {e}, using fallback")
+            kelly_weights = np.array([0.5]) if np.isscalar(mean_returns) else np.ones_like(mean_returns) / len(mean_returns)
         
         if np.sum(kelly_weights) > 0:
             kelly_weights = kelly_weights / np.sum(kelly_weights)
@@ -617,6 +722,203 @@ class QuantumProbability:
         })
         
         return result
+    
+    def create_market_quantum_state(self, returns: np.ndarray, n_qubits: int = 5) -> Dict:
+        """
+        Create quantum state representation of market returns
+        
+        Parameters:
+        - returns: Array of asset returns
+        - n_qubits: Number of qubits to use for representation
+        
+        Returns:
+        - Dictionary with quantum state representation
+        """
+        target_dim = 2**n_qubits
+        
+        if returns is None or returns.size == 0:
+            logger.warning("Empty returns array for quantum state creation")
+            return {
+                "state_vector": np.zeros(target_dim, dtype=complex),
+                "density_matrix": np.eye(target_dim, dtype=complex),
+                "eigenvalues": np.array([1.0] + [0.0] * (target_dim - 1)),
+                "entropy": 0.0,
+                "n_qubits": n_qubits,
+                "dimension": target_dim
+            }
+        
+        try:
+            if len(returns.shape) == 1:
+                std_dev = np.std(returns) + 1e-8
+                returns_norm = (returns - np.mean(returns)) / std_dev
+                returns_norm = returns_norm.reshape(-1, 1)
+            else:
+                std_dev = np.std(returns, axis=0) + 1e-8
+                returns_norm = (returns - np.mean(returns, axis=0)) / std_dev
+                
+            # Create density matrix
+            density_matrix = self.create_density_matrix(returns_norm)
+            
+            current_dim = density_matrix.shape[0]
+            
+            if current_dim < target_dim:
+                padded_matrix = np.zeros((target_dim, target_dim), dtype=complex)
+                padded_matrix[:current_dim, :current_dim] = density_matrix
+                trace = np.trace(padded_matrix)
+                density_matrix = padded_matrix / trace if trace > 0 else padded_matrix
+            elif current_dim > target_dim:
+                density_matrix = density_matrix[:target_dim, :target_dim]
+                trace = np.trace(density_matrix)
+                density_matrix = density_matrix / trace if trace > 0 else density_matrix
+                
+            # Calculate eigenvalues and eigenvectors
+            eigenvalues, eigenvectors = np.linalg.eigh(density_matrix)
+            
+            idx = eigenvalues.argsort()[::-1]
+            eigenvalues = eigenvalues[idx]
+            eigenvectors = eigenvectors[:, idx]
+            
+            # Get principal eigenvector as state vector
+            state_vector = eigenvectors[:, 0]
+            
+            # Calculate quantum entropy safely
+            positive_mask = eigenvalues > 1e-10
+            positive_eigenvalues = eigenvalues[positive_mask]
+            if positive_eigenvalues.size > 0:
+                entropy = float(np.sum(-positive_eigenvalues * np.log2(positive_eigenvalues)))
+            else:
+                entropy = 0.0
+            
+            result = {
+                "state_vector": state_vector,
+                "density_matrix": density_matrix,
+                "eigenvalues": eigenvalues,
+                "entropy": entropy,
+                "n_qubits": n_qubits,
+                "dimension": target_dim
+            }
+            
+            self.history.append({
+                'timestamp': datetime.now().isoformat(),
+                'operation': 'create_market_quantum_state',
+                'returns_shape': returns.shape,
+                'n_qubits': n_qubits,
+                'entropy': entropy
+            })
+            
+            return result
+            
+        except Exception as e:
+            logger.warning(f"Error in quantum state creation: {str(e)}")
+            return {
+                "state_vector": np.zeros(target_dim, dtype=complex),
+                "density_matrix": np.eye(target_dim, dtype=complex),
+                "eigenvalues": np.array([1.0] + [0.0] * (target_dim - 1)),
+                "entropy": 0.0,
+                "n_qubits": n_qubits,
+                "dimension": target_dim
+            }
+    
+    def detect_market_regime_quantum(self, quantum_state: Dict, returns: np.ndarray) -> Dict:
+        """
+        Detect market regime using quantum state
+        
+        Parameters:
+        - quantum_state: Quantum state representation from create_market_quantum_state
+        - returns: Array of asset returns
+        
+        Returns:
+        - Dictionary with detected market regime
+        """
+        if not isinstance(quantum_state, dict) or "density_matrix" not in quantum_state:
+            logger.warning("Invalid quantum state for regime detection")
+            return {"regime": "neutral", "confidence": 0.0, 
+                    "bull_probability": 0.0, "bear_probability": 0.0, "neutral_probability": 1.0}
+            
+        try:
+            density_matrix = quantum_state.get("density_matrix")
+            if density_matrix is None or not isinstance(density_matrix, np.ndarray):
+                logger.warning("Invalid density matrix for regime detection")
+                return {"regime": "neutral", "confidence": 0.0, 
+                        "bull_probability": 0.0, "bear_probability": 0.0, "neutral_probability": 1.0}
+            
+            dim = density_matrix.shape[0]
+            
+            bull_size = max(1, dim // 4)
+            bull_observable = np.zeros_like(density_matrix)
+            bull_observable[:bull_size, :bull_size] = np.eye(bull_size)
+            
+            bear_size = max(1, dim // 4)
+            bear_observable = np.zeros_like(density_matrix)
+            bear_observable[-bear_size:, -bear_size:] = np.eye(bear_size)
+            
+            # Neutral regime: middle eigenvalues
+            neutral_size = max(1, dim // 2)
+            start_idx = max(0, (dim - neutral_size) // 2)
+            neutral_observable = np.zeros_like(density_matrix)
+            neutral_observable[start_idx:start_idx+neutral_size, start_idx:start_idx+neutral_size] = np.eye(neutral_size)
+            
+            # Perform quantum measurements
+            bull_prob, _ = self.quantum_measurement(density_matrix, bull_observable)
+            bear_prob, _ = self.quantum_measurement(density_matrix, bear_observable)
+            neutral_prob, _ = self.quantum_measurement(density_matrix, neutral_observable)
+            
+            total_prob = bull_prob + bear_prob + neutral_prob
+            if total_prob > 0:
+                bull_prob /= total_prob
+                bear_prob /= total_prob
+                neutral_prob /= total_prob
+            else:
+                bull_prob, bear_prob, neutral_prob = 0.0, 0.0, 1.0
+            
+            # Determine regime with highest probability
+            probs = {"bullish": bull_prob, "bearish": bear_prob, "neutral": neutral_prob}
+            regime = "neutral"  # Default
+            max_prob = 0.0
+            
+            for key, value in probs.items():
+                if value > max_prob:
+                    max_prob = value
+                    regime = key
+                    
+            confidence = probs[regime]
+            
+            if returns is not None and returns.size >= 5:
+                if len(returns.shape) == 1:
+                    recent_returns = returns[-5:]
+                else:
+                    recent_returns = returns[-5:, 0] if returns.shape[1] > 0 else np.zeros(5)
+                    
+                recent_trend = np.mean(recent_returns)
+                if recent_trend > 0 and regime == "bearish" and bull_prob > 0.3:
+                    regime = "bullish"
+                    confidence = bull_prob
+                elif recent_trend < 0 and regime == "bullish" and bear_prob > 0.3:
+                    regime = "bearish"
+                    confidence = bear_prob
+            
+            result = {
+                "regime": regime,
+                "confidence": float(confidence),
+                "bull_probability": float(bull_prob),
+                "bear_probability": float(bear_prob),
+                "neutral_probability": float(neutral_prob),
+                "entropy": float(quantum_state.get("entropy", 0.0))
+            }
+            
+            self.history.append({
+                'timestamp': datetime.now().isoformat(),
+                'operation': 'detect_market_regime_quantum',
+                'regime': regime,
+                'confidence': float(confidence)
+            })
+            
+            return result
+            
+        except Exception as e:
+            logger.warning(f"Error in market regime detection: {str(e)}")
+            return {"regime": "neutral", "confidence": 0.0, 
+                    "bull_probability": 0.0, "bear_probability": 0.0, "neutral_probability": 1.0}
     
     def get_statistics(self) -> Dict:
         """
