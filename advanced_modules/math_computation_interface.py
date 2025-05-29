@@ -13,6 +13,7 @@ supporting the quantum trading system with rigorous mathematical capabilities.
 
 import numpy as np
 import sympy as sp
+import mpmath
 from sympy import symbols, solve, simplify, expand, factor, integrate, diff, Matrix
 import subprocess
 import tempfile
@@ -59,7 +60,7 @@ class MathComputationInterface:
         self.use_matlab = use_matlab
         self.history = []
         
-        sp.mpmath.mp.dps = precision
+        mpmath.mp.dps = precision
         
         if use_mathematica and mathematica_path is None:
             self.mathematica_path = self._detect_mathematica_path()

@@ -367,7 +367,7 @@ class MathematicalIntegrationLayer:
         returns = np.diff(np.log(prices))
         
         tda_regime = self.topological_data.detect_market_regimes(
-            prices, volumes, window_size=window_size
+            returns, window_size=window_size
         )
         
         quantum_state = self.quantum_probability.create_market_quantum_state(
@@ -378,15 +378,30 @@ class MathematicalIntegrationLayer:
             quantum_state, returns
         )
         
+        # Check if we have enough price data
+        if prices is None or len(prices) < window_size + 5:
+            logger.warning(f"Insufficient price data for market regime detection. "
+                          f"Need at least {window_size + 5} points, got {len(prices) if prices is not None else 0}")
+            return {
+                "current_regime": "unknown",
+                "confidence": self.confidence_level,
+                "tda_regime": "unknown",
+                "quantum_regime": "unknown",
+                "signature_signal": 1.0,  # Default to buy signal
+                "regime_counts": {"unknown": 3},
+                "window_size": window_size
+            }
+            
         if volumes is not None and len(volumes) >= window_size:
             path = np.column_stack((prices[-window_size:], volumes[-window_size:]))
         else:
-            path = prices[-window_size:].reshape(-1, 1)
+            path = np.array(prices[-window_size:]).reshape(-1, 1)
             
         signature = self.rough_path_theory.compute_path_signature(path)
         
+        prices_array = np.array(prices)
         sig_strategy = self.rough_path_theory.signature_trading_strategy(
-            prices, lookback=window_size, prediction_horizon=5
+            prices_array, lookback=window_size, prediction_horizon=5
         )
         
         regimes = [
