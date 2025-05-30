@@ -1,8 +1,17 @@
 import numpy as np
 import pandas as pd
 import logging
+import warnings
 from sortedcontainers import SortedDict
 from datetime import datetime
+
+def _warn_about_enhanced_features():
+    warnings.warn(
+        "Consider using EnhancedLimitOrderBook for institutional features like trade imbalance tracking and VPIN calculation. "
+        "Basic LimitOrderBook will continue to be supported.",
+        FutureWarning,
+        stacklevel=3
+    )
 
 class LimitOrderBook:
     """
@@ -268,3 +277,122 @@ class LimitOrderBook:
         self.asks.clear()
         self.bid_orders.clear()
         self.ask_orders.clear()
+
+
+class EnhancedLimitOrderBook(LimitOrderBook):
+    """
+    Enhanced Limit Order Book with institutional features.
+    Extends the existing LimitOrderBook with trade imbalance tracking and VPIN calculation.
+    """
+    
+    def __init__(self, tick_size=0.01, enable_institutional_features=False):
+        super().__init__()
+        self.tick_size = tick_size
+        self.enable_institutional_features = enable_institutional_features
+        
+        if enable_institutional_features:
+            self.trade_imbalance = 0
+            self.price_impact = []
+            self.mid_price_history = []
+            self.spread_history = []
+            self.buy_volumes = []
+            self.sell_volumes = []
+    
+    def add_order(self, price, volume, is_bid):
+        """
+        Add a limit order to the book with enhanced tracking
+        """
+        _warn_about_enhanced_features()
+        order_id = super().add_order(price, volume, is_bid)
+        
+        if self.enable_institutional_features:
+            if is_bid:
+                self.trade_imbalance += volume
+            else:
+                self.trade_imbalance -= volume
+                
+        return order_id
+        
+    def process_trade(self, price, volume, side):
+        """
+        Process a trade with institutional metrics
+        
+        Parameters:
+        - price: Trade price
+        - volume: Trade volume
+        - side: 'buy' or 'sell'
+        
+        Returns:
+        - Trade impact metrics
+        """
+        if not self.enable_institutional_features:
+            return None
+            
+        # Update trade imbalance
+        if side == 'buy':
+            self.trade_imbalance += volume
+            self.buy_volumes.append(volume)
+        else:
+            self.trade_imbalance -= volume
+            self.sell_volumes.append(volume)
+        
+        # Calculate price impact
+        impact = None
+        if self.bids and self.asks:
+            current_mid = (self.bids.keys()[-1] + self.asks.keys()[0]) / 2
+            if hasattr(self, 'last_mid') and self.last_mid:
+                impact = (current_mid - self.last_mid) / self.last_mid
+                self.price_impact.append(impact)
+            self.last_mid = current_mid
+            
+            self.mid_price_history.append(current_mid)
+            self.spread_history.append(self.asks.keys()[0] - self.bids.keys()[-1])
+        
+        trade = {
+            'timestamp': datetime.now(),
+            'price': price,
+            'volume': volume,
+            'side': side,
+            'impact': impact
+        }
+        self.trades.append(trade)
+        
+        return impact
+    
+    def calculate_vpin(self, bucket_volume=10000, window=50):
+        """
+        Calculate Volume-synchronized Probability of Informed Trading
+        
+        Parameters:
+        - bucket_volume: Volume per bucket
+        - window: Number of buckets to consider
+        
+        Returns:
+        - VPIN value between 0 (normal) and 1 (toxic flow)
+        """
+        if not self.enable_institutional_features or len(self.buy_volumes) < window or len(self.sell_volumes) < window:
+            return np.nan
+            
+        buy_vol = np.sum(self.buy_volumes[-window:])
+        sell_vol = np.sum(self.sell_volumes[-window:])
+        total_vol = buy_vol + sell_vol
+        
+        if total_vol == 0:
+            return np.nan
+            
+        return np.abs(buy_vol - sell_vol) / total_vol
+    
+    def get_order_book_snapshot(self):
+        """
+        Get an enhanced snapshot of the current order book
+        """
+        snapshot = super().get_order_book_snapshot()
+        
+        if self.enable_institutional_features:
+            snapshot.update({
+                'trade_imbalance': self.trade_imbalance,
+                'vpin': self.calculate_vpin(),
+                'price_impact': np.mean(self.price_impact[-10:]) if len(self.price_impact) >= 10 else None
+            })
+            
+        return snapshot
