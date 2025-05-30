@@ -57,7 +57,11 @@ class MultiAssetLiveTest:
         """
         self.logger.info("Initializing components...")
         
+        # Initialize with our specific assets list
         self.multi_asset_strategy = MultiAssetStrategy()
+        self.multi_asset_strategy.assets = {asset: self.multi_asset_strategy.assets.get(asset, {'volatility': 0.02, 'trend': 0.001}) 
+                                           for asset in self.assets}
+        
         self.performance_dashboard = PerformanceDashboard()
         self.dask_processor = DaskParallelProcessor()
         self.heston_model = HestonModel()
