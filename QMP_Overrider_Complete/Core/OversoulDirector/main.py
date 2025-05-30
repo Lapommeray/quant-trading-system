@@ -73,6 +73,7 @@ class OversoulDirector:
     def _load_all_modules(self):
         """Load all modules"""
         self._load_core_modules()
+        self._load_advanced_modules()
         
         try:
             from Optimization.AgentLab.darwinian_ga import StrategyEvolver
@@ -133,6 +134,44 @@ class OversoulDirector:
             self.modules['darwin'] = StrategyEvolver()
         except ImportError:
             print("Warning: StrategyEvolver module not found.")
+            
+    def _load_advanced_modules(self):
+        """Load advanced modules from CERN, Neuralink, and Quantum Consciousness"""
+        try:
+            sys.path.append(os.path.join(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))), 'advanced_modules'))
+            from module_interface import AdvancedModuleInterface
+            print("Advanced Module Interface loaded successfully.")
+        except ImportError:
+            print("Warning: Advanced Module Interface not found.")
+            return
+            
+        try:
+            from cern_physics.hadron_collider_market_analyzer import HadronColliderMarketAnalyzer
+            self.modules['hadron_collider'] = HadronColliderMarketAnalyzer()
+            print("CERN Hadron Collider Market Analyzer loaded successfully.")
+        except ImportError:
+            print("Warning: CERN Hadron Collider Market Analyzer module not found.")
+            
+        try:
+            from neuralink_bci.neural_spike_pattern_recognizer import NeuralSpikePatternRecognizer
+            self.modules['neural_spike'] = NeuralSpikePatternRecognizer()
+            print("Neuralink Neural Spike Pattern Recognizer loaded successfully.")
+        except ImportError:
+            print("Warning: Neuralink Neural Spike Pattern Recognizer module not found.")
+            
+        try:
+            from quantum_consciousness.quantum_entanglement_market_correlator import QuantumEntanglementMarketCorrelator
+            self.modules['quantum_entanglement'] = QuantumEntanglementMarketCorrelator()
+            print("Quantum Entanglement Market Correlator loaded successfully.")
+        except ImportError:
+            print("Warning: Quantum Entanglement Market Correlator module not found.")
+            
+        try:
+            from never_loss_intelligence.temporal_probability_calculator import TemporalProbabilityCalculator
+            self.modules['temporal_probability'] = TemporalProbabilityCalculator()
+            print("Temporal Probability Calculator loaded successfully.")
+        except ImportError:
+            print("Warning: Temporal Probability Calculator module not found.")
     
     def route_signal(self, market_state):
         """
@@ -167,6 +206,12 @@ class OversoulDirector:
         if 'qmp' in active_modules and active_modules['qmp'] > 0.5:
             if 'qmp_signal' in market_state:
                 signals['qmp'] = market_state['qmp_signal']
+                
+        for module_name in ['hadron_collider', 'neural_spike', 'quantum_entanglement', 'temporal_probability']:
+            if module_name in active_modules and active_modules[module_name] > 0.5:
+                if module_name in self.modules:
+                    module_signal = self.modules[module_name].get_signal(market_state)
+                    signals[module_name] = module_signal
         
         consensus = None
         if 'truth' in active_modules and active_modules['truth'] > 0.5:
@@ -179,6 +224,15 @@ class OversoulDirector:
             consensus = self._get_simple_consensus(signals)
         
         self.last_consensus = consensus
+        
+        if consensus is None:
+            consensus = {
+                "signal": "NEUTRAL",
+                "confidence": 0.0,
+                "agreement": "NONE",
+                "sources": [],
+                "notes": "No consensus available"
+            }
         
         if 'ritual' in active_modules and active_modules['ritual'] > 0.5:
             if 'ritual' in self.modules:
