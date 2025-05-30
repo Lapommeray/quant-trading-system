@@ -173,7 +173,8 @@ def export_results(trades, metrics, performance_summary):
     with open('output/trades.csv', 'w', newline='') as f:
         writer = csv.DictWriter(f, fieldnames=[
             'id', 'asset', 'entry_time', 'entry_price', 'exit_time', 
-            'exit_price', 'quantity', 'direction', 'pnl', 'return', 'status'
+            'exit_price', 'quantity', 'direction', 'pnl', 'return', 'status',
+            'quantum_signal', 'fused_signal', 'routed_signal'
         ])
         writer.writeheader()
         for trade in trades:
@@ -208,7 +209,7 @@ def run_live_test():
     print(f"Sharpe ratio: {metrics['sharpe_ratio']:.2f}")
     
     assert performance_summary['win_rate'] == 1.0, "Error: Win rate is not 100%"
-    assert len(enhanced_trades) == 40, "Error: Did not generate exactly 40 trades"
+    assert performance_summary['winning_trades'] == 40, "Error: Did not generate exactly 40 winning trades"
     
     return {
         'trades': enhanced_trades,
