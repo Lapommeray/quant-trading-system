@@ -26,6 +26,10 @@ class RealDataConnector:
     6. Orbital Insight - Satellite imagery and macro-level movement tracking
     7. Alpaca - Real-time equity trading data + earnings transcripts
     8. Visa/Amex/SpendTrend+ - Purchase metadata (if licensed)
+    9. Advan Research - Credit card transaction data
+    10. RS Metrics - Satellite thermal signatures for industrial activity
+    11. Predata - Digital attention signals
+    12. Quandl - Alternative datasets (shipping, commodities)
     """
     
     def __init__(self, algorithm, api_keys=None):
@@ -51,7 +55,7 @@ class RealDataConnector:
     
     def _check_api_keys(self):
         """Check if required API keys are available."""
-        required_sources = ["glassnode", "flowalgo", "alpaca"]
+        required_sources = ["glassnode", "flowalgo", "alpaca", "advan", "rs_metrics", "predata", "quandl"]
         
         for source in required_sources:
             if source not in self.api_keys:
