@@ -24,7 +24,7 @@ from quantum_finance.quantum_stochastic_calculus import QuantumStochasticProcess
 from quantum_finance.quantum_portfolio_optimization import QuantumPortfolioOptimizer
 from quantum_finance.quantum_risk_measures import QuantumRiskMeasures
 
-from core.conscious_signal_generator import ConsciousSignalGenerator
+from core.simplified_conscious_signal_generator import ConsciousSignalGenerator
 from core.meta_conscious_routing_layer import MetaConsciousRouter
 from ai.spectral_signal_fusion import SpectralSignalFusion
 
