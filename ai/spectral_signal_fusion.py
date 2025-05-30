@@ -13,7 +13,6 @@ class SpectralSignalFusion:
 
     def fuse_signals(self):
         """Combines multi-dimensional signals using Hilbert transform"""
-        fused = {}
         
         # Extract components
         quantum = self._get_component('quantum')
@@ -21,17 +20,29 @@ class SpectralSignalFusion:
         trend = self._get_component('trend')
         void = self._get_component('void')
         
-        # Apply Hilbert transform for spectral analysis
-        analytic_quantum = hilbert(quantum)
-        analytic_emotion = hilbert(emotion)
+        quantum_amplitude = 0.5
+        emotion_phase = 0.0
+        trend_value = 0.5
+        void_value = 0.1
         
-        # Combine in spectral domain
-        spectral_mix = (
-            np.abs(analytic_quantum) * self.spectral_weights['quantum'] +
-            np.angle(analytic_emotion) * self.spectral_weights['emotional'] +
-            trend * self.spectral_weights['trend'] +
-            void * self.spectral_weights['void']
-        )
+        if len(quantum) > 0:
+            quantum_amplitude = np.mean(quantum)
+            
+        if len(emotion) > 0:
+            emotion_phase = np.mean(emotion)
+            
+        # Process trend and void components
+        if len(trend) > 0:
+            trend_value = np.mean(trend)
+            
+        if len(void) > 0:
+            void_value = np.mean(void)
+        
+        # Combine components with weights
+        spectral_mix = (quantum_amplitude * self.spectral_weights['quantum'] + 
+                        emotion_phase * self.spectral_weights['emotional'] + 
+                        trend_value * self.spectral_weights['trend'] + 
+                        void_value * self.spectral_weights['void'])
         
         # Normalize output
         return self._normalize(spectral_mix)
