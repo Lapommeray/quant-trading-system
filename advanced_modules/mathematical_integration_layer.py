@@ -40,6 +40,13 @@ from .rough_path_theory import RoughPathTheory
 from .microstructure_modeling import MicrostructureModeling
 from .stochastic_optimization import StochasticOptimization
 from .alternative_data_integration import AlternativeDataIntegration
+from .heston_stochastic_engine import HestonModel, simulate_heston_paths
+from .transformer_alpha_generation import TimeSeriesTransformer
+from .hft_order_book import LimitOrderBook
+from .black_litterman_optimizer import black_litterman_optimization
+from .satellite_data_processor import estimate_oil_storage
+from .enhanced_backtester import EnhancedBacktester, QuantumStrategy
+from .enhanced_risk_management import adjusted_var, calculate_max_drawdown, risk_parity_weights
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from quantum_finance.quantum_finance_integration import QuantumFinanceIntegration
@@ -86,6 +93,12 @@ class MathematicalIntegrationLayer:
         self.microstructure = MicrostructureModeling(precision=precision)
         self.stochastic_optimization = StochasticOptimization(precision=precision, confidence_level=confidence_level)
         self.alternative_data = AlternativeDataIntegration(precision=precision, confidence_level=confidence_level)
+        
+        # Initialize institutional-grade components
+        self.heston_model = HestonModel()
+        self.transformer = TimeSeriesTransformer()
+        self.order_book = LimitOrderBook()
+        self.enhanced_backtester = EnhancedBacktester()
         
         self.quantum_finance = QuantumFinanceIntegration()
         self.quantum_black_scholes = QuantumBlackScholes()
