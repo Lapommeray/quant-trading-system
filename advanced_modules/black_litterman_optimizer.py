@@ -4,6 +4,30 @@ import cvxpy as cp
 import logging
 from datetime import datetime
 
+def black_litterman_optimization(market_weights, cov_matrix, P=None, Q=None, risk_aversion=2.5, tau=0.05, constraints=None):
+    """
+    Wrapper function for Black-Litterman optimization to maintain compatibility
+    
+    Args:
+        market_weights: Array of market capitalization weights
+        cov_matrix: Covariance matrix of asset returns
+        P: View matrix (k x n) where k is number of views and n is number of assets
+        Q: View returns (k x 1)
+        risk_aversion: Risk aversion parameter
+        tau: Scaling parameter for uncertainty in prior
+        constraints: Dictionary of constraints
+        
+    Returns:
+        Array of optimal portfolio weights
+    """
+    optimizer = BlackLittermanOptimizer(risk_aversion=risk_aversion, tau=tau)
+    
+    if P is None or Q is None:
+        implied_returns = optimizer.market_implied_returns(market_weights, cov_matrix)
+        return optimizer.optimize_portfolio(implied_returns, cov_matrix, constraints)
+    else:
+        return optimizer.optimize_with_views(market_weights, cov_matrix, P, Q, constraints)
+
 class BlackLittermanOptimizer:
     """
     Black-Litterman portfolio optimization with institutional-grade implementation

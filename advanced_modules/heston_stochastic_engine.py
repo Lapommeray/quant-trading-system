@@ -4,6 +4,25 @@ import torchsde
 import logging
 from datetime import datetime
 
+def simulate_heston_paths(initial_state, times, kappa=1.0, theta=0.04, xi=0.2, rho=-0.7, dt=0.01):
+    """
+    Standalone function to simulate Heston model paths
+    
+    Args:
+        initial_state: Initial price and variance
+        times: Time points for simulation
+        kappa: Mean reversion speed
+        theta: Long-term variance
+        xi: Volatility of volatility
+        rho: Correlation between price and volatility
+        dt: Time step for simulation
+        
+    Returns:
+        Simulated price and variance paths
+    """
+    model = HestonModel(kappa=kappa, theta=theta, xi=xi, rho=rho)
+    return model.simulate_paths(initial_state, times, dt=dt)
+
 class HestonModel(torch.nn.Module):
     """
     Heston stochastic volatility model implementation using torchsde

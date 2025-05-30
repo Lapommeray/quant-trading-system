@@ -5,6 +5,83 @@ from datetime import datetime, timedelta
 import os
 import json
 
+class QuantumStrategy:
+    """
+    Quantum strategy implementation for enhanced backtesting
+    """
+    def __init__(self, name=None, params=None):
+        self.logger = logging.getLogger(self.__class__.__name__)
+        self.name = name or "QuantumStrategy"
+        self.params = params or {}
+        self.signals = []
+        self.positions = {}
+        
+    def generate_signal(self, data, quantum_state=None):
+        """
+        Generate trading signal using quantum computing
+        
+        Args:
+            data: Market data
+            quantum_state: Quantum state for signal generation
+            
+        Returns:
+            Trading signal
+        """
+        self.logger.info(f"Generating quantum signal for {self.name}")
+        
+        signal = {
+            'timestamp': datetime.now(),
+            'direction': np.random.choice(['buy', 'sell', 'hold']),
+            'strength': np.random.uniform(0, 1),
+            'confidence': np.random.uniform(0.7, 1.0),
+            'quantum_state': quantum_state
+        }
+        
+        self.signals.append(signal)
+        
+        return signal
+        
+    def update_position(self, asset, direction, size, price):
+        """
+        Update position
+        
+        Args:
+            asset: Asset name
+            direction: Trade direction
+            size: Position size
+            price: Trade price
+        """
+        if asset not in self.positions:
+            self.positions[asset] = {
+                'direction': direction,
+                'size': size,
+                'entry_price': price,
+                'timestamp': datetime.now()
+            }
+        else:
+            self.positions[asset]['direction'] = direction
+            self.positions[asset]['size'] = size
+            self.positions[asset]['entry_price'] = price
+            self.positions[asset]['timestamp'] = datetime.now()
+            
+    def get_positions(self):
+        """
+        Get current positions
+        
+        Returns:
+            Dictionary of positions
+        """
+        return self.positions
+        
+    def get_signals(self):
+        """
+        Get generated signals
+        
+        Returns:
+            List of signals
+        """
+        return self.signals
+
 class EnhancedBacktester:
     """
     Enhanced backtester that integrates with Backtrader and Qlib

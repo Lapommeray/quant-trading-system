@@ -4,6 +4,20 @@ import logging
 from datetime import datetime
 import os
 
+def estimate_oil_storage(image_data, region=None):
+    """
+    Standalone wrapper function for oil storage estimation to maintain compatibility
+    
+    Args:
+        image_data: Satellite image data as numpy array
+        region: Region of interest (default: None, use entire image)
+        
+    Returns:
+        Estimated oil storage in barrels
+    """
+    processor = SatelliteDataProcessor()
+    return processor.estimate_oil_storage(image_data, region)
+
 class SatelliteDataProcessor:
     """
     Satellite imagery processing for oil inventories and alternative data

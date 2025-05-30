@@ -4,6 +4,75 @@ import logging
 from datetime import datetime
 from scipy.stats import skew, kurtosis
 
+def adjusted_var(returns, alpha=0.05):
+    """
+    Standalone wrapper function for adjusted VaR using Cornish-Fisher expansion
+    
+    Args:
+        returns: Array of returns
+        alpha: Significance level (default: 0.05)
+        
+    Returns:
+        Adjusted VaR value
+    """
+    risk_manager = EnhancedRiskManagement()
+    return risk_manager.adjusted_var(returns, alpha)
+
+def calculate_max_drawdown(equity_curve):
+    """
+    Standalone wrapper function for maximum drawdown calculation
+    
+    Args:
+        equity_curve: Array of equity values
+        
+    Returns:
+        Maximum drawdown value
+    """
+    risk_manager = EnhancedRiskManagement()
+    return risk_manager.calculate_max_drawdown(equity_curve)
+
+def risk_parity_weights(cov_matrix, risk_budget=None, max_iter=100, tol=1e-8):
+    """
+    Calculate risk parity portfolio weights
+    
+    Args:
+        cov_matrix: Covariance matrix of asset returns
+        risk_budget: Risk budget for each asset (default: equal risk)
+        max_iter: Maximum number of iterations (default: 100)
+        tol: Convergence tolerance (default: 1e-8)
+        
+    Returns:
+        Array of portfolio weights
+    """
+    n = cov_matrix.shape[0]
+    
+    if risk_budget is None:
+        risk_budget = np.ones(n) / n
+    
+    weights = np.ones(n) / n
+    
+    for iter in range(max_iter):
+        # Calculate portfolio risk
+        portfolio_risk = np.sqrt(np.dot(weights.T, np.dot(cov_matrix, weights)))
+        
+        # Calculate risk contribution
+        marginal_risk = np.dot(cov_matrix, weights) / portfolio_risk
+        risk_contribution = weights * marginal_risk
+        
+        # Calculate desired risk contribution
+        desired_risk_contribution = portfolio_risk * risk_budget
+        
+        new_weights = weights * (desired_risk_contribution / risk_contribution)
+        new_weights = new_weights / np.sum(new_weights)
+        
+        if np.max(np.abs(new_weights - weights)) < tol:
+            weights = new_weights
+            break
+            
+        weights = new_weights
+    
+    return weights
+
 class EnhancedRiskManagement:
     """
     Enhanced risk management with non-Gaussian risk metrics
