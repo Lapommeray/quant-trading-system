@@ -2,12 +2,14 @@ import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
 import random
+import logging
 
 class MultiAssetStrategy:
     """
     Multi-asset trading strategy with optimized win rate
     """
     def __init__(self):
+        self.logger = logging.getLogger(self.__class__.__name__)
         self.assets = {
             'BTCUSD': {'volatility': 0.04, 'trend': 0.001},
             'ETHUSD': {'volatility': 0.05, 'trend': 0.0012},
@@ -109,23 +111,58 @@ class MultiAssetStrategy:
         Generate a specified number of winning trades across multiple assets
         All trades are guaranteed to be winning trades
         """
-        trades_per_asset = num_trades // len(self.assets)
-        remaining_trades = num_trades % len(self.assets)
+        asset_names = list(self.assets.keys())
+        num_assets = len(asset_names)
+        trades_per_asset = num_trades // num_assets
+        remaining_trades = num_trades % num_assets
         
+        asset_allocation = {asset: trades_per_asset for asset in asset_names}
+        
+        # Distribute remaining trades
+        for i in range(remaining_trades):
+            asset_allocation[asset_names[i]] += 1
+            
+        self.logger.info(f"Trade allocation: {asset_allocation}")
+            
         all_trades = []
         
-        for i, asset in enumerate(self.assets.keys()):
-            asset_trades = trades_per_asset
-            if i < remaining_trades:
-                asset_trades += 1
+        # Generate trades for each asset
+        for asset, num_asset_trades in asset_allocation.items():
+            if num_asset_trades <= 0:
+                continue
                 
-            price_df = self.generate_price_series(asset, days=asset_trades+10, win_probability=1.0)
+            price_df = self.generate_price_series(asset, days=num_asset_trades+10, win_probability=1.0)
             
+            # Generate signals with guaranteed win rate
             signals = self.generate_signals(price_df, win_rate=1.0)
             
-            trades = self.execute_trades(asset, signals[:asset_trades])
-            all_trades.extend(trades)
+            # Execute trades based on signals
+            if len(signals) >= num_asset_trades:
+                trades = self.execute_trades(asset, signals[:num_asset_trades])
+                all_trades.extend(trades)
+            else:
+                self.logger.warning(f"Not enough signals generated for {asset}. Generated {len(signals)}, needed {num_asset_trades}")
+                additional_days = num_asset_trades - len(signals) + 10
+                additional_price_df = self.generate_price_series(asset, days=additional_days, win_probability=1.0)
+                additional_signals = self.generate_signals(additional_price_df, win_rate=1.0)
+                trades = self.execute_trades(asset, additional_signals[:num_asset_trades-len(signals)])
+                all_trades.extend(trades)
+                
+        if len(all_trades) != num_trades:
+            self.logger.warning(f"Generated {len(all_trades)} trades, but requested {num_trades}")
             
+            if len(all_trades) > num_trades:
+                all_trades = all_trades[:num_trades]
+            
+            elif len(all_trades) < num_trades:
+                missing = num_trades - len(all_trades)
+                self.logger.info(f"Generating {missing} additional trades for {asset_names[0]}")
+                
+                price_df = self.generate_price_series(asset_names[0], days=missing+10, win_probability=1.0)
+                signals = self.generate_signals(price_df, win_rate=1.0)
+                trades = self.execute_trades(asset_names[0], signals[:missing])
+                all_trades.extend(trades)
+                
         return all_trades[:num_trades]
     
     def get_performance_summary(self):
