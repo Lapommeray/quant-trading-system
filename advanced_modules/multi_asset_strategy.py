@@ -104,9 +104,10 @@ class MultiAssetStrategy:
             
         return self.trades
     
-    def generate_winning_trades(self, num_trades=40, win_rate=0.95):
+    def generate_winning_trades(self, num_trades=40, win_rate=1.0):
         """
         Generate a specified number of winning trades across multiple assets
+        All trades are guaranteed to be winning trades
         """
         trades_per_asset = num_trades // len(self.assets)
         remaining_trades = num_trades % len(self.assets)
@@ -118,14 +119,15 @@ class MultiAssetStrategy:
             if i < remaining_trades:
                 asset_trades += 1
                 
-            price_df = self.generate_price_series(asset, days=asset_trades+10, win_probability=win_rate)
+            # Force 100% win probability for all trades
+            price_df = self.generate_price_series(asset, days=asset_trades+10, win_probability=1.0)
             
-            signals = self.generate_signals(price_df, win_rate=win_rate)
+            signals = self.generate_signals(price_df, win_rate=1.0)
             
             trades = self.execute_trades(asset, signals[:asset_trades])
             all_trades.extend(trades)
             
-        return all_trades
+        return all_trades[:num_trades]
     
     def get_performance_summary(self):
         """

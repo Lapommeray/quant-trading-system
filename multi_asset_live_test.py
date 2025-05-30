@@ -196,7 +196,7 @@ def run_live_test():
     
     components = setup_environment()
     
-    trades, metrics, performance_summary = generate_trades(components, num_trades=40)
+    trades, metrics, performance_summary = generate_trades(components, num_trades=120)
     
     enhanced_trades = integrate_quantum_signals(components, trades)
     
@@ -209,7 +209,7 @@ def run_live_test():
     print(f"Sharpe ratio: {metrics['sharpe_ratio']:.2f}")
     
     assert performance_summary['win_rate'] == 1.0, "Error: Win rate is not 100%"
-    assert performance_summary['winning_trades'] == 40, "Error: Did not generate exactly 40 winning trades"
+    assert performance_summary['winning_trades'] == 120 and len(enhanced_trades) == 120, "Error: Did not generate exactly 120 winning trades"
     
     return {
         'trades': enhanced_trades,
