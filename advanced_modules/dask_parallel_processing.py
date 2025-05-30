@@ -43,13 +43,18 @@ class DaskParallelProcessor:
         if self.client is None:
             self.initialize()
             
+        if self.client is None:
+            raise ValueError("Failed to initialize Dask client")
+            
         futures = []
         for params in parameters_list:
             future = self.client.submit(strategy_func, data, **params)
             futures.append(future)
             
-        results = self.client.gather(futures)
-        return results
+        if futures:
+            results = self.client.gather(futures)
+            return results
+        return []
         
     def parallel_optimization(self, objective_func, param_space, n_trials=100):
         """
@@ -57,6 +62,9 @@ class DaskParallelProcessor:
         """
         if self.client is None:
             self.initialize()
+            
+        if self.client is None:
+            raise ValueError("Failed to initialize Dask client")
             
         param_combinations = []
         for _ in range(n_trials):

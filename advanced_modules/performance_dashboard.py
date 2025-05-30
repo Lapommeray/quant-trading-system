@@ -84,17 +84,18 @@ class PerformanceDashboard:
         df = pd.DataFrame.from_dict(self.performance_data, orient='index')
         df.sort_index(inplace=True)
         
-        returns = df['returns'].values
-        equity = df['equity'].values
+        returns = df['returns'].values.astype(float)
+        equity = df['equity'].values.astype(float)
         
+        # Calculate metrics with proper type handling
         self.metrics = {
-            'total_return': (equity[-1] / equity[0]) - 1,
-            'annualized_return': ((equity[-1] / equity[0]) ** (252 / len(equity))) - 1,
-            'sharpe_ratio': np.mean(returns) / np.std(returns) * np.sqrt(252) if np.std(returns) > 0 else 0,
-            'max_drawdown': df['drawdown'].min(),
-            'volatility': np.std(returns) * np.sqrt(252),
-            'win_rate': sum(1 for t in self.trades if t['pnl'] and t['pnl'] > 0) / len(self.trades) if self.trades else 0,
-            'profit_factor': sum(t['pnl'] for t in self.trades if t['pnl'] and t['pnl'] > 0) / abs(sum(t['pnl'] for t in self.trades if t['pnl'] and t['pnl'] < 0)) if sum(t['pnl'] for t in self.trades if t['pnl'] and t['pnl'] < 0) else float('inf')
+            'total_return': float((equity[-1] / equity[0]) - 1),
+            'annualized_return': float(((equity[-1] / equity[0]) ** (252 / len(equity))) - 1),
+            'sharpe_ratio': float(np.mean(returns) / np.std(returns) * np.sqrt(252)) if np.std(returns) > 0 else 0.0,
+            'max_drawdown': float(df['drawdown'].min()),
+            'volatility': float(np.std(returns) * np.sqrt(252)),
+            'win_rate': float(sum(1 for t in self.trades if t['pnl'] and t['pnl'] > 0) / len(self.trades)) if self.trades else 0.0,
+            'profit_factor': float(sum(t['pnl'] for t in self.trades if t['pnl'] and t['pnl'] > 0) / abs(sum(t['pnl'] for t in self.trades if t['pnl'] and t['pnl'] < 0))) if sum(t['pnl'] for t in self.trades if t['pnl'] and t['pnl'] < 0) else float('inf')
         }
         
         return self.metrics

@@ -47,6 +47,12 @@ from .black_litterman_optimizer import black_litterman_optimization
 from .satellite_data_processor import estimate_oil_storage
 from .enhanced_backtester import EnhancedBacktester, QuantumStrategy
 from .enhanced_risk_management import adjusted_var, calculate_max_drawdown, risk_parity_weights
+from .twitter_sentiment_analysis import TwitterSentimentAnalyzer
+from .qlib_integration import QlibIntegration
+from .dask_parallel_processing import DaskParallelProcessor
+from .live_trading_integration import LiveTradingIntegration
+from .performance_dashboard import PerformanceDashboard
+from .multi_asset_strategy import MultiAssetStrategy
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from quantum_finance.quantum_finance_integration import QuantumFinanceIntegration
@@ -99,6 +105,12 @@ class MathematicalIntegrationLayer:
         self.transformer = TimeSeriesTransformer()
         self.order_book = LimitOrderBook()
         self.enhanced_backtester = EnhancedBacktester()
+        self.twitter_analyzer = TwitterSentimentAnalyzer()
+        self.qlib = QlibIntegration()
+        self.dask_processor = DaskParallelProcessor()
+        self.live_trading = LiveTradingIntegration()
+        self.dashboard = PerformanceDashboard()
+        self.multi_asset_strategy = MultiAssetStrategy()
         
         self.quantum_finance = QuantumFinanceIntegration()
         self.quantum_black_scholes = QuantumBlackScholes()

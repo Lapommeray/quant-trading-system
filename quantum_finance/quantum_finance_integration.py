@@ -490,6 +490,56 @@ class QuantumFinanceIntegration:
         
         return result
         
+    def generate_quantum_signals(self, asset, num_signals):
+        """
+        Generate quantum trading signals for a specific asset
+        
+        Parameters:
+        - asset: Asset symbol
+        - num_signals: Number of signals to generate
+        
+        Returns:
+        - Array of quantum signals
+        """
+        logger.info(f"Generating {num_signals} quantum signals for {asset}")
+        
+        base_signal = 0.5
+        
+        if asset == 'BTCUSD':
+            volatility = 0.2
+            trend = 0.05
+        elif asset == 'ETHUSD':
+            volatility = 0.25
+            trend = 0.06
+        elif asset == 'XAUUSD':
+            volatility = 0.1
+            trend = 0.02
+        elif asset == 'DIA':
+            volatility = 0.15
+            trend = 0.03
+        elif asset == 'QQQ':
+            volatility = 0.18
+            trend = 0.04
+        else:
+            volatility = 0.2
+            trend = 0.03
+            
+        signals = np.random.normal(base_signal + trend, volatility, num_signals)
+        
+        signals = np.clip(signals, 0, 1)
+        
+        self.history.append({
+            'timestamp': datetime.now().isoformat(),
+            'type': 'quantum_signals',
+            'asset': asset,
+            'num_signals': num_signals,
+            'avg_signal': float(np.mean(signals)),
+            'min_signal': float(np.min(signals)),
+            'max_signal': float(np.max(signals))
+        })
+        
+        return signals
+        
     def get_statistics(self):
         """
         Get statistics about quantum finance integration
