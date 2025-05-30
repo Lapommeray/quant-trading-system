@@ -21,7 +21,7 @@ class MetaConsciousRouter:
         if emotion_score < -0.8 and volatility > 0.05:
             return {
                 'system': 'VOID_TRADER',
-                'confidence': min(1.0, abs(emotion_score) * volatility * 10),
+                'confidence': min(1.0, float(abs(emotion_score) * volatility * 10)),
                 'parameters': {
                     'aggression': 0.9,
                     'timeframe': '1m'
@@ -62,7 +62,8 @@ class MetaConsciousRouter:
         """Calculates emotional momentum"""
         if len(self.emotion_history) < 3:
             return 0.0
-        return np.mean(self.emotion_history[-3:]) - np.mean(self.emotion_history)
+        emotion_list = list(self.emotion_history)
+        return np.mean(emotion_list[-3:]) - np.mean(emotion_list)
 
 # Example Market State:
 example_state = {
