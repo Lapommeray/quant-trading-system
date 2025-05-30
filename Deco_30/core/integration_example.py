@@ -84,13 +84,31 @@ def main():
     
     print(f"Quantum Signal: {quantum_signal['signal']} (Confidence: {quantum_signal['confidence']:.2f})")
     
-    print("\nTesting Enhanced Indicator...")
+    print("\nTesting Enhanced Indicator with Advanced Components...")
     enhanced_signal = enhanced_indicator.get_signal(symbol, df)
     
     print(f"Enhanced Signal: {enhanced_signal['signal']} (Confidence: {enhanced_signal['confidence']:.2f})")
     print(f"Fed Bias: {enhanced_signal['fed_bias']}")
     print(f"DNA Prediction: {enhanced_signal['dna_prediction']}")
     print(f"Liquidity Direction: {enhanced_signal['liquidity_direction']}")
+    
+    if enhanced_indicator.advanced_indicators_enabled:
+        print("\nAdvanced Indicator Outputs:")
+        print(f"Volatility: {enhanced_signal.get('volatility', 'N/A')}")
+        print(f"ML RSI Prediction: {enhanced_signal.get('ml_rsi_prediction', 'N/A')}")
+        print(f"Order Flow Imbalance: {enhanced_signal.get('order_flow_imbalance', 'N/A')}")
+        print(f"Market Regime: {enhanced_signal.get('market_regime', 'N/A')}")
+        
+        metrics = enhanced_indicator.get_combined_performance_metrics()
+        print("\nAccuracy Metrics:")
+        print(f"Accuracy Improvement: {metrics['accuracy_improvement_percentage']:.2f}%")
+        print(f"Accuracy Multiplier: {metrics['accuracy_multiplier']:.2f}x")
+        
+        if metrics['accuracy_multiplier'] >= 2.0:
+            print("\n✅ 200% accuracy achieved!")
+        else:
+            print(f"\n⚠ Current accuracy: {metrics['accuracy_multiplier'] * 100:.2f}%")
+            print("   Target: 200%")
     
     print("\nTesting Market Warfare modules...")
     
@@ -108,13 +126,35 @@ def main():
     print(f"Warfare Tactic: {execution['tactic']}")
     print(f"Warfare Signal: {execution['signal']} (Confidence: {execution['confidence']:.2f})")
     
-    print("\nPerformance Metrics:")
+    print("\nDetailed Performance Metrics:")
     enhanced_metrics = enhanced_indicator.get_performance_metrics()
     warfare_metrics = commander.get_performance_metrics()
     
     print("\nMarket Mind Reader Metrics:")
-    for module, metrics in enhanced_metrics.items():
+    
+    base_metrics = {k: enhanced_metrics[k] for k in ["fed_sentiment", "candle_dna", "liquidity_xray"] 
+                   if k in enhanced_metrics}
+    
+    advanced_metrics = {k: enhanced_metrics[k] for k in ["heston_volatility", "ml_rsi", "order_flow_imbalance", "regime_detector"] 
+                       if k in enhanced_metrics}
+    
+    base_win_rate = sum(m["win_rate_boost"] for m in base_metrics.values())
+    advanced_win_rate = sum(m["win_rate_boost"] for m in advanced_metrics.values()) if advanced_metrics else 0
+    
+    print("\nBase Indicators:")
+    for module, metrics in base_metrics.items():
         print(f"{module}: Win Rate Boost: {metrics['win_rate_boost']:.2f}, Drawdown Reduction: {metrics['drawdown_reduction']:.2f}")
+    print(f"Total Base Win Rate Boost: {base_win_rate:.2f}")
+    
+    if advanced_metrics:
+        print("\nAdvanced Indicators:")
+        for module, metrics in advanced_metrics.items():
+            print(f"{module}: Win Rate Boost: {metrics['win_rate_boost']:.2f}, Drawdown Reduction: {metrics['drawdown_reduction']:.2f}")
+        print(f"Total Advanced Win Rate Boost: {advanced_win_rate:.2f}")
+        
+        total_win_rate = base_win_rate + advanced_win_rate
+        print(f"\nTotal Win Rate Boost: {total_win_rate:.2f}")
+        print(f"Accuracy Multiplier: {total_win_rate/base_win_rate:.2f}x")
     
     print("\nMarket Warfare Metrics:")
     for tactic, metrics in warfare_metrics.items():
