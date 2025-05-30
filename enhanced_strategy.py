@@ -1,6 +1,7 @@
 from market_microstructure import LimitOrderBook, VPINCalculator
 from statistical_arbitrage import AdvancedCointegration
-from execution import VWAPExecution
+from execution import VWAPExecution, OptimalExecution
+from execution.advanced.smart_routing import InstitutionalOptimalExecution, AdvancedVWAPExecution
 import pandas as pd
 import numpy as np
 
@@ -37,13 +38,20 @@ class Position:
         self.size = 0
 
 class EnhancedStrategy(Strategy):
+    def __init__(self, use_institutional=False):
+        super().__init__()
+        self.use_institutional = use_institutional
+        
     def init(self):
         self.lob = LimitOrderBook()
         self.vpin = VPINCalculator()
         self.coint = AdvancedCointegration()
         
-        self.rsi = self.I(self._calculate_rsi)
+        if self.use_institutional:
+            self.institutional_execution = InstitutionalOptimalExecution()
+            self.advanced_vwap = AdvancedVWAPExecution
         
+        self.rsi = self.I(self._calculate_rsi)
         self.order_flow = self.I(self._calculate_order_flow)
     
     def _calculate_rsi(self, period=14):
@@ -73,6 +81,14 @@ class EnhancedStrategy(Strategy):
             hedge_ratio = self.coint.hedge_ratio_estimation(
                 self.data[['Close', 'Volume']].iloc[-self.coint.lookback:])
             
+            if self.use_institutional and len(self.data.columns) > 2:
+                institutional_hedge = self.coint.johansen_test(
+                    self.data[['Close', 'Volume']].iloc[-self.coint.lookback:])
+            
         if self.position.size == 0 and self.vpin.calculate() > 0.7:
-            schedule = VWAPExecution(self.data.Volume).get_schedule(
-                1000, self.data.index[-1], self.data.index[-1] + pd.Timedelta('1h'))
+            if self.use_institutional:
+                optimal_schedule = self.institutional_execution.solve_institutional(
+                    1000, 24)  # 24 time periods
+            else:
+                schedule = VWAPExecution(self.data.Volume).get_schedule(
+                    1000, self.data.index[-1], self.data.index[-1] + pd.Timedelta('1h'))

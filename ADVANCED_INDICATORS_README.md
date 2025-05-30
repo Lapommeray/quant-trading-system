@@ -92,12 +92,103 @@ def next(self):
 - **Order Flow**: Needs real tick data for production use
 - **Regime Detection**: Works best with multiple uncorrelated indicators
 
+## Institutional Enhancements
+
+### Enhanced Limit Order Book
+The LimitOrderBook now includes institutional-grade features for trade imbalance tracking and market impact calculation:
+
+```python
+from market_microstructure import LimitOrderBook
+
+# Create enhanced order book
+lob = LimitOrderBook()
+
+# Use institutional trade processing
+impact = lob.process_trade_institutional(price=100.0, volume=1000, side='buy')
+print(f"Trade imbalance: {lob.trade_imbalance}")
+print(f"Price impact: {impact}")
+print(f"Impact history: {lob.price_impact_history}")
+```
+
+### Advanced Cointegration Methods
+Enhanced statistical arbitrage with institutional-grade cointegration tests:
+
+```python
+from statistical_arbitrage import AdvancedCointegration
+
+coint = AdvancedCointegration()
+
+# Institutional Johansen test for multiple assets
+hedge_ratio = coint.johansen_test(multi_asset_prices)
+
+# Kernel-based cointegration test with Gaussian Process
+is_cointegrated = coint.kernel_coint(x, y)
+```
+
+### Smart Execution Algorithms
+Advanced execution algorithms in `/execution/advanced/`:
+
+```python
+from execution.advanced import InstitutionalOptimalExecution, AdvancedVWAPExecution
+
+# Optimal execution with institutional cost modeling
+exec_algo = InstitutionalOptimalExecution(volatility_forecast=0.2, liquidity_profile=1.0)
+schedule = exec_algo.solve_institutional(target_shares=1000, time_horizon=24)
+
+# Enhanced VWAP with risk management
+vwap_exec = AdvancedVWAPExecution(historical_volumes)
+schedule = vwap_exec.get_institutional_schedule(1000, start_time, end_time, risk_aversion=1.0)
+```
+
+### Progressive Enhancement Strategy
+The system follows a three-phase migration approach:
+
+**Phase 1: Opt-in Institutional Features (Current)**
+```python
+# Standard strategy (existing functionality preserved)
+strategy = EnhancedStrategy(use_institutional=False)
+
+# Institutional strategy (enhanced features enabled)
+institutional_strategy = EnhancedStrategy(use_institutional=True)
+```
+
+**Phase 2: Deprecation Warnings (Future)**
+- Legacy components will show deprecation warnings
+- Migration guides will be provided
+
+**Phase 3: Full Transition (Future)**
+- Complete transition to institutional-grade components
+- Legacy code removal after thorough testing
+
+### Modular Indicator Structure
+Indicators are now available in both unified and modular formats:
+
+```python
+# Unified access (existing)
+from core.indicators import HestonVolatility, ML_RSI
+
+# Modular access (new)
+from core.indicators.heston_volatility import HestonVolatility
+from core.indicators.ml_rsi import ML_RSI
+```
+
+### Backwards Compatibility
+All existing functionality is preserved:
+- Original API signatures maintained
+- Existing strategies run without modification
+- No breaking changes to current implementations
+- Progressive enhancement approach ensures smooth migration
+
 ## Dependencies
 
 Added to requirements.txt:
 - `hmmlearn>=0.3.0` (for Regime Detection)
+- `changepy>=0.3.0` (for Regime Switching Detection)
+- `cvxpy>=1.3.0` (for Optimal Execution)
+- `ecos>=2.0.0` (for Convex Optimization Solver)
 
 Existing dependencies used:
 - `scikit-learn>=0.23.0` (for ML_RSI)
 - `scipy>=1.5.0` (for Heston optimization)
 - `numpy>=1.19.0`, `pandas>=1.0.0` (all indicators)
+- `statsmodels>=0.12.0` (for Cointegration tests)

@@ -9,6 +9,9 @@ class LimitOrderBook:
         self.tick_size = tick_size
         self.mid_price_history = []
         self.spread_history = []
+        self.trade_imbalance = 0
+        self.last_mid = None
+        self.price_impact_history = []
     
     def process_order(self, order):
         """Handles limit/market orders with queue position tracking"""
@@ -48,6 +51,21 @@ class LimitOrderBook:
             self.spread_history.append(self.asks.peekitem(0)[0] - self.bids.peekitem(-1)[0])
         
         return executed
+
+    def process_trade_institutional(self, price, volume, side):
+        """Enhanced trade processing with institutional features"""
+        if side == 'buy':
+            self.trade_imbalance += volume
+        else:
+            self.trade_imbalance -= volume
+
+        if self.bids and self.asks:
+            current_mid = (self.bids.peekitem(-1)[0] + self.asks.peekitem(0)[0])/2
+            impact = (current_mid - self.last_mid)/self.last_mid if self.last_mid else 0
+            self.last_mid = current_mid
+            self.price_impact_history.append(impact)
+            return impact
+        return 0
 
 class VPINCalculator:
     """Volume-synchronized probability of informed trading"""
