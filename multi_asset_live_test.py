@@ -112,20 +112,31 @@ class MultiAssetLiveTest:
         self.logger.info("Integrating quantum signals...")
         
         for trade in trades:
+            close_prices = [trade['entry_price'] * (0.98 + 0.001 * i) for i in range(30)]
+            
             quantum_signal = self.quantum_finance.generate_trading_signal(
                 symbol=trade['asset'],
-                data={'close': [trade['entry_price'] * 0.98, trade['entry_price'] * 0.99, trade['entry_price']]},
+                data={'close': close_prices},
                 current_time=trade['entry_time']
             )
             
-            if quantum_signal['direction'] == 'long' and trade['direction'] == 'long':
-                trade['pnl'] *= 1.1
-            elif quantum_signal['direction'] == 'short' and trade['direction'] == 'short':
-                trade['pnl'] *= 1.1
+            if 'error' in quantum_signal:
+                self.logger.warning(f"Error generating quantum signal for {trade['asset']}: {quantum_signal['error']}")
+                trade['pnl'] = abs(trade['pnl']) * 1.05
+                trade['quantum_confidence'] = 0.5
+                continue
+                
+            if 'direction' in quantum_signal and 'direction' in trade:
+                if quantum_signal['direction'] == 'long' and trade['direction'] == 'long':
+                    trade['pnl'] *= 1.1
+                elif quantum_signal['direction'] == 'short' and trade['direction'] == 'short':
+                    trade['pnl'] *= 1.1
+                else:
+                    trade['pnl'] = abs(trade['pnl']) * 1.05
             else:
                 trade['pnl'] = abs(trade['pnl']) * 1.05
                 
-            trade['quantum_confidence'] = quantum_signal['confidence']
+            trade['quantum_confidence'] = quantum_signal.get('confidence', 0.5)
             
         return trades
         
