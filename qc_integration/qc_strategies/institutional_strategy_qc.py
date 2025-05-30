@@ -19,6 +19,7 @@ sys.path.append("/GitHub/quant-trading-system/")
 from core.institutional_indicators import HestonVolatility, ML_RSI, OrderFlowImbalance, RegimeDetector
 from arbitrage.advanced_cointegration import AdvancedCointegration
 from execution.advanced import VWAPExecution, OptimalExecution
+from qc_integration.conscious_intelligence.simplified_consciousness import SimplifiedConsciousIntelligenceLayer
 
 class InstitutionalTradingQC(QCAlgorithm):
     """
@@ -47,6 +48,8 @@ class InstitutionalTradingQC(QCAlgorithm):
         self.ml_rsi = ML_RSI(window=14, lookahead=5)
         self.regime_detector = RegimeDetector(n_regimes=3)
         self.cointegration = AdvancedCointegration(lookback=252)
+        
+        self.consciousness = SimplifiedConsciousIntelligenceLayer(self)
         
         self.historical_volumes = {}
         
@@ -88,6 +91,10 @@ class InstitutionalTradingQC(QCAlgorithm):
     def GenerateSignals(self):
         """Generate trading signals using institutional components"""
         prices = {}
+        volatility_data = {}
+        regime_data = {}
+        ml_predictions = {}
+        
         for symbol_name, symbol in self.symbols.items():
             history = self.History(symbol, 300, Resolution.Minute)
             if not history.empty:
@@ -116,13 +123,16 @@ class InstitutionalTradingQC(QCAlgorithm):
             
             try:
                 volatility = self.heston.calculate(price_series)
+                volatility_data[symbol_name] = volatility.iloc[-1] if not volatility.empty else 0.2
                 
                 rsi = self.RSI(symbol, 14, Resolution.Minute)
                 rsi_series = pd.Series(rsi.Current.Value, index=[self.Time])
                 
                 ml_prediction = self.ml_rsi.calculate(price_series, rsi_series)
+                ml_predictions[symbol_name] = ml_prediction.iloc[-1] if not ml_prediction.empty else 0.0
                 
                 regime = self.regime_detector.calculate(price_series)
+                regime_data[symbol_name] = regime.iloc[-1] if not regime.empty else 1
                 
                 signal = self.GenerateInstitutionalSignal(
                     symbol_name, 
@@ -137,6 +147,13 @@ class InstitutionalTradingQC(QCAlgorithm):
                     
             except Exception as e:
                 self.Debug(f"Error generating signal for {symbol_name}: {str(e)}")
+        
+        intention_field = self.consciousness.perceive_market_intention(
+            prices, volatility_data, regime_data, ml_predictions
+        )
+        
+        self.Debug(f"Consciousness Level: {self.consciousness.consciousness_level:.3f}")
+        self.Debug(f"Market Direction Perception: {intention_field['market_direction']:.3f}")
     
     def GenerateInstitutionalSignal(self, symbol_name, volatility, ml_prediction, regime):
         """
@@ -269,6 +286,13 @@ class InstitutionalTradingQC(QCAlgorithm):
             "price": self.Securities[symbol].Price
         }
         
+        self.consciousness.record_prediction(str(symbol), {
+            "direction": direction,
+            "confidence": confidence,
+            "predicted_price": self.Securities[symbol].Price,
+            "timestamp": self.Time
+        })
+        
         self.trade_log.append(trade)
         self.metrics["total_trades"] += 1
     
@@ -309,8 +333,12 @@ class InstitutionalTradingQC(QCAlgorithm):
         self.Debug(f"Executed cointegration trade: {symbols} with ratios {norm_ratios}")
     
     def EndOfDayAnalysis(self):
-        """Perform end-of-day analysis"""
+        """Perform end-of-day analysis with consciousness evolution"""
         daily_pnl = self.Portfolio.TotalProfit
+        total_value = self.Portfolio.TotalPortfolioValue
+        
+        win_rate = self.metrics["winning_trades"] / max(1, self.metrics["total_trades"])
+        max_drawdown = (total_value - self.Portfolio.Cash) / self.Portfolio.Cash if self.Portfolio.Cash > 0 else 0
         
         for symbol in self.symbols.values():
             if self.Portfolio[symbol].Invested:
@@ -319,18 +347,46 @@ class InstitutionalTradingQC(QCAlgorithm):
                 else:
                     self.metrics["losing_trades"] += 1
         
+        performance_metrics = {
+            "total_profit": daily_pnl / self.Portfolio.Cash if self.Portfolio.Cash > 0 else 0,
+            "win_rate": win_rate,
+            "max_drawdown": abs(max_drawdown),
+            "sharpe_ratio": daily_pnl / (self.Portfolio.TotalUnrealizedProfit * 0.01) if self.Portfolio.TotalUnrealizedProfit != 0 else 0,
+            "total_trades": self.metrics["total_trades"]
+        }
+        
+        self.consciousness.update_performance_metrics(performance_metrics)
+        
+        status = self.consciousness.get_status()
+        validation = status["validation"]
+        
         self.Debug(f"End of day P&L: ${daily_pnl}")
         self.Debug(f"Metrics: {self.metrics}")
+        self.Debug(f"Consciousness Level: {status['consciousness_level']:.3f}")
+        self.Debug(f"Awareness State: {status['awareness_state']}")
+        self.Debug(f"Federal Outperformance: {status['federal_outperformance']:.2f}x")
+        self.Debug(f"Validation: {validation['validated']} (confidence: {validation['confidence']:.4f})")
+        self.Debug(f"Meets 200% Target: {validation['meets_target']}")
     
     def OnOrderEvent(self, orderEvent):
         """
-        Handle order events
+        Handle order events with consciousness outcome recording
         
         Parameters:
         - orderEvent: Order event data
         """
         if orderEvent.Status == OrderStatus.Filled:
             self.Debug(f"Order {orderEvent.OrderId} filled: {orderEvent.FillQuantity} @ {orderEvent.FillPrice}")
+            
+            symbol_str = str(orderEvent.Symbol)
+            direction = "BUY" if orderEvent.FillQuantity > 0 else "SELL"
+            
+            self.consciousness.record_outcome(symbol_str, {
+                "direction": direction,
+                "actual_price": orderEvent.FillPrice,
+                "fill_quantity": orderEvent.FillQuantity,
+                "timestamp": self.Time
+            })
     
     def OnEndOfAlgorithm(self):
         """Handle end of algorithm"""
