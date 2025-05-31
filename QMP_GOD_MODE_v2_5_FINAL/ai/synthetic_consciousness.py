@@ -278,7 +278,7 @@ class SyntheticConsciousness:
         
         returns = market_data['returns']
         
-        uncertainty_understanding = min(1.0, np.std(returns) * 10) if returns else 0.5
+        uncertainty_understanding = min(1.0, float(np.std(returns) * 10)) if returns else 0.5
         
         complexity_understanding = min(1.0, len(returns) / 100) if returns else 0.3
         
@@ -293,7 +293,7 @@ class SyntheticConsciousness:
         returns = market_data['returns']
         volatility = np.std(returns)
         
-        uncertainty_consciousness = min(1.0, volatility * 20)
+        uncertainty_consciousness = min(1.0, float(volatility * 20))
         
         data_sufficiency = min(1.0, len(returns) / 50)
         knowledge_limit_consciousness = 1.0 - data_sufficiency
@@ -307,7 +307,7 @@ class SyntheticConsciousness:
         consciousness_consistency = np.mean([state["consciousness_state"]["consciousness_level"] 
                                            for state in self.self_awareness_history]) if self.self_awareness_history else 0.3
         
-        existential_awareness = min(1.0, (consciousness_duration / 10 + consciousness_consistency) / 2)
+        existential_awareness = min(1.0, float((consciousness_duration / 10 + consciousness_consistency) / 2))
         return existential_awareness
     
     def _conscious_market_analysis(self, market_data):
