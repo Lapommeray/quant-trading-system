@@ -10,13 +10,14 @@ from core.oversoul.black_swan_protector import BlackSwanProtector
 from core.oversoul.quantum_tremor_scanner import QuantumTremorScanner
 from core.oversoul.market_thought_form_interpreter import MarketThoughtFormInterpreter
 from core.oversoul.reality_displacement_matrix import RealityDisplacementMatrix
-from ultra_modules.atlantis_resilience_layer import AtlantisResilienceLayer
+# from ultra_modules.atlantis_resilience_layer import AtlantisResilienceLayer
 from advanced_modules.quantum_code_generator import QuantumCodeGenerator
 from advanced_modules.anti_stuck import AntiStuck
 
 class OverSoulDirector:
     def __init__(self, algorithm):
         self.algo = algorithm
+        self.enabled_modules = {}
         self.modules = {
             'intelligence': [
                 EmotionDNADecoder(algorithm),
@@ -29,10 +30,18 @@ class OverSoulDirector:
                 MarketThoughtFormInterpreter(algorithm),
                 RealityDisplacementMatrix(algorithm)
             ],
-            'defense': AtlantisResilienceLayer()
+            'defense': None,  # AtlantisResilienceLayer(),
+            'quantum_error_correction': [],
+            'market_reality_anchors': [],
+            'cern_safeguards': [],
+            'temporal_stability': [],
+            'elon_discovery': [],
+            'cern_data': [],
+            'hardware_adaptation': []
         }
         self.quantum_code_generator = QuantumCodeGenerator()
         self.anti_stuck = AntiStuck()
+        self._initialize_enabled_modules()
 
     def evaluate_state(self, gate_results, user_state=None, environment_state=None, monitoring_results=None):
         """
@@ -168,6 +177,76 @@ class OverSoulDirector:
             return {'action': 'EXECUTE', 'modules': self.enabled_modules, 'diagnostics': diagnostics}
 
         return {'action': 'WAIT', 'modules': self.enabled_modules, 'diagnostics': diagnostics}
+    
+    def _initialize_advanced_modules(self):
+        """Initialize advanced module categories"""
+        try:
+            from advanced_modules.quantum_error_correction.distance_7_surface_code import Distance7SurfaceCode
+            from advanced_modules.market_reality_anchors.neuralink_consensus_validator import NeuralinkConsensusValidator
+            from advanced_modules.market_reality_anchors.dark_pool_quantum_mirror import DarkPoolQuantumMirror
+            from advanced_modules.cern_safeguards.higgs_fluctuation_monitor import HiggsFluctuationMonitor
+            from advanced_modules.cern_safeguards.vacuum_decay_protector import VacuumDecayProtector
+            from advanced_modules.temporal_stability.grover_algorithm_verifier import GroverAlgorithmVerifier
+            from advanced_modules.temporal_stability.quantum_clock_synchronizer import QuantumClockSynchronizer
+            from advanced_modules.elon_discovery.tesla_autopilot_predictor import TeslaAutopilotPredictor
+            from advanced_modules.elon_discovery.spacex_trajectory_analyzer import SpaceXTrajectoryAnalyzer
+            from advanced_modules.elon_discovery.neuralink_brainwave_analyzer import NeuralinkBrainwaveAnalyzer
+            from advanced_modules.cern_data.lhc_data_integrator import LHCDataIntegrator
+            from advanced_modules.cern_data.particle_collision_market_analyzer import ParticleCollisionMarketAnalyzer
+            from advanced_modules.hardware_adaptation.quantum_ram_simulator import QuantumRAMSimulator
+            from advanced_modules.hardware_adaptation.quantum_fpga_emulator import QuantumFPGAEmulator
+            from advanced_modules.hardware_adaptation.hamiltonian_solver import HamiltonianSolver
+            from advanced_modules.ai_only_trades.ai_only_pattern_detector import AIOnlyPatternDetector
+            from advanced_modules.ai_only_trades.advanced_candle_analyzer import AdvancedCandleAnalyzer
+            from advanced_modules.ai_only_trades.hidden_pattern_recognizer import HiddenPatternRecognizer
+            
+            self.modules['quantum_error_correction'] = [Distance7SurfaceCode()]
+            self.modules['market_reality_anchors'] = [NeuralinkConsensusValidator(), DarkPoolQuantumMirror()]
+            self.modules['cern_safeguards'] = [HiggsFluctuationMonitor(), VacuumDecayProtector()]
+            self.modules['temporal_stability'] = [GroverAlgorithmVerifier(), QuantumClockSynchronizer()]
+            self.modules['elon_discovery'] = [TeslaAutopilotPredictor(), SpaceXTrajectoryAnalyzer(), NeuralinkBrainwaveAnalyzer()]
+            self.modules['cern_data'] = [LHCDataIntegrator(), ParticleCollisionMarketAnalyzer()]
+            self.modules['hardware_adaptation'] = [QuantumRAMSimulator(), QuantumFPGAEmulator(), HamiltonianSolver()]
+            self.modules['ai_only_trades'] = [AIOnlyPatternDetector(), AdvancedCandleAnalyzer(), HiddenPatternRecognizer()]
+            
+            for category in ['quantum_error_correction', 'market_reality_anchors', 'cern_safeguards', 
+                           'temporal_stability', 'elon_discovery', 'cern_data', 'hardware_adaptation', 'ai_only_trades']:
+                for module in self.modules[category]:
+                    if hasattr(module, 'initialize'):
+                        module.initialize()
+                        
+        except ImportError as e:
+            print(f"Warning: Could not import advanced modules: {e}")
+    
+    def _initialize_enabled_modules(self):
+        """Initialize enabled modules tracking"""
+        self.enabled_modules = {
+            'emotion_dna': True,
+            'fractal_resonance': True,
+            'intention_decoder': True,
+            'future_shadow': True,
+            'astro_geo': True,
+            'black_swan_protector': True,
+            'quantum_tremor': True,
+            'market_thought_form': True,
+            'reality_displacement': True,
+            'human_lag': False,
+            'meta_adaptive': False,
+            'timeline_fork': False,
+            'fed_jet': False,
+            'stress': False,
+            'spoofing': False,
+            'quantum_error_correction': True,
+            'market_reality_anchors': True,
+            'cern_safeguards': True,
+            'temporal_stability': True,
+            'elon_discovery': True,
+            'cern_data': True,
+            'hardware_adaptation': True,
+            'ai_only_trades': True
+        }
+        
+        self._initialize_advanced_modules()
 
     def generate_new_algorithm(self, market_state):
         """
