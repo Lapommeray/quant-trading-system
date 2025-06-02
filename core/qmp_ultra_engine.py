@@ -1,9 +1,32 @@
 # -*- coding: utf-8 -*-
 # QMP GOD MODE v7.0 | ASCENSION CORE LOOP
 
+import time
 from advanced_modules.quantum_code_generator import QuantumCodeGenerator
 from advanced_modules.anti_stuck import AntiStuck
 from core.data_feeds import QuantumDataFeed
+
+try:
+    from qiskit import QuantumCircuit, execute, Aer
+except ImportError:
+    class QuantumCircuit:
+        def __init__(self, qubits):
+            self.qubits = qubits
+        def h(self, qubit):
+            pass
+        def measure_all(self):
+            pass
+    
+    def execute(circuit, backend, shots=1):
+        class MockResult:
+            def result(self):
+                class MockCounts:
+                    def get_counts(self, circuit):
+                        return {'0': shots//2, '1': shots//2}
+                return MockCounts()
+        return MockResult()
+    
+    Aer = None
 
 class QMPUltraEngine:
     def __init__(self):
@@ -12,6 +35,7 @@ class QMPUltraEngine:
         self.data_feed = QuantumDataFeed()
         self.performance_history = []
         self.current_strategy = self._load_base_strategy()
+        self.backend = Aer.get_backend('qasm_simulator') if Aer else None
 
     def run_ascension_loop(self):
         """Main execution loop with quantum self-improvement"""
@@ -55,8 +79,10 @@ class QMPUltraEngine:
             qc.h(0)
             qc.measure_all()
             result = execute(qc, self.backend, shots=1).result()
-            if '1' in result.get_counts(qc):
+            counts = result.get_counts(qc)
+            if '1' in counts:
                 exec(new_code, globals())
+                strategy = globals().get('strategy', self.current_strategy)
                 self.current_strategy = strategy
         except:
             pass  # Maintain current strategy on failure
@@ -69,8 +95,10 @@ class QMPUltraEngine:
             qc.h(0)
             qc.measure_all()
             result = execute(qc, self.backend, shots=1).result()
-            if '1' in result.get_counts(qc):
+            counts = result.get_counts(qc)
+            if '1' in counts:
                 exec(new_code, globals())
+                strategy = globals().get('strategy', self.current_strategy)
                 self.current_strategy = strategy
         except:
             pass  # Maintain current strategy on failure

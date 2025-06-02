@@ -93,7 +93,7 @@ class PortActivityAnalyzer:
     def _execute_nautical_protocol(self, port_id: str, raw_metrics: Dict, error: Exception):
         """Emergency risk assessment procedure"""
         try:
-            raw_score = min(max(float(raw_metrics.get("cargo_volatility", 0)) * 0.7, 1)
+            raw_score = min(max(float(raw_metrics.get("cargo_volatility", 0)) * 0.7, 0), 1)
         except:
             raw_score = 0.5  # Default risk if calculation fails
             

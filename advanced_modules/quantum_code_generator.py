@@ -1,3 +1,5 @@
+import random
+
 class QuantumCodeGenerator:
     def __init__(self):
         self.genetic_pool = []
