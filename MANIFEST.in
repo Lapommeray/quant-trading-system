@@ -1,0 +1,37 @@
+include README.md
+include LICENSE
+include CHANGELOG.md
+include CONTRIBUTING.md
+include requirements*.txt
+include pyproject.toml
+include setup.py
+include setup.cfg
+
+recursive-include core *.py
+recursive-include modules *.py
+recursive-include advanced_modules *.py
+recursive-include defense *.py
+recursive-include arbitrage *.py
+recursive-include data *.py
+recursive-include market_intelligence *.py
+recursive-include ultra_modules *.py
+
+recursive-include docs *.md *.rst *.txt
+recursive-include config *.yaml *.yml *.json
+
+include Dockerfile
+include docker-compose.yml
+include .dockerignore
+
+exclude Deco_*
+exclude QMP_*
+exclude Sa_son_code
+
+global-exclude *.pyc
+global-exclude *.pyo
+global-exclude *.pyd
+global-exclude __pycache__
+global-exclude .git*
+global-exclude .DS_Store
+global-exclude *.so
+global-exclude *.egg-info

@@ -1,0 +1,69 @@
+system:
+  name: "Quant Trading System"
+  version: "2.5.0"
+  environment: "production"
+  debug: false
+
+trading:
+  never_loss_protection: true
+  protection_layers: 9
+  accuracy_multiplier: 2.5
+  max_position_size: 1000000
+  max_daily_loss: 50000
+  risk_management:
+    enabled: true
+    max_leverage: 10
+    stop_loss_percentage: 0.02
+    take_profit_percentage: 0.05
+
+quantum:
+  enabled: true
+  dimensions: 11
+  quantum_gates_threshold: 0.85
+  cosmic_alignment_threshold: 0.9
+  zero_point_threshold: 0.92
+
+data:
+  sources:
+    - yfinance
+    - websocket
+    - prometheus
+  cache_enabled: true
+  cache_duration: 3600
+
+monitoring:
+  prometheus:
+    enabled: true
+    port: 9090
+  grafana:
+    enabled: true
+    port: 3000
+  mlflow:
+    enabled: true
+    port: 5000
+
+api:
+  fastapi:
+    host: "0.0.0.0"
+    port: 8000
+  streamlit:
+    host: "0.0.0.0"
+    port: 8501
+
+logging:
+  level: "INFO"
+  format: "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+  file: "logs/qts.log"
+  max_size: "10MB"
+  backup_count: 5
+
+institutional:
+  compliance:
+    enabled: true
+    audit_trail: true
+    position_limits: true
+    reporting: true
+  risk_limits:
+    max_position_size: 10000000
+    max_daily_loss: 500000
+    max_leverage: 5
