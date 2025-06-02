@@ -54,6 +54,21 @@ from .live_trading_integration import LiveTradingIntegration
 from .performance_dashboard import PerformanceDashboard
 from .multi_asset_strategy import MultiAssetStrategy
 
+try:
+    from .hyperbolic_market_manifold import HyperbolicMarketManifold
+except ImportError:
+    HyperbolicMarketManifold = None
+
+try:
+    from .quantum_topology_analysis import QuantumTopologyAnalysis
+except ImportError:
+    QuantumTopologyAnalysis = None
+
+try:
+    from .noncommutative_calculus import NoncommutativeCalculus
+except ImportError:
+    NoncommutativeCalculus = None
+
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from quantum_finance.quantum_finance_integration import QuantumFinanceIntegration
 from quantum_finance.quantum_black_scholes import QuantumBlackScholes
@@ -118,6 +133,21 @@ class MathematicalIntegrationLayer:
         self.quantum_portfolio = QuantumPortfolioOptimizer()
         self.quantum_risk = QuantumRiskMeasures()
         
+        if HyperbolicMarketManifold is not None:
+            self.hyperbolic_manifold = HyperbolicMarketManifold(dimension=11)
+        else:
+            self.hyperbolic_manifold = None
+            
+        if QuantumTopologyAnalysis is not None:
+            self.quantum_topology = QuantumTopologyAnalysis(homology_dimensions=[0, 1, 2], num_qubits=3)
+        else:
+            self.quantum_topology = None
+            
+        if NoncommutativeCalculus is not None:
+            self.noncommutative_calculus = NoncommutativeCalculus(market_dimension=3)
+        else:
+            self.noncommutative_calculus = None
+        
         logger.info(f"Initialized MathematicalIntegrationLayer with confidence_level={confidence_level}, "
                    f"precision={precision}, hurst_parameter={hurst_parameter}")
     
@@ -146,8 +176,14 @@ class MathematicalIntegrationLayer:
             "quantum_finance": self.quantum_finance,
             "quantum_black_scholes": self.quantum_black_scholes,
             "quantum_stochastic": self.quantum_stochastic,
+            "quantum_finance": self.quantum_finance,
+            "quantum_black_scholes": self.quantum_black_scholes,
+            "quantum_stochastic": self.quantum_stochastic,
             "quantum_portfolio": self.quantum_portfolio,
-            "quantum_risk": self.quantum_risk
+            "quantum_risk": self.quantum_risk,
+            "hyperbolic_manifold": self.hyperbolic_manifold,
+            "quantum_topology": self.quantum_topology,
+            "noncommutative_calculus": self.noncommutative_calculus
         }
         
         if module_name not in modules:
@@ -177,48 +213,124 @@ class MathematicalIntegrationLayer:
             "quantum_finance": self.quantum_finance,
             "quantum_black_scholes": self.quantum_black_scholes,
             "quantum_stochastic": self.quantum_stochastic,
+            "quantum_finance": self.quantum_finance,
+            "quantum_black_scholes": self.quantum_black_scholes,
+            "quantum_stochastic": self.quantum_stochastic,
             "quantum_portfolio": self.quantum_portfolio,
-            "quantum_risk": self.quantum_risk
+            "quantum_risk": self.quantum_risk,
+            "hyperbolic_manifold": self.hyperbolic_manifold,
+            "quantum_topology": self.quantum_topology,
+            "noncommutative_calculus": self.noncommutative_calculus
         }
     
     
-    def enhance_trading_signal(self, asset: str, data: Dict[str, np.ndarray], 
-                              account_balance: float, current_time: str,
-                              stop_loss_pct: float = 0.02) -> Dict:
+    def enhance_trading_signal(self, original_signal: Dict[str, Any], 
+                              market_data: Dict[str, Any]) -> Dict[str, Any]:
         """
-        Enhance trading signal using advanced mathematics
+        Enhance trading signal using advanced mathematics including new Real No-Hopium components
+        
+        Parameters:
+        - original_signal: Original trading signal to enhance
+        - market_data: Market data dictionary
+        
+        Returns:
+        - Enhanced trading signal with mathematical analysis
+        """
+        original_confidence = original_signal.get('confidence', 0.5)
+        
+        prices = market_data.get('prices', [])
+        volumes = market_data.get('volumes', None)
+        order_flows = market_data.get('order_flows', None)
+        
+        if len(prices) < 3:
+            logger.warning("Insufficient price data for mathematical enhancement")
+            return {
+                'original_signal': original_signal,
+                'mathematical_confidence': original_confidence,
+                'hyperbolic_analysis': {'signal': 'NEUTRAL', 'confidence': 0.0},
+                'quantum_topology_analysis': {'signal': 'NEUTRAL', 'confidence': 0.0},
+                'noncommutative_analysis': {'signal': 'NEUTRAL', 'confidence': 0.0}
+            }
+        
+        hyperbolic_signal = {'signal': 'NEUTRAL', 'confidence': 0.0, 'noise_immunity': 0.0}
+        if self.hyperbolic_manifold is not None:
+            hyperbolic_signal = self.hyperbolic_manifold.generate_trading_signal(
+                np.array(prices), 
+                np.array(volumes) if volumes else None,
+                np.array(order_flows) if order_flows else None
+            )
+        
+        quantum_topo_signal = {'signal': 'NEUTRAL', 'confidence': 0.0, 'cycles_detected': False}
+        if self.quantum_topology is not None:
+            quantum_topo_signal = self.quantum_topology.generate_trading_signal(
+                np.array(prices),
+                np.array(volumes) if volumes else None
+            )
+        
+        noncomm_signal = {'signal': 'NEUTRAL', 'confidence': 0.0, 'noncommutative_advantage': 0.0}
+        if self.noncommutative_calculus is not None:
+            noncomm_signal = self.noncommutative_calculus.generate_trading_signal(
+                market_data, 
+                original_signal.get('direction', 'buy')
+            )
+        
+        enhanced_confidence = original_confidence
+        if hyperbolic_signal.get('confidence', 0) > 0.7:
+            enhanced_confidence *= 1.1
+        if quantum_topo_signal.get('confidence', 0) > 0.7:
+            enhanced_confidence *= 1.1
+        if noncomm_signal.get('confidence', 0) > 0.7:
+            enhanced_confidence *= 1.1
+        
+        enhanced_confidence = min(1.0, enhanced_confidence)
+        
+        enhanced_signal = {
+            'original_signal': original_signal,
+            'mathematical_confidence': enhanced_confidence,
+            'hyperbolic_analysis': hyperbolic_signal,
+            'quantum_topology_analysis': quantum_topo_signal,
+            'noncommutative_analysis': noncomm_signal,
+            'enhancement_applied': True,
+            'noise_immunity': hyperbolic_signal.get('noise_immunity', 0.0),
+            'cycle_detection': quantum_topo_signal.get('cycles_detected', False),
+            'noncommutative_advantage': noncomm_signal.get('noncommutative_advantage', 0.0)
+        }
+        
+        self.history.append({
+            'timestamp': datetime.now().isoformat(),
+            'operation': 'enhance_trading_signal',
+            'original_confidence': original_confidence,
+            'enhanced_confidence': enhanced_confidence,
+            'hyperbolic_available': hyperbolic_signal.get('geomstats_available', False),
+            'quantum_topology_available': quantum_topo_signal.get('giotto_available', False),
+            'noncommutative_available': noncomm_signal.get('sympy_available', False),
+            'real_no_hopium_mathematics': True
+        })
+        
+        return enhanced_signal
+    
+    def calculate_enhanced_risk(self, asset: str, data: Dict[str, np.ndarray], 
+                               account_balance: float, current_time: str) -> Dict:
+        """
+        Calculate enhanced risk metrics using advanced mathematics
         
         Parameters:
         - asset: Asset symbol
-        - data: Dictionary with price data (close, volume, high, low)
+        - data: Dictionary with price data
         - account_balance: Current account balance
         - current_time: Current timestamp
-        - stop_loss_pct: Stop loss percentage
         
         Returns:
-        - Enhanced trading signal
+        - Enhanced risk metrics
         """
-        base_signal = self.quantum_finance.generate_trading_signal(
-            asset, data, int(account_balance), stop_loss_pct, current_time
-        )
-        
         prices = data.get("close", [])
         volumes = data.get("volume", [])
-        highs = data.get("high", [])
-        lows = data.get("low", [])
         
         if len(prices) < 20:
-            logger.warning("Insufficient price data for signal enhancement")
-            return base_signal
+            logger.warning("Insufficient price data for risk calculation")
+            return {"risk_score": 0.5, "confidence": 0.0}
             
         returns = np.diff(np.log(prices))
-        
-        prices_array = np.array(prices)
-        volumes_array = np.array(volumes) if volumes is not None and len(volumes) > 0 else None
-        
-        market_regimes = self.topological_data.detect_market_regimes(
-            prices_array, volumes_array, window_size=20
-        )
         
         quantum_state = self.quantum_probability.create_market_quantum_state(
             returns, n_qubits=5
@@ -242,7 +354,11 @@ class MathematicalIntegrationLayer:
         prices_array = np.array(prices)
         vol_model = self.stochastic_calculus.calibrate_rough_volatility_model(prices_array)
         
-        enhanced_signal = base_signal.copy() if isinstance(base_signal, dict) else {}
+        market_regimes = self.topological_data.detect_market_regimes(
+            prices_array, volumes_array if volumes is not None and len(volumes) >= 20 else None, window_size=20
+        )
+        
+        enhanced_signal = {}
         
         for key, value in {
             "market_regime": market_regimes.get("current_regime", "unknown"),
@@ -264,11 +380,11 @@ class MathematicalIntegrationLayer:
             
         if "stop_loss" not in enhanced_signal or enhanced_signal.get("stop_loss") is None:
             rough_vol = vol_model.get("volatility", 0.0)
-            enhanced_signal["stop_loss"] = str(prices[-1] * (1.0 - max(stop_loss_pct, rough_vol)))
+            enhanced_signal["stop_loss"] = str(prices[-1] * (1.0 - max(0.02, rough_vol)))
             
         if "take_profit" not in enhanced_signal or enhanced_signal.get("take_profit") is None:
             rough_vol = vol_model.get("volatility", 0.0)
-            enhanced_signal["take_profit"] = str(prices[-1] * (1.0 + max(stop_loss_pct * 2, rough_vol * 2)))
+            enhanced_signal["take_profit"] = str(prices[-1] * (1.0 + max(0.04, rough_vol * 2)))
             
         enhanced_signal["confidence"] = str(max(
             float(enhanced_signal.get("confidence", 0.0)),
@@ -279,10 +395,9 @@ class MathematicalIntegrationLayer:
         
         self.history.append({
             'timestamp': datetime.now().isoformat(),
-            'operation': 'enhance_trading_signal',
+            'operation': 'calculate_enhanced_risk',
             'asset': asset,
             'data_length': len(prices),
-            'base_signal_direction': base_signal.get("direction", 0) if isinstance(base_signal, dict) else 0,
             'enhanced_signal_direction': enhanced_signal.get("direction", 0),
             'confidence': enhanced_signal.get("confidence", 0.0)
         })
