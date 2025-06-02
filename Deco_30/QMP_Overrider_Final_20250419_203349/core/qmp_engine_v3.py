@@ -25,6 +25,19 @@ from advanced_modules.spoofing_detector import SpoofingDetector
 from advanced_modules.compliance_check import ComplianceCheck
 from advanced_modules.stress_detector import StressDetector
 from advanced_modules.port_activity_analyzer import PortActivityAnalyzer
+from advanced_modules.quantum_topology_analyzer import QuantumTopologyAnalyzer
+from advanced_modules.nonergodic_calculus import NonErgodicCalculus
+from advanced_modules.meta_learning_engine import MetaLearningEngine
+from advanced_modules.neural_pde_market_analyzer import NeuralPDEMarketAnalyzer
+from advanced_modules.execution_alpha_optimizer import ExecutionAlphaOptimizer
+from advanced_modules.hyper_topology_analyzer import HyperTopologyAnalyzer
+from advanced_modules.path_signature_transformer import PathSignatureTransformer
+from advanced_modules.dark_pool_gan import DarkPoolGAN
+from advanced_modules.neuromorphic_pde import NeuromorphicPDE
+from advanced_modules.quantum_execution_optimizer import QuantumExecutionOptimizer
+from advanced_modules.dark_pool_dna_decoder import DarkPoolDNADecoder
+from advanced_modules.neural_market_holography import NeuralMarketHolography
+from advanced_modules.quantum_liquidity_warper import QuantumLiquidityWarper
 
 class QMPUltraEngine:
     def __init__(self, algorithm):
@@ -56,7 +69,21 @@ class QMPUltraEngine:
             'fed_jet': FedJetMonitor(algorithm),
             'spoofing': SpoofingDetector(algorithm),
             'stress': StressDetector(algorithm),
-            'port_activity': PortActivityAnalyzer(algorithm)
+            'port_activity': PortActivityAnalyzer(algorithm),
+            
+            'quantum_topology': QuantumTopologyAnalyzer(algorithm),
+            'nonergodic_calculus': NonErgodicCalculus(algorithm),
+            'meta_learning': MetaLearningEngine(algorithm),
+            'neural_pde_market': NeuralPDEMarketAnalyzer(algorithm),
+            'execution_alpha': ExecutionAlphaOptimizer(algorithm),
+            'hyper_topology': HyperTopologyAnalyzer(algorithm),
+            'path_signature': PathSignatureTransformer(algorithm),
+            'dark_pool_gan': DarkPoolGAN(algorithm),
+            'neuromorphic_pde': NeuromorphicPDE(algorithm),
+            'quantum_execution': QuantumExecutionOptimizer(algorithm),
+            'dark_pool_dna': DarkPoolDNADecoder(algorithm),
+            'neural_holography': NeuralMarketHolography(algorithm),
+            'quantum_liquidity': QuantumLiquidityWarper(algorithm)
         }
         
         self.compliance = ComplianceCheck(algorithm)
@@ -83,7 +110,21 @@ class QMPUltraEngine:
             'fed_jet': 0.04,
             'spoofing': 0.04,
             'stress': 0.04,
-            'port_activity': 0.04
+            'port_activity': 0.04,
+            
+            'quantum_topology': 0.05,
+            'nonergodic_calculus': 0.05,
+            'meta_learning': 0.05,
+            'neural_pde_market': 0.05,
+            'execution_alpha': 0.04,
+            'hyper_topology': 0.04,
+            'path_signature': 0.04,
+            'dark_pool_gan': 0.04,
+            'neuromorphic_pde': 0.04,
+            'quantum_execution': 0.04,
+            'dark_pool_dna': 0.04,
+            'neural_holography': 0.04,
+            'quantum_liquidity': 0.04
         }
         
         self.confidence_threshold = 0.7
@@ -154,6 +195,12 @@ class QMPUltraEngine:
                 result = module.detect(symbol, self.algo.Time)
             elif module_name == 'port_activity':
                 result = module.analyze(self.algo.Time)
+            elif module_name in ['quantum_topology', 'nonergodic_calculus', 'meta_learning', 
+                               'neural_pde_market', 'execution_alpha', 'hyper_topology',
+                               'path_signature', 'dark_pool_gan', 'neuromorphic_pde',
+                               'quantum_execution', 'dark_pool_dna', 'neural_holography',
+                               'quantum_liquidity']:
+                result = module.analyze(symbol, history_data)
             else:
                 result = module.decode(symbol, history_bars)
                 
