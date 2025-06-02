@@ -31,8 +31,8 @@ class IntentionDecoder:
             elif bar.Close < bar.Open:
                 bearish_count += 1
 
-        wick_avg = sum(wicks) / len(wicks)
-        range_avg = sum(ranges) / len(ranges)
+        wick_avg = sum(wicks) / len(wicks) if len(wicks) > 0 else 0
+        range_avg = sum(ranges) / len(ranges) if len(ranges) > 0 else 0
 
         # Conditions that hint at hidden intent
         if bullish_count >= len(history_window) * 0.8 and wick_avg < range_avg * 0.2:
