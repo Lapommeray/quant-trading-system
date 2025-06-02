@@ -88,6 +88,20 @@ from .rough_path_theory import RoughPathTheory
 from .mathematical_integration_layer import MathematicalIntegrationLayer
 from .meta_conscious_routing_layer import MetaConsciousRoutingLayer
 
+from .quantum_topology_analyzer import QuantumTopologyAnalyzer
+from .nonergodic_calculus import NonErgodicCalculus
+from .meta_learning_engine import MetaLearningEngine
+from .neural_pde_market_analyzer import NeuralPDEMarketAnalyzer
+from .execution_alpha_optimizer import ExecutionAlphaOptimizer
+from .hyper_topology_analyzer import HyperTopologyAnalyzer
+from .path_signature_transformer import PathSignatureTransformer
+from .dark_pool_gan import DarkPoolGAN
+from .neuromorphic_pde import NeuromorphicPDE
+from .quantum_execution_optimizer import QuantumExecutionOptimizer
+from .dark_pool_dna_decoder import DarkPoolDNADecoder
+from .neural_market_holography import NeuralMarketHolography
+from .quantum_liquidity_warper import QuantumLiquidityWarper
+
 __all__ = [
     'HumanLagExploit',
     'InvisibleDataMiner',
@@ -130,5 +144,19 @@ __all__ = [
     'MeasureTheory',
     'RoughPathTheory',
     'MathematicalIntegrationLayer',
-    'MetaConsciousRoutingLayer'
+    'MetaConsciousRoutingLayer',
+    
+    'QuantumTopologyAnalyzer',
+    'NonErgodicCalculus', 
+    'MetaLearningEngine',
+    'NeuralPDEMarketAnalyzer',
+    'ExecutionAlphaOptimizer',
+    'HyperTopologyAnalyzer',
+    'PathSignatureTransformer',
+    'DarkPoolGAN',
+    'NeuromorphicPDE',
+    'QuantumExecutionOptimizer',
+    'DarkPoolDNADecoder',
+    'NeuralMarketHolography',
+    'QuantumLiquidityWarper'
 ]
