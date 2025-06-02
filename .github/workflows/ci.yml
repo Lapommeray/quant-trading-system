@@ -76,6 +76,7 @@ jobs:
     - name: Build Docker image
       run: |
         docker build -t quant-trading-system:latest .
+      working-directory: .
     
     - name: Test Docker image
       run: |
