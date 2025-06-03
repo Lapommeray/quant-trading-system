@@ -90,6 +90,8 @@ class PortActivityAnalyzer:
             except Exception as e:
                 if attempt == self.MAX_RETRIES:
                     raise RuntimeError(f"Quantum seal failed after {attempt} attempts") from e
+        
+        return b"QUANTUM_SEAL_FALLBACK"
 
     def _execute_nautical_protocol(self, port_id: str, raw_metrics: Dict, error: Exception):
         """Emergency risk assessment procedure"""
