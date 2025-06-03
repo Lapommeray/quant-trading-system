@@ -236,8 +236,10 @@ if __name__ == "__main__":
     
     for i in range(len(df)):
         values = [df.iloc[i]['open'], df.iloc[i]['close']]
-        df.iloc[i, df.columns.get_loc('high')] = max(values) + np.random.normal(1, 0.2)
-        df.iloc[i, df.columns.get_loc('low')] = min(values) - np.random.normal(1, 0.2)
+        high_col = 'high'
+        low_col = 'low'
+        df.at[df.index[i], high_col] = max(values) + np.random.normal(1, 0.2)
+        df.at[df.index[i], low_col] = min(values) - np.random.normal(1, 0.2)
     
     signal = indicator.get_signal(symbol, df)
     
