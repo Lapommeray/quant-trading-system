@@ -1,4 +1,7 @@
 import pytest
+import sys
+import os
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 from core.qmp_ai import QMPAIAgent
 from market_simulators import AtlanteanAttackScenario, load_quantum_test_dataset, calculate_accuracy
 from tests.mock_algorithm import MockAlgorithm
