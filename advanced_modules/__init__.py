@@ -300,10 +300,8 @@ try:
 except ImportError:
     NeuralMarketHolography = None
 
-try:
-    from .quantum_liquidity_warper import QuantumLiquidityWarper
-except ImportError:
-    QuantumLiquidityWarper = None
+# QuantumLiquidityWarper removed - replaced with QC-compatible EntropyScanner
+QuantumLiquidityWarper = None
 
 try:
     from .twitter_sentiment_analysis import TwitterSentimentAnalyzer
