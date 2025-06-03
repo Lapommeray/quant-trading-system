@@ -4,8 +4,16 @@ import pandas as pd
 from datetime import datetime, timedelta
 import sys
 import os
+from unittest.mock import Mock, patch
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
+try:
+    from tests.mocks.quantconnect_mock import MockQCAlgorithm, MockQMPAIAgent, quantconnect_mock
+except ImportError:
+    MockQCAlgorithm = Mock
+    MockQMPAIAgent = Mock
+    quantconnect_mock = Mock()
 
 @pytest.fixture
 def sample_price_data():
@@ -117,6 +125,15 @@ def pytest_configure(config):
     config.addinivalue_line(
         "markers", "institutional: mark test as institutional feature"
     )
+    config.addinivalue_line(
+        "markers", "consciousness: mark test as consciousness-related"
+    )
+    config.addinivalue_line(
+        "markers", "sacred_geometry: mark test as sacred geometry related"
+    )
+    config.addinivalue_line(
+        "markers", "performance: mark test as performance related"
+    )
 
 def pytest_collection_modifyitems(config, items):
     """Automatically mark tests based on their location"""
@@ -131,3 +148,23 @@ def pytest_collection_modifyitems(config, items):
         
         if "institutional" in item.name.lower():
             item.add_marker(pytest.mark.institutional)
+
+@pytest.fixture
+def mock_quantconnect(monkeypatch):
+    """Mock QuantConnect imports for testing."""
+    try:
+        monkeypatch.setattr('quantconnect.QCAlgorithm', MockQCAlgorithm)
+        monkeypatch.setattr('quantconnect.QMPAIAgent', MockQMPAIAgent)
+    except Exception:
+        pass
+    return quantconnect_mock
+
+@pytest.fixture
+def mock_algorithm():
+    """Provide mock algorithm instance for tests."""
+    return MockQCAlgorithm()
+
+@pytest.fixture
+def mock_qmp_ai_agent():
+    """Provide mock QMP AI agent for tests."""
+    return MockQMPAIAgent()

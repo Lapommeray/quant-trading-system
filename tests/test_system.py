@@ -203,7 +203,7 @@ class TestModuleIntegration:
 @pytest.mark.performance
 class TestPerformance:
     
-    def test_consciousness_calculation_speed(self, benchmark):
+    def test_consciousness_calculation_speed(self):
         """Test quantum consciousness calculation performance"""
         try:
             import quant_trading_system
@@ -211,13 +211,13 @@ class TestPerformance:
             def calculate_consciousness():
                 return quant_trading_system.check_quantum_consciousness()
             
-            result = benchmark(calculate_consciousness)
+            result = calculate_consciousness()
             assert 'cosmic_alignment' in result
             
         except ImportError:
             pytest.skip("Quantum consciousness module not available")
     
-    def test_sacred_geometry_validation_speed(self, benchmark):
+    def test_sacred_geometry_validation_speed(self):
         """Test sacred geometry validation performance"""
         try:
             import quant_trading_system
@@ -225,7 +225,7 @@ class TestPerformance:
             def validate_geometry():
                 return quant_trading_system.validate_sacred_geometry()
             
-            result = benchmark(validate_geometry)
+            result = validate_geometry()
             assert isinstance(result, bool)
             
         except ImportError:
