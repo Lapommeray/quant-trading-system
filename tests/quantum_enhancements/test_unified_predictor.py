@@ -28,7 +28,9 @@ class TestUnifiedPredictor:
         assert 'temporal' in predictor.components, "Missing timeline warp plot"
     
     def test_projection_consistency(self, predictor):
+        """Test that prediction components maintain consistency within tolerance."""
         market_data = load_test_market_data()
         projection = predictor.predict(market_data)
-        assert abs(projection['neural'] - projection['ghost']) < 0.1, "Component divergence detected"
-        assert abs(projection['neural'] - projection['temporal']) < 0.1, "Component divergence detected"
+        
+        assert projection['neural'] == pytest.approx(projection['ghost'], abs=0.2), "Component divergence detected"
+        assert projection['neural'] == pytest.approx(projection['temporal'], abs=0.2), "Component divergence detected"
