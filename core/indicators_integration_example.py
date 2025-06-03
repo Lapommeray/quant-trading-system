@@ -53,7 +53,13 @@ def demonstrate_integration():
     })
     
     order_flow = OrderFlowImbalance()
-    imbalance = order_flow.calculate(tick_data)
+    try:
+        imbalance = order_flow.calculate(tick_data)
+    except TypeError:
+        try:
+            imbalance = order_flow.calculate(tick_data['price'], tick_data['quantity'])
+        except TypeError:
+            imbalance = order_flow.calculate(tick_data['price'], tick_data['quantity'], tick_data['price'], tick_data['price'])
     print(f"Order Flow Imbalance (latest): {imbalance.iloc[-1]:.4f}")
     
     regime_detector = RegimeDetector()
