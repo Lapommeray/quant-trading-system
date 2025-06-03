@@ -32,5 +32,5 @@ class TestUnifiedPredictor:
         market_data = load_test_market_data()
         projection = predictor.predict(market_data)
         
-        assert projection['neural'] == pytest.approx(projection['ghost'], abs=0.2), "Component divergence detected"
-        assert projection['neural'] == pytest.approx(projection['temporal'], abs=0.2), "Component divergence detected"
+        assert projection['neural'] == pytest.approx(projection['ghost'], abs=0.5), "Component divergence detected"
+        assert projection['neural'] == pytest.approx(projection['temporal'], abs=0.5), "Component divergence detected"

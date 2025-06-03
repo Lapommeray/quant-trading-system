@@ -83,7 +83,7 @@ class MultiAssetLiveTest:
         self.signal_generator = ConsciousSignalGenerator()
         self.meta_router = MetaConsciousRouter()
         # Initialize with empty signals list, will be populated during signal generation
-        self.signal_fusion = SpectralSignalFusion(signal_inputs=[])
+        self.signal_fusion = SpectralSignalFusion()
         
         self.logger.info("All components initialized successfully")
         
