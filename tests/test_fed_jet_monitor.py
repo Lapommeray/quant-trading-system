@@ -1,6 +1,7 @@
 import unittest
 from unittest.mock import patch, MagicMock
 from advanced_modules.fed_jet_monitor import FedJetMonitor, JetDirection
+from tests.mock_algorithm import MockAlgorithm
 import logging
 
 class TestFedJetMonitor(unittest.TestCase):
@@ -16,9 +17,8 @@ class TestFedJetMonitor(unittest.TestCase):
         }
 
     def setUp(self):
-        self.monitor = FedJetMonitor()
-        self.log_handler = MagicMock()
-        logging.getLogger("FedJetMonitor").addHandler(self.log_handler)
+        self.mock_algorithm = MockAlgorithm()
+        self.monitor = FedJetMonitor(self.mock_algorithm)
 
     def tearDown(self):
         logging.getLogger("FedJetMonitor").handlers.clear()
