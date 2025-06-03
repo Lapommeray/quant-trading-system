@@ -18,6 +18,7 @@ import logging
 from encryption.xmss_encryption import XMSSEncryption
 import traceback
 from dataclasses import dataclass
+from typing import Dict
 
 @dataclass
 class PortRiskAssessment:

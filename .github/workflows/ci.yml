@@ -73,10 +73,10 @@ jobs:
     steps:
     - uses: actions/checkout@v4
     
+    - name: Verify Dockerfile exists
+      run: ls -la Dockerfile
     - name: Build Docker image
-      run: |
-        docker build -t quant-trading-system:latest .
-      working-directory: .
+      run: docker build -t quant-trading-system:latest .
     
     - name: Test Docker image
       run: |
