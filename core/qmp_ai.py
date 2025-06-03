@@ -6,7 +6,8 @@ from sklearn.model_selection import train_test_split
 from quantum_enhancers import CosmicRayAnalyzer, QuantumEntanglementFusion
 
 class QMPAIAgent:
-    def __init__(self):
+    def __init__(self, algorithm=None):
+        self.algorithm = algorithm
         self.model = RandomForestClassifier(n_estimators=100, random_state=42, max_depth=10)
         self.scaler = StandardScaler()
         self.is_trained = False
@@ -73,8 +74,9 @@ class QMPAIAgent:
         """
         Predicts market movements using quantum entanglement fusion and unconventional data analysis.
         """
+        base_prediction = self.model.predict(data) if hasattr(self.model, 'predict') else data
         return self.fusion.quantum_entangle(
-            super().predict(data),
+            base_prediction,
             self.analyze_unconventional()
         )
     
