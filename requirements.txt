@@ -7,17 +7,17 @@ setuptools==68.0.0
 scipy==1.9.3
 matplotlib==3.6.2
 statsmodels==0.13.5
-numba==0.56.4
+numba==0.58.1
 yfinance==0.2.28
 websocket-client==1.6.4
 prometheus-client==0.17.1
 requests==2.31.0
-tensorflow==2.13.1
+tensorflow==2.15.0
 transformers==4.30.2
 cvxpy==1.3.2
 backtrader==1.9.78.123
 sortedcontainers==2.4.0
-hmmlearn==0.2.8
+# hmmlearn==0.2.8  # Removed due to pybind11 compilation issues
 sympy==1.12
 streamlit==1.28.1
 fastapi==0.104.1
