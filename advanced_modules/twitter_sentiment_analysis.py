@@ -1,6 +1,10 @@
 import numpy as np
 import pandas as pd
-from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+try:
+    from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
+except ImportError:
+    SentimentIntensityAnalyzer = None
+    print("Warning: vaderSentiment not available. Sentiment analysis will be disabled.")
 import logging
 
 class TwitterSentimentAnalyzer:
@@ -8,8 +12,13 @@ class TwitterSentimentAnalyzer:
     Twitter NLP sentiment analysis for alternative data integration
     """
     def __init__(self):
-        self.analyzer = SentimentIntensityAnalyzer()
-        self.logger = logging.getLogger(self.__class__.__name__)
+        if SentimentIntensityAnalyzer is None:
+            self.analyzer = None
+            self.logger = logging.getLogger(self.__class__.__name__)
+            self.logger.warning("vaderSentiment not available, sentiment analysis disabled")
+        else:
+            self.analyzer = SentimentIntensityAnalyzer()
+            self.logger = logging.getLogger(self.__class__.__name__)
         self.sentiment_history = {}
         
     def analyze_tweet(self, tweet_text):
@@ -25,6 +34,13 @@ class TwitterSentimentAnalyzer:
             }
             
         try:
+            if self.analyzer is None:
+                return {
+                    'compound': 0.0,
+                    'pos': 0.0,
+                    'neu': 1.0,
+                    'neg': 0.0
+                }
             sentiment = self.analyzer.polarity_scores(tweet_text)
             return sentiment
         except Exception as e:

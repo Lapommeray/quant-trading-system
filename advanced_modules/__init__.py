@@ -45,118 +45,329 @@ Advanced Mathematical Modules:
 36. Rough Path Theory - Implements path signatures and neural rough differential equations
 """
 
-from .human_lag_exploit import HumanLagExploit
-from .invisible_data_miner import InvisibleDataMiner
-from .meta_adaptive_ai import MetaAdaptiveAI
-from .self_destruct_protocol import SelfDestructProtocol
-from .quantum_sentiment_decoder import QuantumSentimentDecoder
-from .quantum_tremor_scanner import QuantumTremorScanner
-from .spectral_signal_fusion import SpectralSignalFusion
-from .dna_breath import DNABreath
-from .dna_overlord import DNAOverlord
-from .void_trader_chart_renderer import VoidTraderChartRenderer
-from .meta_conscious_routing_layer import MetaConsciousRoutingLayer
-from .quantum_code_generator import QuantumCodeGenerator
-from .anti_stuck import AntiStuck
-from .time_resonant_neural_lattice import TimeResonantNeuralLattice
-from .self_rewriting_dna_ai import SelfRewritingDNAAI
-from .causal_quantum_reasoning import CausalQuantumReasoningEngine as CausalQuantumReasoning
-from .latency_cancellation_field import LatencyCancellationField
-from .emotion_harvest_ai import EmotionHarvestAI
-from .quantum_liquidity_signature_reader import QuantumLiquiditySignatureReader
-from .causal_flow_splitter import CausalFlowSplitter
-from .inverse_time_echoes import InverseTimeEchoes
-from .liquidity_event_horizon_mapper import LiquidityEventHorizonMapper
-from .shadow_spread_resonator import ShadowSpreadResonator
-from .arbitrage_synapse_chain import ArbitrageSynapseChain
-from .sentiment_energy_coupling_engine import SentimentEnergyCouplingEngine
-from .multi_timeline_probability_mesh import MultiTimelineProbabilityMesh
-from .sovereign_quantum_oracle import SovereignQuantumOracle
-from .synthetic_consciousness import SyntheticConsciousness
-from .language_universe_decoder import LanguageUniverseDecoder
-from .zero_energy_recursive_intelligence import ZeroEnergyRecursiveIntelligence
-from .truth_verification_core import TruthVerificationCore
+try:
+    from .human_lag_exploit import HumanLagExploit
+except ImportError:
+    HumanLagExploit = None
 
-# Advanced Mathematical Modules
-from .pure_math_foundation import PureMathFoundation
-from .math_computation_interface import MathComputationInterface
-from .advanced_stochastic_calculus import AdvancedStochasticCalculus
-from .quantum_probability import QuantumProbability
-from .topological_data_analysis import TopologicalDataAnalysis
-from .measure_theory import MeasureTheory
-from .rough_path_theory import RoughPathTheory
-from .mathematical_integration_layer import MathematicalIntegrationLayer
-from .meta_conscious_routing_layer import MetaConsciousRoutingLayer
+try:
+    from .invisible_data_miner import InvisibleDataMiner
+except ImportError:
+    InvisibleDataMiner = None
 
-from .quantum_topology_analyzer import QuantumTopologyAnalyzer
-from .nonergodic_calculus import NonErgodicCalculus
-from .meta_learning_engine import MetaLearningEngine
-from .neural_pde_market_analyzer import NeuralPDEMarketAnalyzer
-from .execution_alpha_optimizer import ExecutionAlphaOptimizer
-from .hyper_topology_analyzer import HyperTopologyAnalyzer
-from .path_signature_transformer import PathSignatureTransformer
-from .dark_pool_gan import DarkPoolGAN
-from .neuromorphic_pde import NeuromorphicPDE
-from .quantum_execution_optimizer import QuantumExecutionOptimizer
-from .dark_pool_dna_decoder import DarkPoolDNADecoder
-from .neural_market_holography import NeuralMarketHolography
-from .quantum_liquidity_warper import QuantumLiquidityWarper
+try:
+    from .meta_adaptive_ai import MetaAdaptiveAI
+except ImportError:
+    MetaAdaptiveAI = None
 
-__all__ = [
-    'HumanLagExploit',
-    'InvisibleDataMiner',
-    'MetaAdaptiveAI',
-    'SelfDestructProtocol',
-    'QuantumSentimentDecoder',
-    'QuantumTremorScanner',
-    'SpectralSignalFusion',
-    'DNABreath',
-    'DNAOverlord',
-    'VoidTraderChartRenderer',
-    'MetaConsciousRoutingLayer',
-    'QuantumCodeGenerator',
-    'AntiStuck',
-    'TimeResonantNeuralLattice',
-    'SelfRewritingDNAAI',
-    'CausalQuantumReasoning',
-    'LatencyCancellationField',
-    'EmotionHarvestAI',
-    'QuantumLiquiditySignatureReader',
-    'CausalFlowSplitter',
-    'InverseTimeEchoes',
-    'LiquidityEventHorizonMapper',
-    'ShadowSpreadResonator',
-    'ArbitrageSynapseChain',
-    'SentimentEnergyCouplingEngine',
-    'MultiTimelineProbabilityMesh',
-    'SovereignQuantumOracle',
-    'SyntheticConsciousness',
-    'LanguageUniverseDecoder',
-    'ZeroEnergyRecursiveIntelligence',
-    'TruthVerificationCore',
-    
-    # Advanced Mathematical Modules
-    'PureMathFoundation',
-    'MathComputationInterface',
-    'AdvancedStochasticCalculus',
-    'QuantumProbability',
-    'TopologicalDataAnalysis',
-    'MeasureTheory',
-    'RoughPathTheory',
-    'MathematicalIntegrationLayer',
-    'MetaConsciousRoutingLayer',
-    
-    'QuantumTopologyAnalyzer',
-    'NonErgodicCalculus', 
-    'MetaLearningEngine',
-    'NeuralPDEMarketAnalyzer',
-    'ExecutionAlphaOptimizer',
-    'HyperTopologyAnalyzer',
-    'PathSignatureTransformer',
-    'DarkPoolGAN',
-    'NeuromorphicPDE',
-    'QuantumExecutionOptimizer',
-    'DarkPoolDNADecoder',
-    'NeuralMarketHolography',
-    'QuantumLiquidityWarper'
+try:
+    from .self_destruct_protocol import SelfDestructProtocol
+except ImportError:
+    SelfDestructProtocol = None
+
+try:
+    from .quantum_sentiment_decoder import QuantumSentimentDecoder
+except ImportError:
+    QuantumSentimentDecoder = None
+
+try:
+    from .quantum_tremor_scanner import QuantumTremorScanner
+except ImportError:
+    QuantumTremorScanner = None
+
+try:
+    from .spectral_signal_fusion import SpectralSignalFusion
+except ImportError:
+    SpectralSignalFusion = None
+
+try:
+    from .dna_breath import DNABreath
+except ImportError:
+    DNABreath = None
+
+try:
+    from .dna_overlord import DNAOverlord
+except ImportError:
+    DNAOverlord = None
+
+try:
+    from .void_trader_chart_renderer import VoidTraderChartRenderer
+except ImportError:
+    VoidTraderChartRenderer = None
+
+try:
+    from .meta_conscious_routing_layer import MetaConsciousRoutingLayer
+except ImportError:
+    MetaConsciousRoutingLayer = None
+
+try:
+    from .quantum_code_generator import QuantumCodeGenerator
+except ImportError:
+    QuantumCodeGenerator = None
+
+try:
+    from .anti_stuck import AntiStuck
+except ImportError:
+    AntiStuck = None
+
+try:
+    from .time_resonant_neural_lattice import TimeResonantNeuralLattice
+except ImportError:
+    TimeResonantNeuralLattice = None
+
+try:
+    from .self_rewriting_dna_ai import SelfRewritingDNAAI
+except ImportError:
+    SelfRewritingDNAAI = None
+
+try:
+    from .causal_quantum_reasoning import CausalQuantumReasoningEngine as CausalQuantumReasoning
+except ImportError:
+    CausalQuantumReasoning = None
+
+try:
+    from .latency_cancellation_field import LatencyCancellationField
+except ImportError:
+    LatencyCancellationField = None
+
+try:
+    from .emotion_harvest_ai import EmotionHarvestAI
+except ImportError:
+    EmotionHarvestAI = None
+
+try:
+    from .quantum_liquidity_signature_reader import QuantumLiquiditySignatureReader
+except ImportError:
+    QuantumLiquiditySignatureReader = None
+
+try:
+    from .causal_flow_splitter import CausalFlowSplitter
+except ImportError:
+    CausalFlowSplitter = None
+
+try:
+    from .inverse_time_echoes import InverseTimeEchoes
+except ImportError:
+    InverseTimeEchoes = None
+
+try:
+    from .liquidity_event_horizon_mapper import LiquidityEventHorizonMapper
+except ImportError:
+    LiquidityEventHorizonMapper = None
+
+try:
+    from .shadow_spread_resonator import ShadowSpreadResonator
+except ImportError:
+    ShadowSpreadResonator = None
+
+try:
+    from .arbitrage_synapse_chain import ArbitrageSynapseChain
+except ImportError:
+    ArbitrageSynapseChain = None
+
+try:
+    from .sentiment_energy_coupling_engine import SentimentEnergyCouplingEngine
+except ImportError:
+    SentimentEnergyCouplingEngine = None
+
+try:
+    from .multi_timeline_probability_mesh import MultiTimelineProbabilityMesh
+except ImportError:
+    MultiTimelineProbabilityMesh = None
+
+try:
+    from .sovereign_quantum_oracle import SovereignQuantumOracle
+except ImportError:
+    SovereignQuantumOracle = None
+
+try:
+    from .synthetic_consciousness import SyntheticConsciousness
+except ImportError:
+    SyntheticConsciousness = None
+
+try:
+    from .language_universe_decoder import LanguageUniverseDecoder
+except ImportError:
+    LanguageUniverseDecoder = None
+
+try:
+    from .zero_energy_recursive_intelligence import ZeroEnergyRecursiveIntelligence
+except ImportError:
+    ZeroEnergyRecursiveIntelligence = None
+
+try:
+    from .truth_verification_core import TruthVerificationCore
+except ImportError:
+    TruthVerificationCore = None
+
+try:
+    from .pure_math_foundation import PureMathFoundation
+except ImportError:
+    PureMathFoundation = None
+
+try:
+    from .math_computation_interface import MathComputationInterface
+except ImportError:
+    MathComputationInterface = None
+
+try:
+    from .advanced_stochastic_calculus import AdvancedStochasticCalculus
+except ImportError:
+    AdvancedStochasticCalculus = None
+
+try:
+    from .quantum_probability import QuantumProbability
+except ImportError:
+    QuantumProbability = None
+
+try:
+    from .topological_data_analysis import TopologicalDataAnalysis
+except ImportError:
+    TopologicalDataAnalysis = None
+
+try:
+    from .measure_theory import MeasureTheory
+except ImportError:
+    MeasureTheory = None
+
+try:
+    from .rough_path_theory import RoughPathTheory
+except ImportError:
+    RoughPathTheory = None
+
+try:
+    from .mathematical_integration_layer import MathematicalIntegrationLayer
+except ImportError:
+    MathematicalIntegrationLayer = None
+
+try:
+    from .quantum_topology_analyzer import QuantumTopologyAnalyzer
+except ImportError:
+    QuantumTopologyAnalyzer = None
+
+try:
+    from .nonergodic_calculus import NonErgodicCalculus
+except ImportError:
+    NonErgodicCalculus = None
+
+try:
+    from .meta_learning_engine import MetaLearningEngine
+except ImportError:
+    MetaLearningEngine = None
+
+try:
+    from .neural_pde_market_analyzer import NeuralPDEMarketAnalyzer
+except ImportError:
+    NeuralPDEMarketAnalyzer = None
+
+try:
+    from .execution_alpha_optimizer import ExecutionAlphaOptimizer
+except ImportError:
+    ExecutionAlphaOptimizer = None
+
+try:
+    from .hyper_topology_analyzer import HyperTopologyAnalyzer
+except ImportError:
+    HyperTopologyAnalyzer = None
+
+try:
+    from .path_signature_transformer import PathSignatureTransformer
+except ImportError:
+    PathSignatureTransformer = None
+
+try:
+    from .dark_pool_gan import DarkPoolGAN
+except ImportError:
+    DarkPoolGAN = None
+
+try:
+    from .neuromorphic_pde import NeuromorphicPDE
+except ImportError:
+    NeuromorphicPDE = None
+
+try:
+    from .quantum_execution_optimizer import QuantumExecutionOptimizer
+except ImportError:
+    QuantumExecutionOptimizer = None
+
+try:
+    from .dark_pool_dna_decoder import DarkPoolDNADecoder
+except ImportError:
+    DarkPoolDNADecoder = None
+
+try:
+    from .neural_market_holography import NeuralMarketHolography
+except ImportError:
+    NeuralMarketHolography = None
+
+try:
+    from .quantum_liquidity_warper import QuantumLiquidityWarper
+except ImportError:
+    QuantumLiquidityWarper = None
+
+try:
+    from .twitter_sentiment_analysis import TwitterSentimentAnalyzer
+except ImportError:
+    TwitterSentimentAnalyzer = None
+
+__all__ = []
+
+modules = [
+    ('HumanLagExploit', HumanLagExploit),
+    ('InvisibleDataMiner', InvisibleDataMiner),
+    ('MetaAdaptiveAI', MetaAdaptiveAI),
+    ('SelfDestructProtocol', SelfDestructProtocol),
+    ('QuantumSentimentDecoder', QuantumSentimentDecoder),
+    ('QuantumTremorScanner', QuantumTremorScanner),
+    ('SpectralSignalFusion', SpectralSignalFusion),
+    ('DNABreath', DNABreath),
+    ('DNAOverlord', DNAOverlord),
+    ('VoidTraderChartRenderer', VoidTraderChartRenderer),
+    ('MetaConsciousRoutingLayer', MetaConsciousRoutingLayer),
+    ('QuantumCodeGenerator', QuantumCodeGenerator),
+    ('AntiStuck', AntiStuck),
+    ('TimeResonantNeuralLattice', TimeResonantNeuralLattice),
+    ('SelfRewritingDNAAI', SelfRewritingDNAAI),
+    ('CausalQuantumReasoning', CausalQuantumReasoning),
+    ('LatencyCancellationField', LatencyCancellationField),
+    ('EmotionHarvestAI', EmotionHarvestAI),
+    ('QuantumLiquiditySignatureReader', QuantumLiquiditySignatureReader),
+    ('CausalFlowSplitter', CausalFlowSplitter),
+    ('InverseTimeEchoes', InverseTimeEchoes),
+    ('LiquidityEventHorizonMapper', LiquidityEventHorizonMapper),
+    ('ShadowSpreadResonator', ShadowSpreadResonator),
+    ('ArbitrageSynapseChain', ArbitrageSynapseChain),
+    ('SentimentEnergyCouplingEngine', SentimentEnergyCouplingEngine),
+    ('MultiTimelineProbabilityMesh', MultiTimelineProbabilityMesh),
+    ('SovereignQuantumOracle', SovereignQuantumOracle),
+    ('SyntheticConsciousness', SyntheticConsciousness),
+    ('LanguageUniverseDecoder', LanguageUniverseDecoder),
+    ('ZeroEnergyRecursiveIntelligence', ZeroEnergyRecursiveIntelligence),
+    ('TruthVerificationCore', TruthVerificationCore),
+    ('PureMathFoundation', PureMathFoundation),
+    ('MathComputationInterface', MathComputationInterface),
+    ('AdvancedStochasticCalculus', AdvancedStochasticCalculus),
+    ('QuantumProbability', QuantumProbability),
+    ('TopologicalDataAnalysis', TopologicalDataAnalysis),
+    ('MeasureTheory', MeasureTheory),
+    ('RoughPathTheory', RoughPathTheory),
+    ('MathematicalIntegrationLayer', MathematicalIntegrationLayer),
+    ('QuantumTopologyAnalyzer', QuantumTopologyAnalyzer),
+    ('NonErgodicCalculus', NonErgodicCalculus),
+    ('MetaLearningEngine', MetaLearningEngine),
+    ('NeuralPDEMarketAnalyzer', NeuralPDEMarketAnalyzer),
+    ('ExecutionAlphaOptimizer', ExecutionAlphaOptimizer),
+    ('HyperTopologyAnalyzer', HyperTopologyAnalyzer),
+    ('PathSignatureTransformer', PathSignatureTransformer),
+    ('DarkPoolGAN', DarkPoolGAN),
+    ('NeuromorphicPDE', NeuromorphicPDE),
+    ('QuantumExecutionOptimizer', QuantumExecutionOptimizer),
+    ('DarkPoolDNADecoder', DarkPoolDNADecoder),
+    ('NeuralMarketHolography', NeuralMarketHolography),
+    ('QuantumLiquidityWarper', QuantumLiquidityWarper),
+    ('TwitterSentimentAnalyzer', TwitterSentimentAnalyzer)
 ]
+
+for name, module in modules:
+    if module is not None:
+        __all__.append(name)
