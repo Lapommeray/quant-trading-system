@@ -241,8 +241,7 @@ class OrderFlowImbalance:
         self.window = window
         self.logger = logging.getLogger('OrderFlowImbalance')
     
-    def calculate(self, prices: pd.Series, volume: pd.Series, 
-                 high: pd.Series = None, low: pd.Series = None) -> pd.Series:
+    def calculate(self, trades: pd.DataFrame) -> pd.Series:
         """Calculate order flow imbalance"""
         
         if high is None:

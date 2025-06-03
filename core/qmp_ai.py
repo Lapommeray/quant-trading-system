@@ -3,7 +3,11 @@ import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
-from quantum_enhancers import CosmicRayAnalyzer, QuantumEntanglementFusion
+try:
+    from quantum_enhancers import CosmicRayAnalyzer, QuantumEntanglementFusion
+    QUANTUM_ENHANCERS_AVAILABLE = True
+except ImportError:
+    QUANTUM_ENHANCERS_AVAILABLE = False
 
 class QMPAIAgent:
     def __init__(self, algorithm=None):
@@ -14,8 +18,12 @@ class QMPAIAgent:
         self.feature_importances = {}
         self.min_samples_for_training = 15
         self.last_prediction_confidence = 0.0
-        self.analyzer = CosmicRayAnalyzer()
-        self.fusion = QuantumEntanglementFusion()
+        if QUANTUM_ENHANCERS_AVAILABLE:
+            self.analyzer = CosmicRayAnalyzer()
+            self.fusion = QuantumEntanglementFusion()
+        else:
+            self.analyzer = None
+            self.fusion = None
         
     def train(self, df):
         """
@@ -75,13 +83,17 @@ class QMPAIAgent:
         Predicts market movements using quantum entanglement fusion and unconventional data analysis.
         """
         base_prediction = self.model.predict(data) if hasattr(self.model, 'predict') else data
-        return self.fusion.quantum_entangle(
-            base_prediction,
-            self.analyze_unconventional()
-        )
+        if self.fusion is not None:
+            return self.fusion.quantum_entangle(
+                base_prediction,
+                self.analyze_unconventional()
+            )
+        return base_prediction
     
     def analyze_unconventional(self):
         """
         Analyzes unconventional data patterns using CosmicRayAnalyzer.
         """
-        return self.analyzer.analyze()
+        if self.analyzer is not None:
+            return self.analyzer.analyze()
+        return {}

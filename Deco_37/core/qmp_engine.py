@@ -15,7 +15,7 @@ from data.macro_fetcher import is_macro_environment_favorable
 
 class QMPOverrider:
     def __init__(self):
-        self.ai = QMPAIAgent()
+        self.ai = QMPAIAgent(algorithm=None)
         self.history = []
         self.gate_scores = {}
         self.last_confidence = 0.0
