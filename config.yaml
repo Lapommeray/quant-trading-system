@@ -18,7 +18,7 @@ trading:
 
 quantum:
   enabled: true
-  dimensions: 11
+  dimensional_analysis: 11
   quantum_gates_threshold: 0.85
   cosmic_alignment_threshold: 0.9
   zero_point_threshold: 0.92
