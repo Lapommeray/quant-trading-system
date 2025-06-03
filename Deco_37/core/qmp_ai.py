@@ -4,15 +4,27 @@ import numpy as np
 from sklearn.ensemble import RandomForestClassifier
 from sklearn.preprocessing import StandardScaler
 from sklearn.model_selection import train_test_split
+try:
+    from quantum_enhancers import CosmicRayAnalyzer, QuantumEntanglementFusion
+    QUANTUM_ENHANCERS_AVAILABLE = True
+except ImportError:
+    QUANTUM_ENHANCERS_AVAILABLE = False
 
 class QMPAIAgent:
-    def __init__(self):
+    def __init__(self, algorithm=None):
+        self.algorithm = algorithm
         self.model = RandomForestClassifier(n_estimators=100, random_state=42, max_depth=10)
         self.scaler = StandardScaler()
         self.is_trained = False
         self.feature_importances = {}
         self.min_samples_for_training = 15
         self.last_prediction_confidence = 0.0
+        if QUANTUM_ENHANCERS_AVAILABLE:
+            self.analyzer = CosmicRayAnalyzer()
+            self.fusion = QuantumEntanglementFusion()
+        else:
+            self.analyzer = None
+            self.fusion = None
         
     def train(self, df):
         """
@@ -65,4 +77,19 @@ class QMPAIAgent:
         self.last_prediction_confidence = confidence
         
         pred = self.model.predict(X_new_scaled)
-        return bool(pred[0])
+        base_prediction = bool(pred[0])
+        
+        if self.fusion is not None:
+            return self.fusion.quantum_entangle(
+                base_prediction,
+                self.analyze_unconventional()
+            )
+        return base_prediction
+    
+    def analyze_unconventional(self):
+        """
+        Analyzes unconventional data patterns using CosmicRayAnalyzer.
+        """
+        if self.analyzer is not None:
+            return self.analyzer.analyze()
+        return {}
