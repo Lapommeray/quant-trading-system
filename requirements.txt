@@ -39,4 +39,4 @@ vaderSentiment>=3.3.2
 python-dotenv>=1.0.0
 feedparser>=6.0.0
 beautifulsoup4>=4.12.0
-dask[distributed]
+dask[distributed]>=2022.7.0

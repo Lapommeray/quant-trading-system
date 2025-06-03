@@ -1,16 +1,66 @@
-from AlgorithmImports import *
+try:
+    from AlgorithmImports import *
+    from QuantConnect import Resolution, Market
+    from QuantConnect.Algorithm import QCAlgorithm
+    from QuantConnect.Data.Consolidators import TradeBarConsolidator
+    from QuantConnect.Orders import OrderStatus
+    QUANTCONNECT_AVAILABLE = True
+except ImportError:
+    QUANTCONNECT_AVAILABLE = False
+    
+    class QCAlgorithm:
+        def __init__(self):
+            self.Time = None
+            self.DataFolder = "/tmp"
+            
+        def SetStartDate(self, year, month, day): pass
+        def SetEndDate(self, year, month, day): pass
+        def SetCash(self, amount): pass
+        def AddCrypto(self, symbol, resolution, market): 
+            return type('MockSymbol', (), {'Symbol': symbol})()
+        def AddForex(self, symbol, resolution, market):
+            return type('MockSymbol', (), {'Symbol': symbol})()
+        def AddEquity(self, symbol, resolution):
+            return type('MockSymbol', (), {'Symbol': symbol})()
+        def Debug(self, message): print(f"DEBUG: {message}")
+        def Plot(self, chart, series, value): pass
+        def SetHoldings(self, symbol, weight): pass
+        def Schedule(self): return self
+        def On(self, date_rule, time_rule, callback): pass
+        def DateRules(self): return self
+        def TimeRules(self): return self
+        def EveryDay(self): return self
+        def EveryMinute(self): return self
+        def SubscriptionManager(self): return self
+        def AddConsolidator(self, symbol, consolidator): pass
+    
+    class TradeBarConsolidator:
+        def __init__(self, timespan):
+            self.DataConsolidated = None
+    
+    class OrderStatus:
+        Filled = "Filled"
+    
+    class Resolution:
+        Minute = 'Minute'
+    
+    class Market:
+        Binance = 'Binance'
+        Oanda = 'Oanda'
+
 from core.oversoul_integration import QMPOversoulEngine
 from core.alignment_filter import is_fully_aligned
 import pandas as pd
 import os
 import json
 from datetime import timedelta
-from QuantConnect import Resolution, Market
-from QuantConnect.Algorithm import QCAlgorithm
-from QuantConnect.Data.Consolidators import TradeBarConsolidator
-from QuantConnect.Orders import OrderStatus
 
 class QMPOverriderUnified(QCAlgorithm):
+    
+    def __init__(self):
+        super().__init__()
+        if not QUANTCONNECT_AVAILABLE:
+            print("Running in mock mode - QuantConnect not available")
 
     def Initialize(self):
         self.SetStartDate(2024, 1, 1)
