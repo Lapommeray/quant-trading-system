@@ -105,6 +105,7 @@ class MockQuantConnectImports:
         self.SecurityType.Crypto = "Crypto"
         self.SecurityType.Forex = "Forex"
 
+QMPAIAgent = MockQMPAIAgent
 QCAlgorithm = MockQCAlgorithm
 QuantConnectImports = MockQuantConnectImports()
 
