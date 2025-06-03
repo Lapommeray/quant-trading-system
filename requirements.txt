@@ -17,7 +17,7 @@ transformers==4.30.2
 cvxpy==1.3.2
 backtrader==1.9.78.123
 sortedcontainers==2.4.0
-# hmmlearn==0.2.8  # Removed due to pybind11 compilation issues
+hmmlearn==0.3.0
 sympy==1.12
 streamlit==1.28.1
 fastapi==0.104.1
@@ -34,3 +34,4 @@ vaderSentiment==3.3.2
 python-dotenv==1.0.0
 feedparser==6.0.10
 beautifulsoup4==4.12.2
+dask[distributed]==2023.12.1
