@@ -84,11 +84,11 @@ class AtlanteanAttackScenario:
     def get_attack_signature(self) -> Dict[str, float]:
         """Get the unique signature of this Atlantean attack."""
         return {
-            'intensity': self.intensity,
-            'duration': self.duration,
-            'pattern_complexity': len(self.attack_patterns),
-            'quantum_resonance': np.mean(self.attack_patterns['quantum_interference']),
-            'temporal_variance': np.var(self.attack_patterns['temporal_distortion'])
+            'intensity': float(self.intensity),
+            'duration': float(self.duration),
+            'pattern_complexity': float(len(self.attack_patterns)),
+            'quantum_resonance': float(np.mean(self.attack_patterns['quantum_interference'])),
+            'temporal_variance': float(np.var(self.attack_patterns['temporal_distortion']))
         }
 
 
