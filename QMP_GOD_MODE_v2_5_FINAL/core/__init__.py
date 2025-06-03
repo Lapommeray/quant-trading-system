@@ -94,3 +94,9 @@ try:
     __all__.append('PerformanceOptimizer')
 except ImportError as e:
     logger.warning(f"Could not import PerformanceOptimizer: {e}")
+
+try:
+    from .indicators import HestonVolatility, ML_RSI, OrderFlowImbalance, RegimeDetector
+    __all__.extend(['HestonVolatility', 'ML_RSI', 'OrderFlowImbalance', 'RegimeDetector'])
+except ImportError as e:
+    logger.warning(f"Could not import indicators: {e}")
