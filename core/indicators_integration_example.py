@@ -6,7 +6,7 @@ import pandas as pd
 import numpy as np
 from datetime import datetime, timedelta
 
-from indicators import HestonVolatility, ML_RSI, OrderFlowImbalance, RegimeDetector
+from core.indicators import HestonVolatility, ML_RSI, OrderFlowImbalance, RegimeDetector
 
 def create_sample_data():
     """Create sample market data for testing"""
