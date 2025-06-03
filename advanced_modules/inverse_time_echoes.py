@@ -12,7 +12,11 @@ import ccxt
 import logging
 from typing import Dict, Any, List, Tuple, Optional
 from datetime import datetime, timedelta
-import pywt  # PyWavelets for wavelet transform
+try:
+    import pywt
+except ImportError:
+    pywt = None
+    print("Warning: PyWavelets not available. Wavelet analysis will be disabled.")
 from scipy import signal
 from scipy.stats import pearsonr
 
@@ -180,7 +184,11 @@ class InverseTimeEchoes:
             if len(price_series) < scale * 3:
                 continue
                 
-            coeffs, freqs = pywt.cwt(price_series, np.arange(1, scale), 'morl')
+            if pywt is None:
+                coeffs = [np.convolve(price_series, np.ones(scale)/scale, mode='valid')]
+                freqs = [1.0/scale]
+            else:
+                coeffs, freqs = pywt.cwt(price_series, np.arange(1, scale), 'morl')
             
             for i, coeff in enumerate(coeffs):
                 peaks, _ = signal.find_peaks(np.abs(coeff), height=np.std(coeff) * 2, distance=scale)

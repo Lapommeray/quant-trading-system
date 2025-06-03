@@ -1,6 +1,10 @@
 import pytest
 import subprocess
-import docker
+try:
+    import docker
+except ImportError:
+    docker = None
+    pytest.skip("docker not available", allow_module_level=True)
 from pathlib import Path
 
 class TestDocker:
@@ -49,6 +53,8 @@ class TestDocker:
     
     @pytest.mark.slow
     def test_docker_build(self):
+        if docker is None:
+            pytest.skip("Docker not available")
         try:
             client = docker.from_env()
         except Exception:
