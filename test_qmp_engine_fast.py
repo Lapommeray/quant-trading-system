@@ -14,7 +14,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 import mock_algorithm_imports
 sys.modules['AlgorithmImports'] = mock_algorithm_imports
 
-sys.path.append(os.path.dirname(__file__))
+sys.path.insert(0, os.path.dirname(__file__))
 from core.qmp_engine_v3 import QMPUltraEngine
 
 def generate_small_market_data(symbol="BTCUSD", periods=50):
