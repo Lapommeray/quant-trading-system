@@ -58,6 +58,7 @@ class InvisibleDataMiner:
         self.pattern_match_threshold = 0.80
         
         self.encryption_engine = XMSSEncryption(tree_height=tree_height)
+        self.encrypted_blobs = {}
         self._init_failover()
         
         algorithm.Debug("Invisible Data Miner module initialized")
@@ -69,7 +70,7 @@ class InvisibleDataMiner:
         self.failover_engaged = False
         self.failover_count = 0
     
-    def mine(self, symbol, history_data) -> bool:
+    def mine(self, symbol, history_data):
         """
         Mine invisible patterns from market data.
         

@@ -20,6 +20,7 @@ from encryption.xmss_encryption import XMSSEncryption
 import traceback
 from dataclasses import dataclass
 from enum import Enum, auto
+from typing import Dict, Union
 
 class JetDirection(Enum):
     HAWKISH = auto()

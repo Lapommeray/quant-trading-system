@@ -148,7 +148,7 @@ class TestAntiLossSystems(unittest.TestCase):
             
         result = self.guardian.check_anti_loss_conditions(portfolio_value=100000, current_positions={})
         self.assertFalse(result["allowed"])
-        self.assertEqual(result["action"], "pause_trading")
+        self.assertEqual(result["action"], "emergency_mode")
         
     def test_integration_of_all_systems(self):
         """Test integration of all anti-loss systems"""

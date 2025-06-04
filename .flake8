@@ -1,0 +1,29 @@
+[flake8]
+max-line-length = 88
+extend-ignore = 
+    E203,  # whitespace before ':'
+    W503,  # line break before binary operator
+    E501,  # line too long (handled by black)
+    F401,  # imported but unused (handled by other tools)
+exclude = 
+    .git,
+    __pycache__,
+    build,
+    dist,
+    .tox,
+    .eggs,
+    *.egg-info,
+    .venv,
+    venv,
+    env,
+    Deco_*,
+    QMP_*,
+    Sa_son_code,
+    migrations,
+    .mypy_cache
+per-file-ignores =
+    __init__.py:F401
+    */tests/*:S101,D103
+max-complexity = 10
+import-order-style = google
+application-import-names = core,modules,advanced_modules,defense,arbitrage,data,market_intelligence,ultra_modules

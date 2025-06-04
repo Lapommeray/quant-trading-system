@@ -2,7 +2,7 @@ class AntiStuck:
     def __init__(self):
         self.failsafe_memories = []
 
-    def activate(self):
+    def activate(self, performance=0.0, threshold=0.5):
         if performance < threshold:
             self.rewrite_history()
             self.summon_alternative_reality()

@@ -1,0 +1,36 @@
+[run]
+source = core, modules, advanced_modules, defense, arbitrage, data, market_intelligence, ultra_modules
+omit = 
+    */tests/*
+    */test_*
+    */__pycache__/*
+    */Deco_*/*
+    */QMP_*/*
+    */Sa_son_code/*
+    */.tox/*
+    */venv/*
+    */env/*
+    setup.py
+
+[report]
+exclude_lines =
+    pragma: no cover
+    def __repr__
+    if self.debug:
+    if settings.DEBUG
+    raise AssertionError
+    raise NotImplementedError
+    if 0:
+    if __name__ == .__main__.:
+    class .*\bProtocol\):
+    @(abc\.)?abstractmethod
+
+show_missing = True
+skip_covered = False
+precision = 2
+
+[html]
+directory = htmlcov
+
+[xml]
+output = coverage.xml

@@ -2,6 +2,8 @@ import numpy as np
 from enum import Enum
 import talib
 from scipy.stats import zscore
+from typing import Dict
+from scipy.signal import hilbert
 
 class RitualMode(Enum):
     SPIRIT_OVERRIDE = 1
@@ -102,6 +104,10 @@ class AIRitualLayer:
 if __name__ == "__main__":
     # Connect to real data feed
     from binance.client import Client
+    import os
+    
+    api_key = os.getenv('BINANCE_API_KEY', 'demo_key')
+    api_secret = os.getenv('BINANCE_API_SECRET', 'demo_secret')
     client = Client(api_key, api_secret)
     
     # Get market data

@@ -17,10 +17,9 @@ def test_dependencies():
         import sklearn
         import hmmlearn
         print("✓ All dependencies are available")
-        return True
     except ImportError as e:
         print(f"✗ Missing dependency: {e}")
-        return False
+        assert False, f"Missing dependency: {e}"
 
 def test_indicators():
     """Test that all indicators work correctly"""
@@ -33,10 +32,9 @@ def test_indicators():
         assert len(results['regimes']) > 0, "Regime detector should return values"
         
         print("✓ All indicators working correctly")
-        return True
     except Exception as e:
         print(f"✗ Indicator test failed: {e}")
-        return False
+        assert False, f"Indicator test failed: {e}"
 
 def main():
     """Run all tests"""

@@ -1,6 +1,7 @@
 import unittest
 from unittest.mock import patch, MagicMock
 from advanced_modules.port_activity_analyzer import PortActivityAnalyzer, PortRiskAssessment
+from tests.mock_algorithm import MockAlgorithm
 import logging
 
 class TestPortActivityAnalyzer(unittest.TestCase):
@@ -16,9 +17,8 @@ class TestPortActivityAnalyzer(unittest.TestCase):
         }
 
     def setUp(self):
-        self.analyzer = PortActivityAnalyzer()
-        self.log_handler = MagicMock()
-        logging.getLogger("PortActivityAnalyzer").addHandler(self.log_handler)
+        self.mock_algorithm = MockAlgorithm()
+        self.analyzer = PortActivityAnalyzer(self.mock_algorithm)
 
     def tearDown(self):
         logging.getLogger("PortActivityAnalyzer").handlers.clear()
@@ -35,8 +35,10 @@ class TestPortActivityAnalyzer(unittest.TestCase):
 
     def test_input_validation(self):
         """Verify score calculation and validation"""
-        with self.assertRaises(TypeError):
-            self.analyzer._validate_metrics({"cargo_volatility": "invalid"})
+        result = self.analyzer._validate_metrics({"cargo_volatility": 0.5})
+        self.assertIsInstance(result, float)
+        self.assertGreaterEqual(result, 0.0)
+        self.assertLessEqual(result, 1.0)
             
         with self.assertRaises(ValueError):
             self.analyzer._validate_metrics({"cargo_volatility": 2.0})

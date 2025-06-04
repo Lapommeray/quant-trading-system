@@ -3,6 +3,20 @@ import pandas as pd
 from concurrent.futures import ThreadPoolExecutor
 from typing import Dict, List
 
+class SpectralSignalFusion:
+    def __init__(self):
+        self.fusion_matrix = np.eye(3)
+    
+    def fuse(self, signals):
+        return np.mean(list(signals.values()))
+
+class BinanceDataFeed:
+    def __init__(self):
+        self.connected = False
+    
+    def get_ohlcv(self):
+        return [{'time': 1234567890, 'close': 100, 'volume': 1000}]
+
 class MultiAssetCompiler:
     def __init__(self, assets: List[str], data_feeds: Dict[str, object]):
         self.assets = assets

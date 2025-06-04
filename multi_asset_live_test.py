@@ -26,7 +26,7 @@ from quantum_finance.quantum_risk_measures import QuantumRiskMeasures
 
 from core.simplified_conscious_signal_generator import ConsciousSignalGenerator
 from core.meta_conscious_routing_layer import MetaConsciousRouter
-from ai.spectral_signal_fusion import SpectralSignalFusion
+from advanced_modules.spectral_signal_fusion import SpectralSignalFusion
 
 logging.basicConfig(
     level=logging.INFO,
@@ -83,7 +83,7 @@ class MultiAssetLiveTest:
         self.signal_generator = ConsciousSignalGenerator()
         self.meta_router = MetaConsciousRouter()
         # Initialize with empty signals list, will be populated during signal generation
-        self.signal_fusion = SpectralSignalFusion(signal_inputs=[])
+        self.signal_fusion = SpectralSignalFusion()
         
         self.logger.info("All components initialized successfully")
         

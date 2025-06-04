@@ -14,9 +14,22 @@ class DNAOverlord:
         self.assets = {
             AssetClass.CRYPTO: [
                 {'symbol': 'BTC/USDT', 'spirit': 0.0, 'liquidity': 0.0},
-                # ... other crypto pairs ...
+                {'symbol': 'ETH/USDT', 'spirit': 0.0, 'liquidity': 0.0},
+                {'symbol': 'DOGE/USDT', 'spirit': 0.0, 'liquidity': 0.0},
             ],
-            # ... other asset classes ...
+            AssetClass.FOREX: [
+                {'symbol': 'XAU/USD', 'spirit': 0.0, 'liquidity': 0.0},
+                {'symbol': 'USD/JPY', 'spirit': 0.0, 'liquidity': 0.0},
+                {'symbol': 'EUR/USD', 'spirit': 0.0, 'liquidity': 0.0},
+            ],
+            AssetClass.COMMODITIES: [
+                {'symbol': 'OIL/USD', 'spirit': 0.0, 'liquidity': 0.0},
+                {'symbol': 'XAU/USD', 'spirit': 0.0, 'liquidity': 0.0},
+            ],
+            AssetClass.INDICES: [
+                {'symbol': 'US30', 'spirit': 0.0, 'liquidity': 0.0},
+                {'symbol': 'SPX500', 'spirit': 0.0, 'liquidity': 0.0},
+            ],
         }
         self.last_scan = datetime.min
 

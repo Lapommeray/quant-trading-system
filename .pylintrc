@@ -1,0 +1,42 @@
+[MASTER]
+init-hook='import sys; sys.path.append(".")'
+ignore=Deco_*,QMP_*,Sa_son_code
+ignore-patterns=test_.*\.py,.*_test\.py
+
+[MESSAGES CONTROL]
+disable=
+    C0103,  # Invalid name
+    C0111,  # Missing docstring
+    R0903,  # Too few public methods
+    R0913,  # Too many arguments
+    R0914,  # Too many local variables
+    R0915,  # Too many statements
+    W0613,  # Unused argument
+    W0622,  # Redefined builtin
+    E1101,  # Instance has no member (false positives with numpy/pandas)
+    C0415,  # Import outside toplevel
+
+[FORMAT]
+max-line-length=88
+good-names=i,j,k,ex,Run,_,x,y,z,df,ax,fig
+
+[DESIGN]
+max-args=10
+max-locals=20
+max-returns=6
+max-branches=15
+max-statements=50
+max-parents=7
+max-attributes=10
+min-public-methods=1
+max-public-methods=25
+
+[SIMILARITIES]
+min-similarity-lines=4
+ignore-comments=yes
+ignore-docstrings=yes
+ignore-imports=no
+
+[TYPECHECK]
+ignored-modules=numpy,pandas,scipy,sklearn,tensorflow,torch,qiskit,geomstats,gtda
+ignored-classes=SQLObject,optparse.Values,thread._local,_thread._local

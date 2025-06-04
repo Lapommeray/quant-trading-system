@@ -5,7 +5,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
-from test_advanced_modules import test_advanced_modules
+from tests.test_advanced_modules import main as test_advanced_modules
 from module_factory import get_module_factory
 
 def run_comprehensive_tests():

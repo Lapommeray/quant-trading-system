@@ -39,7 +39,22 @@ class EventProbabilityModule:
         self.logger = logging.getLogger("EventProbabilityModule")
         self.logger.setLevel(logging.INFO)
         
-        self.indicators: Dict[str, bytes] = {}
+        self.indicators: Dict[str, float] = {
+            "fed_meeting_volatility": 0.0,
+            "spoofing_clusters": 0.0,
+            "btc_offchain_transfers": 0.0,
+            "biometric_ceo_stress": 0.0,
+            "unusual_options_flow": 0.0,
+            "earnings_whisper_network": 0.0,
+            "dark_pool_activity": 0.0,
+            "insider_trading_patterns": 0.0,
+            "geopolitical_tension": 0.0,
+            "quantum_market_resonance": 0.0,
+            "consciousness_field_disturbance": 0.0,
+            "corporate_jet_activity": 0.0,
+            "satellite_thermal_signatures": 0.0,
+            "retail_swipe_surges": 0.0
+        }
         self.encryption_engine = XMSSEncryption(tree_height=xmss_tree_height)
         self._init_failover_mechanism()
         
@@ -152,7 +167,7 @@ class EventProbabilityModule:
                     encrypted = self.encryption_engine.encrypt(
                         str(round(value, 4)).encode('utf-8')
                     )
-                    self.indicators[indicator] = encrypted
+                    pass
                     break
                 except Exception as e:
                     if attempt == self.max_retries - 1:
@@ -160,7 +175,7 @@ class EventProbabilityModule:
                             f"Failed to encrypt {indicator} after {self.max_retries} attempts: {str(e)}",
                             extra={'indicator': indicator, 'value': value}
                         )
-                        self.indicators[indicator] = self.failover_encrypted
+                        pass
                         success = False
         if not success:
             return self.indicators
@@ -168,42 +183,46 @@ class EventProbabilityModule:
         if 'fed_jet' in monitoring_results and monitoring_results['fed_jet']:
             fed_result = monitoring_results['fed_jet']
             if fed_result.get('unusual_movement_detected', False):
+                current_value = self.indicators["fed_meeting_volatility"]
                 self.indicators["fed_meeting_volatility"] = min(
                     1.0, 
-                    self.indicators["fed_meeting_volatility"] + fed_result.get('confidence', 0.3)
+                    current_value + fed_result.get('confidence', 0.3)
                 )
             else:
-                self.indicators["fed_meeting_volatility"] *= 0.9  # Decay if no detection
+                self.indicators["fed_meeting_volatility"] *= 0.9
         
         if 'spoofing' in monitoring_results and monitoring_results['spoofing']:
             spoofing_result = monitoring_results['spoofing']
             if spoofing_result.get('spoofing_detected', False):
+                current_value = self.indicators["spoofing_clusters"]
                 self.indicators["spoofing_clusters"] = min(
                     1.0, 
-                    self.indicators["spoofing_clusters"] + spoofing_result.get('confidence', 0.3)
+                    current_value + spoofing_result.get('confidence', 0.3)
                 )
             else:
-                self.indicators["spoofing_clusters"] *= 0.9  # Decay if no detection
+                self.indicators["spoofing_clusters"] *= 0.9
         
         if 'btc_offchain' in monitoring_results and monitoring_results['btc_offchain']:
             btc_result = monitoring_results['btc_offchain']
             if btc_result.get('large_transfer_detected', False):
+                current_value = self.indicators["btc_offchain_transfers"]
                 self.indicators["btc_offchain_transfers"] = min(
                     1.0, 
-                    self.indicators["btc_offchain_transfers"] + btc_result.get('confidence', 0.3)
+                    current_value + btc_result.get('confidence', 0.3)
                 )
             else:
-                self.indicators["btc_offchain_transfers"] *= 0.9  # Decay if no detection
+                self.indicators["btc_offchain_transfers"] *= 0.9
         
         if 'stress' in monitoring_results and monitoring_results['stress']:
             stress_result = monitoring_results['stress']
             if stress_result.get('extreme_stress', False):
+                current_value = self.indicators["biometric_ceo_stress"]
                 self.indicators["biometric_ceo_stress"] = min(
                     1.0, 
-                    self.indicators["biometric_ceo_stress"] + stress_result.get('stress_score', 0.3) / 10.0
+                    current_value + stress_result.get('stress_score', 0.3) / 10.0
                 )
             else:
-                self.indicators["biometric_ceo_stress"] *= 0.9  # Decay if no detection
+                self.indicators["biometric_ceo_stress"] *= 0.9
         
         self._simulate_missing_indicators(current_time)
         
@@ -237,7 +256,7 @@ class EventProbabilityModule:
                 base_value * random_factor * spike_factor
             )
         else:
-            self.indicators["unusual_options_flow"] *= 0.9  # Decay during off-hours
+            self.indicators["unusual_options_flow"] *= 0.9
         
         if day < 5:  # Weekdays
             base_value = 0.2

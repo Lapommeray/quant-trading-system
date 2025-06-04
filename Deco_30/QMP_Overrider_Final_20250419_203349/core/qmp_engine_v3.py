@@ -37,7 +37,7 @@ from advanced_modules.neuromorphic_pde import NeuromorphicPDE
 from advanced_modules.quantum_execution_optimizer import QuantumExecutionOptimizer
 from advanced_modules.dark_pool_dna_decoder import DarkPoolDNADecoder
 from advanced_modules.neural_market_holography import NeuralMarketHolography
-from advanced_modules.quantum_liquidity_warper import QuantumLiquidityWarper
+from strategies.entropy_scanner import EntropyScanner
 
 class QMPUltraEngine:
     def __init__(self, algorithm):
