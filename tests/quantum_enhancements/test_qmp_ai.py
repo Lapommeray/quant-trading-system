@@ -10,7 +10,7 @@ class TestQMPAI:
     @pytest.fixture
     def agent(self):
         mock_algorithm = MockAlgorithm()
-        return QMPAIAgent(mock_algorithm)
+        return QMPAIAgent()
     
     def test_99percent_accuracy(self, agent):
         """Verifies the 99% accuracy benchmark"""
