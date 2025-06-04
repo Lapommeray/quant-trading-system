@@ -44,7 +44,7 @@ class DependencyChecker:
         """
         dependencies = {
             "python": {
-                "version": ">=3.8.0",
+                "version": "==3.10.*",
                 "required": True
             },
             "packages": {
