@@ -111,11 +111,11 @@ class VeveTriggers:
         rejection_level = 100 - love_level  # ~38.2
         
         if rsi < love_level:
-            strength = min(1.0, (love_level - rsi) / love_level)
+            strength = min(1.0, float((love_level - rsi) / love_level))
             signal = 'LOVE EMBRACE'
             message = 'Erzulie Freda embraces with love. Mean reversion upward likely.'
         elif rsi > rejection_level:
-            strength = min(1.0, (rsi - rejection_level) / (100 - rejection_level))
+            strength = min(1.0, float((rsi - rejection_level) / (100 - rejection_level)))
             signal = 'LOVE REJECTION'
             message = 'Erzulie Freda rejects with passion. Mean reversion downward likely.'
         else:

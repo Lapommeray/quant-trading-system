@@ -85,8 +85,9 @@ class QOLEngine:
             'expires': expiry
         }
         
-        if re.search(r'\d+\.\d+', message):
-            numeric = re.search(r'(\d+\.\d+)', message).group(1)
+        regex_match = re.search(r'(\d+\.\d+)', message)
+        if regex_match:
+            numeric = regex_match.group(1)
         else:
             h = hashlib.md5(message.encode()).hexdigest()
             numeric = f"{int(h[:4], 16) / 100:.3f}"
