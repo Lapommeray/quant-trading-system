@@ -18,3 +18,4 @@ hmmlearn>=0.3.0
 plotly>=4.0.0
 streamlit>=1.0.0
 python-dateutil>=2.8.0
+ccxt>=3.0.0,<5.0.0
