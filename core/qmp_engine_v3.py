@@ -27,6 +27,7 @@ from advanced_modules.port_activity_analyzer import PortActivityAnalyzer
 from advanced_modules.dna_breath import DNABreath
 from advanced_modules.dna_overlord import DNAOverlord
 from advanced_modules.spectral_signal_fusion import SpectralSignalFusion
+from advanced_modules.time_fractal_fft import TimeFractalFFT
 from advanced_modules.void_trader_chart_renderer import VoidTraderChartRenderer
 from advanced_modules.meta_conscious_routing_layer import MetaConsciousRoutingLayer
 
@@ -67,6 +68,7 @@ class QMPUltraEngine:
             'dna_breath': DNABreath(),
             'dna_overlord': DNAOverlord(),
             'spectral_fusion': SpectralSignalFusion(),
+            'time_fractal_fft': TimeFractalFFT(),
             'void_renderer': VoidTraderChartRenderer(type('MockDataFeed', (), {'get_ohlcv': lambda self, symbol, timeframe: [[1704067200000, 50000, 50100, 49900, 50050, 1000]]})()),
             'meta_routing': MetaConsciousRoutingLayer()
         }
@@ -100,6 +102,7 @@ class QMPUltraEngine:
             'dna_breath': 0.05,
             'dna_overlord': 0.05,
             'spectral_fusion': 0.05,
+            'time_fractal_fft': 0.04,
             'void_renderer': 0.05,
             'meta_routing': 0.05
         }
@@ -209,6 +212,9 @@ class QMPUltraEngine:
                 mock_signal = {'direction': 'BUY', 'confidence': 0.7}
                 mock_market_data = {'entropy': 0.5, 'liquidity': 0.8}
                 result = module.route_trading_signal(mock_signal, mock_market_data, {})
+            elif module_name == 'time_fractal_fft':
+                closes = history_data['1m']['close'].values if 'close' in history_data['1m'].columns else np.random.randn(100)
+                result = module.predict_price_direction(closes)
             else:
                 result = module.decode(symbol, history_bars)
                 
