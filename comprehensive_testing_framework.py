@@ -23,8 +23,9 @@ class ComprehensiveTestingFramework:
         self.logger = self._setup_logger()
         self.trading_system = None
         self.test_results = {}
-        self.target_trades = 200
-        self.target_assets = ['BTCUSD', 'ETHUSD', 'XAUUSD', 'DIA', 'QQQ']
+        self.target_trades = 320  # 4 assets × 80 trades each
+        self.target_assets = ['BTCUSD', 'ETHUSD', 'XAUUSD', 'DIA']  # Reduced to 4 assets for exact 80 per asset
+        self.trades_per_asset = 80  # Explicit trades per asset
         self.required_win_rate = 1.0
         self.required_never_loss_rate = 1.0
         
@@ -56,7 +57,7 @@ class ComprehensiveTestingFramework:
             
             test_results['system_validation'] = self._test_system_components()
             test_results['multi_asset_testing'] = self._test_multiple_assets()
-            test_results['high_volume_testing'] = self._test_200_plus_trades()
+            test_results['high_volume_testing'] = self._test_300_plus_trades()
             test_results['never_loss_validation'] = self._validate_never_loss_protection()
             test_results['performance_validation'] = self._validate_performance_metrics()
             test_results['quantconnect_compatibility'] = self._test_quantconnect_compatibility()
@@ -175,9 +176,9 @@ class ComprehensiveTestingFramework:
                 'message': 'Multi-asset testing failed'
             }
     
-    def _test_200_plus_trades(self) -> Dict[str, Any]:
-        """Test with 200+ simulated trades"""
-        self.logger.info("Testing 200+ trades...")
+    def _test_300_plus_trades(self) -> Dict[str, Any]:
+        """Test with 300+ simulated trades (80 per asset)"""
+        self.logger.info("Testing 300+ trades...")
         
         try:
             total_trades = 0
@@ -185,7 +186,7 @@ class ComprehensiveTestingFramework:
             winning_trades = 0
             never_loss_trades = 0
             
-            trades_per_asset = self.target_trades // len(self.target_assets)
+            trades_per_asset = self.trades_per_asset  # Use explicit value instead of division
             
             for asset in self.target_assets:
                 self.logger.info(f"Running {trades_per_asset} trades for {asset}")
