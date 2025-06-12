@@ -27,7 +27,7 @@ class QuantumTremorScanner:
     def _detect_volume_anomalies(self, symbol: str, volumes: List[float]) -> bool:
         """Identifies abnormal volume spikes"""
         threshold = self.volume_thresholds.get(symbol, 100)
-        return volumes[-1] > (2 * np.mean(volumes[-20:])) and volumes[-1] > threshold
+        return bool(volumes[-1] > (2 * np.mean(volumes[-20:])) and volumes[-1] > threshold)
 
     def _analyze_price_microstructure(self, symbol: str) -> Dict:
         """Deep analysis of order book dynamics"""

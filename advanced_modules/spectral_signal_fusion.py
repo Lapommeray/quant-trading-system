@@ -44,7 +44,7 @@ class SpectralSignalFusion:
         self.spectral_cache = {}
         self.hilbert_window = 14
         
-    def fuse_signals(self, asset_class: str = 'crypto', components: SpectralComponents = None) -> float:
+    def fuse_signals(self, asset_class: str = 'crypto', components: Optional[SpectralComponents] = None) -> float:
         """
         Fuse multi-dimensional signals using advanced spectral analysis
         
@@ -164,7 +164,8 @@ class SpectralSignalFusion:
         """Calculate spectral power using FFT"""
         try:
             fft_result = fft(complex_signal)
-            power_spectrum = np.abs(fft_result) ** 2
+            fft_magnitude = np.abs(fft_result)
+            power_spectrum = fft_magnitude * fft_magnitude
             
             total_power = np.sum(power_spectrum)
             
@@ -197,7 +198,7 @@ class SpectralSignalFusion:
         
         return max(-1.0, min(1.0, final))
         
-    def _analyze_price_spectrum(self, prices: np.ndarray) -> SpectralComponents:
+    def _analyze_price_spectrum(self, prices) -> SpectralComponents:
         """Analyze price data to extract spectral components"""
         if len(prices) < 10:
             return SpectralComponents()
@@ -219,8 +220,8 @@ class SpectralSignalFusion:
         return SpectralComponents(
             quantum=quantum,
             emotion=emotion,
-            volatility=volatility,
-            trend=trend,
+            volatility=float(volatility),
+            trend=float(trend),
             entropy=entropy,
             void=void
         )
@@ -233,7 +234,7 @@ class SpectralSignalFusion:
         high_freq = returns[-5:]
         quantum_energy = np.var(high_freq) / (np.var(returns) + 1e-10)
         
-        return min(1.0, quantum_energy)
+        return min(1.0, float(quantum_energy))
         
     def _extract_emotional_component(self, returns: np.ndarray) -> float:
         """Extract emotional momentum component"""
@@ -245,7 +246,7 @@ class SpectralSignalFusion:
         
         emotion = (short_momentum - long_momentum) * 10
         
-        return max(-1.0, min(1.0, emotion))
+        return max(-1.0, min(1.0, float(emotion)))
         
     def _calculate_entropy(self, returns: np.ndarray) -> float:
         """Calculate Shannon entropy of returns"""
@@ -328,7 +329,8 @@ class SpectralSignalFusion:
         
         try:
             fft_result = fft(returns)
-            power_spectrum = np.abs(fft_result) ** 2
+            fft_magnitude = np.abs(fft_result)
+            power_spectrum = fft_magnitude * fft_magnitude
             
             n_harmonics = min(3, len(power_spectrum) // 4)
             harmonics = []
@@ -349,7 +351,7 @@ class SpectralSignalFusion:
             
         recent_signals = [entry['signal'] for entry in self.fusion_history[-10:]]
         
-        return np.mean(np.abs(recent_signals))
+        return float(np.mean(np.abs(recent_signals)))
         
     def optimize_weights(self, performance_data: List[Dict]):
         """Optimize spectral weights based on performance data"""

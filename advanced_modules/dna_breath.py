@@ -5,7 +5,7 @@ from datetime import datetime
 from scipy.stats import zscore
 from scipy.signal import hilbert
 from enum import Enum
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 
 class MarketState(Enum):
     EXPANSION = 1
@@ -17,7 +17,9 @@ class BreathConfig:
     base_risk: float = 0.02
     max_risk: float = 0.05
     min_risk: float = 0.005
-    emotion_weights: Dict[str, float] = None
+    emotion_weights: Dict[str, float] = field(default_factory=lambda: {
+        'fear': 0.8, 'greed': 0.9, 'neutral': 0.5, 'euphoria': 1.0, 'panic': 1.2
+    })
 
 class DNABreath:
     """
@@ -104,7 +106,7 @@ class DNABreath:
         """Converts emotion to risk modifier"""
         return self.config.emotion_weights.get(emotion.lower(), 1.0)
         
-    def _extract_dna_pattern(self, prices: np.ndarray) -> List[int]:
+    def _extract_dna_pattern(self, prices) -> List[int]:
         """Extract binary DNA sequence from price movements"""
         if len(prices) < 2:
             return [0, 1, 0, 1]
@@ -114,9 +116,9 @@ class DNABreath:
         
         self.dna_sequences.append(binary_sequence[-10:].tolist())
         
-        return binary_sequence[-10:].tolist()
+        return list(binary_sequence[-10:].astype(int))
         
-    def _detect_market_emotion(self, prices: np.ndarray) -> str:
+    def _detect_market_emotion(self, prices) -> str:
         """Detect dominant market emotion from price action"""
         if len(prices) < 14:
             return 'neutral'
@@ -138,13 +140,13 @@ class DNABreath:
         else:
             return 'neutral'
             
-    def _calculate_volatility(self, prices: np.ndarray) -> float:
+    def _calculate_volatility(self, prices) -> float:
         """Calculate current volatility"""
         if len(prices) < 2:
             return 0.02
             
         returns = np.diff(prices) / prices[:-1]
-        return np.std(returns[-14:]) if len(returns) >= 14 else np.std(returns)
+        return float(np.std(returns[-14:]) if len(returns) >= 14 else np.std(returns))
         
     def _calculate_breathing_factor(self) -> float:
         """Calculate fractal breathing pattern factor"""
@@ -165,7 +167,7 @@ class DNABreath:
         probabilities = counts / len(sequence)
         entropy = -np.sum(probabilities * np.log2(probabilities + 1e-10))
         
-        return entropy
+        return float(entropy)
         
     def _calculate_fractal_dimension(self, series: np.ndarray) -> float:
         """Calculate Higuchi fractal dimension"""
