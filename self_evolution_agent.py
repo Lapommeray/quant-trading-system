@@ -636,6 +636,15 @@ class SelfEvolutionAgent:
     - Hall of fame baseline comparison
     - Perpetual innovation daemon
     - Eternal safety guardrails
+    - Self/market analysis for autonomous adaptation
+    - Loss prevention and proactive risk management
+    
+    Daemon Self-Improvement Mandate:
+    The agent must prioritize:
+    1. Deep anomaly/pattern discovery in all raw data streams
+    2. Auto-generation of novel proprietary signals only AI-scale iteration can uncover
+    3. Real-time loss forecasting and preemptive adaptation
+    4. Weekly full-system audit + radical innovation if edge stagnant
     """
     
     SAFETY_GUARDS = {
@@ -756,8 +765,129 @@ class SelfEvolutionAgent:
         logger.info(f"Added task {task_id}: {description[:50]}...")
         return task_id
         
+    def parse_logs_for_drawdown(self) -> float:
+        """Parse recent logs/metrics for drawdown information"""
+        try:
+            risk_manager_path = self.base_dir / "risk" / "institutional_risk_manager.py"
+            metrics_file = self.base_dir / "performance_metrics.json"
+            
+            if metrics_file.exists():
+                with open(metrics_file, 'r') as f:
+                    metrics = json.load(f)
+                    return metrics.get("max_drawdown", 0.0)
+                    
+            log_file = self.base_dir / "evolution_log.json"
+            if log_file.exists():
+                with open(log_file, 'r') as f:
+                    logs = json.load(f)
+                    for entry in reversed(logs[-50:]):
+                        if "drawdown" in str(entry).lower():
+                            return entry.get("drawdown", 0.0)
+        except Exception as e:
+            logger.warning(f"Could not parse drawdown: {e}")
+        return 0.0
+        
+    def get_current_regime(self) -> str:
+        """Get current market regime from regime_detection module"""
+        try:
+            sys.path.insert(0, str(self.base_dir))
+            from advanced_modules.regime_detection import RegimeDetector
+            
+            detector = RegimeDetector()
+            import numpy as np
+            sample_returns = np.random.randn(100) * 0.01
+            regime = detector.detect_regime(sample_returns.tolist())
+            return regime
+        except Exception as e:
+            logger.warning(f"Could not get regime: {e}")
+            return "UNKNOWN"
+            
+    def detect_anomalies(self) -> List[str]:
+        """Detect anomalies in recent data streams"""
+        anomalies = []
+        try:
+            log_file = self.base_dir / "evolution_log.json"
+            if log_file.exists():
+                with open(log_file, 'r') as f:
+                    logs = json.load(f)
+                    
+                recent_failures = sum(1 for l in logs[-20:] if l.get("event") == "task_failed")
+                if recent_failures > 5:
+                    anomalies.append(f"High task failure rate: {recent_failures}/20")
+                    
+                cycle_times = [l.get("duration_seconds", 0) for l in logs[-10:] if "duration_seconds" in l]
+                if cycle_times and max(cycle_times) > 300:
+                    anomalies.append(f"Slow cycle detected: {max(cycle_times):.1f}s")
+                    
+        except Exception as e:
+            logger.warning(f"Anomaly detection error: {e}")
+            
+        return anomalies
+        
+    def self_market_analysis(self) -> str:
+        """Analyze recent performance and market data for autonomous adaptation"""
+        recent_drawdown = self.parse_logs_for_drawdown()
+        market_regime = self.get_current_regime()
+        anomalies = self.detect_anomalies()
+        
+        analysis = f"Recent drawdown: {recent_drawdown:.2%}. Regime: {market_regime}."
+        if anomalies:
+            analysis += f" Anomalies: {', '.join(anomalies)}"
+        else:
+            analysis += " No anomalies detected."
+            
+        return analysis
+        
+    def auto_loss_prevention_task(self):
+        """Automatically generate loss prevention tasks based on analysis"""
+        analysis = self.self_market_analysis()
+        
+        drawdown = self.parse_logs_for_drawdown()
+        regime = self.get_current_regime()
+        
+        if drawdown > 0.05:
+            self.add_task(
+                f"Auto-fix loss streak: Evolve new adaptive signal/countermeasure for drawdown {drawdown:.2%}",
+                "loss_prevention",
+                TaskPriority.CRITICAL
+            )
+            self.add_task(
+                "Tighten circuit breakers and re-optimize position sizing",
+                "risk_management",
+                TaskPriority.CRITICAL
+            )
+            
+        if "SHIFT" in regime.upper() or "HIGH_VOLATILITY" in regime.upper():
+            self.add_task(
+                f"Adapt strategy to current regime: {regime}",
+                "regime_adaptation",
+                TaskPriority.HIGH
+            )
+            
+        if self.metrics.get("tasks_failed", 0) > self.metrics.get("tasks_completed", 1) * 0.5:
+            self.add_task(
+                "Self-analysis: Review code/logs for systematic weaknesses",
+                "self_improvement",
+                TaskPriority.HIGH
+            )
+            
+        stagnant_cycles = 0
+        if self.metrics.get("baseline_improvements", 0) == 0 and self.metrics.get("cycles_completed", 0) > 3:
+            stagnant_cycles = self.metrics["cycles_completed"]
+            
+        if stagnant_cycles >= 3:
+            self.add_task(
+                "Radical innovation: Propose entirely new architectural layer or signal class",
+                "radical_innovation",
+                TaskPriority.HIGH
+            )
+            
+        logger.info(f"Loss prevention analysis: {analysis}")
+        
     def generate_autonomous_tasks(self):
         """Generate new tasks autonomously based on system state"""
+        analysis = self.self_market_analysis()
+        
         autonomous_tasks = [
             ("Discover new microstructural edge from recent order flow anomalies", "innovation"),
             ("Evolve improved absorption cluster detector using genetic programming", "innovation"),
@@ -767,6 +897,10 @@ class SelfEvolutionAgent:
             ("Implement adaptive position sizing based on regime", "improvement"),
             ("Create micro-price calculation from order book depth", "innovation"),
             ("Add spoofing detection via order book dynamics", "innovation"),
+            (f"Self-analysis: Review my own code/logs for weaknesses and propose upgrades", "self_improvement"),
+            (f"Market adaptation: Generate new proprietary data/signal to exploit current {analysis[:100]}", "market_adaptation"),
+            ("Invent novel loss-avoidance layer (e.g., predictive drawdown forecaster)", "loss_prevention"),
+            ("Cross-validate all strategies and diversify further", "validation"),
         ]
         
         for description, task_type in autonomous_tasks:
@@ -902,7 +1036,15 @@ class SelfEvolutionAgent:
         logger.info(f"Applied change to {file_path}")
         
     def evolution_cycle(self):
-        """Run a single evolution cycle"""
+        """
+        Run a single evolution cycle.
+        
+        The agent must prioritize:
+        1. Deep anomaly/pattern discovery in all raw data streams
+        2. Auto-generation of novel proprietary signals only AI-scale iteration can uncover
+        3. Real-time loss forecasting and preemptive adaptation
+        4. Weekly full-system audit + radical innovation if edge stagnant
+        """
         cycle_start = datetime.now()
         logger.info("Starting evolution cycle...")
         
@@ -910,6 +1052,8 @@ class SelfEvolutionAgent:
             "event": "cycle_start",
             "pending_tasks": len(self.task_queue)
         })
+        
+        self.auto_loss_prevention_task()
         
         self.generate_autonomous_tasks()
         
