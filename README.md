@@ -97,6 +97,95 @@ cd covid_test
 python run_covid_test_quantum.py
 ```
 
+## Perpetual Innovation Daemon
+
+The system includes a self-evolving agent that continuously improves trading strategies through autonomous research and code generation.
+
+### Quick Start
+
+```bash
+# Set your LLM API key (OpenAI, Grok, or Claude)
+export LLM_API_KEY="your-api-key"
+
+# Run single evolution cycle demo
+python self_evolution_agent.py --demo
+
+# Start perpetual daemon (runs every 24 hours)
+python self_evolution_agent.py --daemon
+
+# Start with auto-apply for approved changes
+python self_evolution_agent.py --daemon --auto-apply
+```
+
+### Features
+
+The perpetual innovation daemon implements:
+- Multi-agent debate system (researcher → coder → critic → tester)
+- Autonomous research ingestion from arXiv
+- Genetic feature evolution using symbolic regression
+- Hall of fame baseline comparison
+- Eternal safety guardrails
+
+## One-Click Colab / Live Setup
+
+```python
+# In Google Colab
+!git clone https://github.com/Lapommeray/quant-trading-system.git
+%cd quant-trading-system
+!python install_dependencies.py
+
+# Start the system
+!python self_evolution_agent.py --demo
+```
+
+## MT5 Live Trading
+
+```python
+from mt5_live_engine import MT5LiveEngine, OrderRequest, OrderSide
+
+# Initialize engine (auto-detects MT5/IBKR/Simulation)
+engine = MT5LiveEngine()
+engine.connect()
+
+# Place order with smart routing
+order = OrderRequest(
+    symbol="EURUSD",
+    side=OrderSide.BUY,
+    quantity=0.1
+)
+result = engine.place_order(order)
+```
+
+## Safety Governance
+
+All live trading requires human confirmation for the first 100 trades:
+
+```python
+from safety_governance import SafetyGovernanceSystem
+
+system = SafetyGovernanceSystem(paper_mode=False)
+
+# Request trade authorization
+authorized, message, auth = system.authorize_trade(
+    symbol="EURUSD",
+    side="buy",
+    quantity=0.1
+)
+
+# If pending, confirm with code
+if auth and auth.confirmation_code:
+    system.confirm_trade(auth.trade_id, auth.confirmation_code)
+```
+
+Emergency kill switch:
+```python
+# Activate
+system.activate_kill_switch("Market anomaly detected", "admin")
+
+# Deactivate (requires cooldown)
+system.deactivate_kill_switch("admin", force=True)
+```
+
 ## License
 
 Proprietary - All rights reserved
