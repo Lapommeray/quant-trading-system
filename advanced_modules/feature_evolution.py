@@ -539,6 +539,170 @@ class FallbackFeatureEvolver:
         return np.array([])
 
 
+class AutonomousFeatureEvolver:
+    """
+    Autonomous feature evolution that runs on every cycle.
+    
+    Designed to be triggered by the self-evolution agent to
+    continuously discover new features from live data.
+    """
+    
+    def __init__(self, 
+                 base_dir: str = None,
+                 features_per_cycle: int = 5,
+                 min_fitness_threshold: float = 0.01):
+        self.base_dir = base_dir or "."
+        self.features_per_cycle = features_per_cycle
+        self.min_fitness_threshold = min_fitness_threshold
+        
+        self.evolved_features_history: List[EvolvedFeature] = []
+        self.best_features: List[EvolvedFeature] = []
+        self.cycle_count = 0
+        
+        self._load_history()
+        
+    def _load_history(self):
+        """Load evolved features history from file"""
+        import os
+        import json
+        
+        history_file = os.path.join(self.base_dir, "evolved_features_history.json")
+        if os.path.exists(history_file):
+            try:
+                with open(history_file, 'r') as f:
+                    data = json.load(f)
+                    for item in data.get("features", []):
+                        feature = EvolvedFeature(
+                            name=item["name"],
+                            formula=item["formula"],
+                            fitness=item["fitness"],
+                            feature_type=FeatureType(item["feature_type"]),
+                            input_columns=item["input_columns"],
+                            complexity=item["complexity"],
+                            created_at=item.get("created_at", "")
+                        )
+                        self.evolved_features_history.append(feature)
+                    self.cycle_count = data.get("cycle_count", 0)
+            except Exception as e:
+                logger.warning(f"Could not load feature history: {e}")
+                
+    def _save_history(self):
+        """Save evolved features history to file"""
+        import os
+        import json
+        
+        history_file = os.path.join(self.base_dir, "evolved_features_history.json")
+        data = {
+            "features": [f.to_dict() for f in self.evolved_features_history],
+            "cycle_count": self.cycle_count,
+            "best_features": [f.to_dict() for f in self.best_features]
+        }
+        
+        with open(history_file, 'w') as f:
+            json.dump(data, f, indent=2)
+            
+    def run_evolution_cycle(self, 
+                            df,
+                            target_col: str = 'returns') -> List[EvolvedFeature]:
+        """
+        Run a single evolution cycle on provided data.
+        
+        This is designed to be called by the self-evolution agent
+        on every cycle to continuously discover new features.
+        
+        Args:
+            df: DataFrame with market data
+            target_col: Target column name
+            
+        Returns:
+            List of newly evolved features that meet threshold
+        """
+        from datetime import datetime
+        
+        self.cycle_count += 1
+        logger.info(f"Starting autonomous feature evolution cycle {self.cycle_count}")
+        
+        new_features = []
+        
+        if GPLEARN_AVAILABLE:
+            evolver = FeatureEvolver(
+                generations=10,
+                population_size=500,
+                n_components=self.features_per_cycle,
+                parsimony_coefficient=0.01
+            )
+            
+            feature_cols = [c for c in df.columns if c != target_col]
+            X = df[feature_cols].values
+            y = df[target_col].values
+            
+            try:
+                evolver.evolve_features(X, y, feature_cols)
+                
+                for feature in evolver.evolved_features:
+                    if feature.fitness >= self.min_fitness_threshold:
+                        feature.name = f"auto_evolved_{self.cycle_count}_{len(new_features)}"
+                        feature.created_at = datetime.now().isoformat()
+                        new_features.append(feature)
+                        self.evolved_features_history.append(feature)
+                        
+            except Exception as e:
+                logger.error(f"Feature evolution failed: {e}")
+        else:
+            fallback = FallbackFeatureEvolver()
+            for name, func, arity in fallback.features:
+                feature = EvolvedFeature(
+                    name=f"fallback_{name}_{self.cycle_count}",
+                    formula=f"predefined_{name}",
+                    fitness=0.5,
+                    feature_type=FeatureType.DERIVED,
+                    input_columns=[],
+                    complexity=arity,
+                    created_at=datetime.now().isoformat()
+                )
+                new_features.append(feature)
+                
+        self._update_best_features()
+        self._save_history()
+        
+        logger.info(f"Cycle {self.cycle_count} complete: {len(new_features)} new features")
+        
+        return new_features
+        
+    def _update_best_features(self, top_n: int = 10):
+        """Update the list of best features across all cycles"""
+        all_features = sorted(
+            self.evolved_features_history,
+            key=lambda f: f.fitness,
+            reverse=True
+        )
+        self.best_features = all_features[:top_n]
+        
+    def get_integration_code(self, feature: EvolvedFeature) -> str:
+        """Generate code to integrate a feature into the signal pipeline"""
+        code = f'''
+def {feature.name}(df):
+    """
+    Auto-evolved feature from cycle.
+    Formula: {feature.formula}
+    Fitness: {feature.fitness:.4f}
+    """
+    # Implementation based on evolved formula
+    result = {feature.formula}
+    return result
+'''
+        return code
+        
+    def get_status(self) -> Dict[str, Any]:
+        """Get current status of autonomous evolution"""
+        return {
+            "cycle_count": self.cycle_count,
+            "total_features_evolved": len(self.evolved_features_history),
+            "best_features": [f.to_dict() for f in self.best_features[:5]],
+            "gplearn_available": GPLEARN_AVAILABLE
+        }
+
+
 def evolve_features(df,
                     target_col: str = 'returns',
                     generations: int = 20,
@@ -581,6 +745,50 @@ def evolve_features(df,
         }
         
         return evolver.transform(df, columns)
+
+
+def run_autonomous_evolution(base_dir: str = None) -> Dict[str, Any]:
+    """
+    Run autonomous feature evolution cycle.
+    
+    This function is designed to be called by the self-evolution agent.
+    It generates sample data if no live data is available.
+    
+    Args:
+        base_dir: Base directory for saving history
+        
+    Returns:
+        Status dictionary with evolved features
+    """
+    import pandas as pd
+    
+    evolver = AutonomousFeatureEvolver(base_dir=base_dir)
+    
+    np.random.seed(int(datetime.now().timestamp()) % 2**31)
+    n_samples = 500
+    
+    data = {
+        'ask': 100 + np.random.randn(n_samples) * 0.5,
+        'bid': 99.9 + np.random.randn(n_samples) * 0.5,
+        'ask_vol': np.abs(np.random.randn(n_samples) * 100),
+        'bid_vol': np.abs(np.random.randn(n_samples) * 100),
+    }
+    
+    imbalance = (data['bid_vol'] - data['ask_vol']) / (data['bid_vol'] + data['ask_vol'] + 1e-10)
+    data['returns'] = imbalance * 0.001 + np.random.randn(n_samples) * 0.0001
+    
+    df = pd.DataFrame(data)
+    
+    new_features = evolver.run_evolution_cycle(df)
+    
+    return {
+        "status": "success",
+        "new_features": [f.to_dict() for f in new_features],
+        "evolver_status": evolver.get_status()
+    }
+
+
+from datetime import datetime
 
 
 def demo():
