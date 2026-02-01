@@ -1,16 +1,20 @@
 """
-Self-Evolution Agent
+Self-Evolution Agent - Perpetual Ascension Engine
 
-A safe, gated self-improvement agent that enables the trading system to autonomously
-evolve by detecting errors, proposing fixes, generating new features, and validating
-changes through comprehensive testing.
+A fully autonomous, perpetually self-improving trading system that:
+- Runs as a continuous innovation daemon
+- Uses multi-agent debate (researcher → coder → critic → tester)
+- Ingests cutting-edge research from arXiv/SSRN
+- Generates and tests new alpha strategies
+- Maintains a hall of fame baseline for comparison
+- Enforces eternal guardrails for safety
 
-Safety Features:
-- All changes require passing automated tests
-- Risk metrics must remain within bounds
-- File-based versioning for all changes
-- Human override capability
-- Sandboxed code execution
+Directives 17-21 Implementation:
+17. Perpetual Self-Directed Innovation Engine
+18. Autonomous Research Ingestion
+19. Infinite Architectural Expansion
+20. Self-Sustaining Performance Evolution
+21. Eternal Safeguards for Infinite Growth
 """
 
 import os
@@ -23,6 +27,8 @@ import difflib
 import traceback
 import threading
 import subprocess
+import requests
+import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional, Callable, Tuple
 from dataclasses import dataclass, field, asdict
@@ -42,6 +48,28 @@ logging.basicConfig(
 )
 logger = logging.getLogger("SelfEvolutionAgent")
 
+try:
+    from apscheduler.schedulers.background import BackgroundScheduler
+    SCHEDULER_AVAILABLE = True
+except ImportError:
+    SCHEDULER_AVAILABLE = False
+    logger.warning("APScheduler not available. Daemon mode will use simple loop.")
+
+try:
+    import git
+    GIT_AVAILABLE = True
+except ImportError:
+    GIT_AVAILABLE = False
+    logger.warning("GitPython not available. Using subprocess for git operations.")
+
+
+LLM_API_KEY = os.getenv("LLM_API_KEY") or os.getenv("OPENAI_API_KEY") or os.getenv("GROK_API_KEY")
+REPO_PATH = os.path.dirname(os.path.abspath(__file__))
+LOG_FILE = os.path.join(REPO_PATH, "evolution_log.json")
+TASK_QUEUE_FILE = os.path.join(REPO_PATH, "task_queue.json")
+HALL_OF_FAME_FILE = os.path.join(REPO_PATH, "hall_of_fame.json")
+RESEARCH_PAPERS_URL = "http://export.arxiv.org/api/query?search_query=cat:q-fin.*+OR+cat:stat.ML&sortBy=submittedDate&sortOrder=descending&max_results=20"
+
 
 class TaskPriority(Enum):
     CRITICAL = 1
@@ -60,7 +88,6 @@ class TaskStatus(Enum):
 
 @dataclass
 class EvolutionTask:
-    """A task for the evolution agent to work on"""
     id: str
     description: str
     task_type: str
@@ -72,6 +99,7 @@ class EvolutionTask:
     error: Optional[str] = None
     proposed_changes: List[Dict] = field(default_factory=list)
     test_results: Optional[Dict] = None
+    metrics_improvement: Optional[Dict] = None
     
     def to_dict(self) -> Dict:
         return {
@@ -85,13 +113,35 @@ class EvolutionTask:
             "result": self.result,
             "error": self.error,
             "proposed_changes": self.proposed_changes,
-            "test_results": self.test_results
+            "test_results": self.test_results,
+            "metrics_improvement": self.metrics_improvement
         }
 
 
 @dataclass
+class PerformanceMetrics:
+    sharpe_ratio: float = 0.0
+    sortino_ratio: float = 0.0
+    calmar_ratio: float = 0.0
+    max_drawdown: float = 0.0
+    win_rate: float = 0.0
+    profit_factor: float = 0.0
+    total_return: float = 0.0
+    volatility: float = 0.0
+    
+    def to_dict(self) -> Dict:
+        return asdict(self)
+        
+    def beats(self, other: 'PerformanceMetrics', threshold: float = 0.05) -> bool:
+        """Check if this metrics beats another by threshold"""
+        if other.sharpe_ratio == 0:
+            return self.sharpe_ratio > 0
+        improvement = (self.sharpe_ratio - other.sharpe_ratio) / abs(other.sharpe_ratio)
+        return improvement >= threshold
+
+
+@dataclass
 class CodeChange:
-    """Represents a proposed code change"""
     file_path: str
     original_content: str
     new_content: str
@@ -100,7 +150,6 @@ class CodeChange:
     diff: str = ""
     
     def compute_diff(self):
-        """Compute unified diff"""
         original_lines = self.original_content.splitlines(keepends=True)
         new_lines = self.new_content.splitlines(keepends=True)
         diff = difflib.unified_diff(
@@ -113,7 +162,7 @@ class CodeChange:
 
 
 class VersionControl:
-    """Simple file-based version control for tracking changes"""
+    """File-based version control for tracking changes"""
     
     def __init__(self, base_dir: str):
         self.base_dir = Path(base_dir)
@@ -123,19 +172,16 @@ class VersionControl:
         self.history = self._load_history()
         
     def _load_history(self) -> List[Dict]:
-        """Load version history"""
         if self.history_file.exists():
             with open(self.history_file, 'r') as f:
                 return json.load(f)
         return []
         
     def _save_history(self):
-        """Save version history"""
         with open(self.history_file, 'w') as f:
             json.dump(self.history, f, indent=2)
             
     def create_version(self, file_path: str, content: str, description: str) -> str:
-        """Create a new version of a file"""
         version_id = hashlib.sha256(
             f"{file_path}{datetime.now().isoformat()}{content}".encode()
         ).hexdigest()[:12]
@@ -162,7 +208,6 @@ class VersionControl:
         return version_id
         
     def rollback(self, version_id: str) -> bool:
-        """Rollback to a previous version"""
         for entry in self.history:
             if entry["version_id"] == version_id:
                 backup_path = Path(entry["backup_path"])
@@ -174,477 +219,469 @@ class VersionControl:
                     logger.info(f"Rolled back {entry['file_path']} to version {version_id}")
                     return True
         return False
-        
-    def get_history(self, file_path: Optional[str] = None) -> List[Dict]:
-        """Get version history, optionally filtered by file"""
-        if file_path:
-            return [e for e in self.history if e["file_path"] == file_path]
-        return self.history
 
 
-class CodeAnalyzer:
-    """Analyzes code for errors, patterns, and improvement opportunities"""
+class MultiAgentDebateSystem:
+    """
+    Multi-agent debate system for rigorous code generation.
     
-    def __init__(self, base_dir: str):
-        self.base_dir = Path(base_dir)
-        
-    def analyze_file(self, file_path: str) -> Dict[str, Any]:
-        """Analyze a Python file for issues"""
-        full_path = self.base_dir / file_path
-        
-        if not full_path.exists():
-            return {"error": f"File not found: {file_path}"}
-            
-        with open(full_path, 'r') as f:
-            content = f.read()
-            
-        results = {
-            "file_path": file_path,
-            "syntax_errors": [],
-            "import_errors": [],
-            "complexity_issues": [],
-            "suggestions": []
-        }
-        
-        try:
-            ast.parse(content)
-        except SyntaxError as e:
-            results["syntax_errors"].append({
-                "line": e.lineno,
-                "message": str(e.msg),
-                "text": e.text
-            })
-            
-        import_pattern = r'^(?:from\s+(\S+)\s+)?import\s+(.+)$'
-        for i, line in enumerate(content.split('\n'), 1):
-            match = re.match(import_pattern, line.strip())
-            if match:
-                module = match.group(1) or match.group(2).split(',')[0].strip()
-                try:
-                    __import__(module.split('.')[0])
-                except ImportError:
-                    results["import_errors"].append({
-                        "line": i,
-                        "module": module,
-                        "message": f"Module '{module}' not found"
-                    })
-                    
-        try:
-            tree = ast.parse(content)
-            for node in ast.walk(tree):
-                if isinstance(node, ast.FunctionDef):
-                    if len(node.body) > 50:
-                        results["complexity_issues"].append({
-                            "type": "long_function",
-                            "name": node.name,
-                            "line": node.lineno,
-                            "length": len(node.body)
-                        })
-        except:
-            pass
-            
-        return results
-        
-    def find_error_patterns(self, log_content: str) -> List[Dict]:
-        """Find error patterns in log content"""
-        patterns = []
-        
-        error_regex = r'(?:ERROR|Exception|Traceback).*?(?=\n\n|\Z)'
-        matches = re.findall(error_regex, log_content, re.DOTALL)
-        
-        for match in matches:
-            error_type = "unknown"
-            if "ImportError" in match:
-                error_type = "import_error"
-            elif "AttributeError" in match:
-                error_type = "attribute_error"
-            elif "TypeError" in match:
-                error_type = "type_error"
-            elif "ValueError" in match:
-                error_type = "value_error"
-            elif "KeyError" in match:
-                error_type = "key_error"
-                
-            patterns.append({
-                "type": error_type,
-                "content": match[:500],
-                "timestamp": datetime.now().isoformat()
-            })
-            
-        return patterns
-
-
-class TestRunner:
-    """Runs tests and validates changes"""
+    Agents:
+    - Researcher: Proposes new high-signal ideas
+    - Coder: Implements the proposals
+    - Critic: Reviews and critiques the code
+    - Tester: Validates through automated testing
+    """
     
-    def __init__(self, base_dir: str):
-        self.base_dir = Path(base_dir)
-        
-    def run_tests(self, test_files: Optional[List[str]] = None) -> Dict[str, Any]:
-        """Run test suite"""
-        results = {
-            "passed": 0,
-            "failed": 0,
-            "errors": [],
-            "duration": 0,
-            "timestamp": datetime.now().isoformat()
-        }
-        
-        start_time = time.time()
-        
-        try:
-            test_script = self.base_dir / "run_comprehensive_test.py"
-            if test_script.exists():
-                result = subprocess.run(
-                    [sys.executable, str(test_script)],
-                    cwd=str(self.base_dir),
-                    capture_output=True,
-                    text=True,
-                    timeout=300
-                )
-                
-                if result.returncode == 0:
-                    results["passed"] = 1
-                    results["output"] = result.stdout
-                else:
-                    results["failed"] = 1
-                    results["errors"].append(result.stderr or result.stdout)
-                    
-        except subprocess.TimeoutExpired:
-            results["errors"].append("Test timeout exceeded")
-        except Exception as e:
-            results["errors"].append(str(e))
-            
-        results["duration"] = time.time() - start_time
-        return results
-        
-    def validate_syntax(self, file_path: str, content: str) -> Tuple[bool, str]:
-        """Validate Python syntax"""
-        try:
-            ast.parse(content)
-            return True, "Syntax valid"
-        except SyntaxError as e:
-            return False, f"Syntax error at line {e.lineno}: {e.msg}"
-            
-    def run_backtest(self, strategy_params: Dict = None) -> Dict[str, Any]:
-        """Run backtest to validate strategy performance"""
-        results = {
-            "sharpe_ratio": 0.0,
-            "max_drawdown": 0.0,
-            "win_rate": 0.0,
-            "total_return": 0.0,
-            "passed": False
-        }
-        
-        import numpy as np
-        np.random.seed(42)
-        returns = np.random.normal(0.001, 0.02, 252)
-        
-        cumulative = np.cumprod(1 + returns)
-        total_return = cumulative[-1] - 1
-        
-        running_max = np.maximum.accumulate(cumulative)
-        drawdowns = (running_max - cumulative) / running_max
-        max_drawdown = np.max(drawdowns)
-        
-        sharpe = np.mean(returns) / np.std(returns) * np.sqrt(252)
-        
-        win_rate = np.sum(returns > 0) / len(returns)
-        
-        results["sharpe_ratio"] = float(sharpe)
-        results["max_drawdown"] = float(max_drawdown)
-        results["win_rate"] = float(win_rate)
-        results["total_return"] = float(total_return)
-        
-        results["passed"] = (
-            sharpe > 0.5 and 
-            max_drawdown < 0.2 and 
-            win_rate > 0.45
-        )
-        
-        return results
-
-
-class LLMInterface:
-    """Interface for LLM-based code generation"""
-    
-    def __init__(self, api_key: Optional[str] = None, provider: str = "openai"):
-        self.api_key = api_key or os.environ.get("OPENAI_API_KEY") or os.environ.get("GROK_API_KEY")
-        self.provider = provider
+    def __init__(self, llm_api_key: Optional[str] = None):
+        self.api_key = llm_api_key or LLM_API_KEY
         self.available = self.api_key is not None
         
-    def generate_code(self, prompt: str, context: str = "") -> Optional[str]:
-        """Generate code using LLM"""
+    def _call_llm(self, prompt: str, system_prompt: str = "") -> str:
+        """Call LLM API (OpenAI compatible)"""
         if not self.available:
-            logger.warning("LLM API not available, using template-based generation")
-            return self._template_generation(prompt)
+            return self._template_response(prompt)
             
-        try:
-            if self.provider == "openai":
-                return self._openai_generate(prompt, context)
-            elif self.provider == "grok":
-                return self._grok_generate(prompt, context)
-            else:
-                return self._template_generation(prompt)
-        except Exception as e:
-            logger.error(f"LLM generation failed: {e}")
-            return self._template_generation(prompt)
-            
-    def _openai_generate(self, prompt: str, context: str) -> Optional[str]:
-        """Generate using OpenAI API"""
         try:
             import openai
             client = openai.OpenAI(api_key=self.api_key)
             
+            messages = []
+            if system_prompt:
+                messages.append({"role": "system", "content": system_prompt})
+            messages.append({"role": "user", "content": prompt})
+            
             response = client.chat.completions.create(
                 model="gpt-4",
-                messages=[
-                    {"role": "system", "content": "You are an expert quantitative trading system developer. Generate clean, efficient Python code."},
-                    {"role": "user", "content": f"Context:\n{context}\n\nTask:\n{prompt}"}
-                ],
+                messages=messages,
                 max_tokens=2000,
                 temperature=0.3
             )
             
             return response.choices[0].message.content
         except Exception as e:
-            logger.error(f"OpenAI API error: {e}")
-            return None
+            logger.error(f"LLM API error: {e}")
+            return self._template_response(prompt)
             
-    def _grok_generate(self, prompt: str, context: str) -> Optional[str]:
-        """Generate using Grok API"""
-        logger.info("Grok API integration placeholder")
-        return self._template_generation(prompt)
-        
-    def _template_generation(self, prompt: str) -> str:
-        """Template-based code generation fallback"""
+    def _template_response(self, prompt: str) -> str:
+        """Template-based fallback when LLM unavailable"""
         if "order flow" in prompt.lower():
-            return self._generate_order_flow_template()
+            return self._order_flow_template()
         elif "regime" in prompt.lower():
-            return self._generate_regime_template()
-        elif "fix" in prompt.lower() or "error" in prompt.lower():
-            return self._generate_fix_template(prompt)
+            return self._regime_template()
+        elif "arbitrage" in prompt.lower():
+            return self._arbitrage_template()
+        elif "absorption" in prompt.lower():
+            return self._absorption_template()
         else:
-            return f"# Auto-generated code for: {prompt}\n# TODO: Implement\npass"
+            return f"# Template response for: {prompt[:100]}\npass"
             
-    def _generate_order_flow_template(self) -> str:
-        """Generate order flow analysis template"""
-        return '''
-import numpy as np
-from typing import Dict, Any, List
-
-class OrderFlowAnalyzer:
-    """Analyzes order flow for trading signals"""
-    
-    def __init__(self, lookback: int = 100):
-        self.lookback = lookback
-        self.imbalance_threshold = 0.6
+    def researcher_agent(self, context: str) -> str:
+        """Research agent proposes new high-signal ideas"""
+        system_prompt = """You are a quantitative researcher at a top hedge fund. 
+        Only propose ideas that are:
+        1. Mathematically rigorous and testable
+        2. Based on microstructure, statistical arbitrage, or proven quantitative methods
+        3. High-signal with clear edge hypothesis
+        Never propose pseudoscience or unproven concepts."""
         
-    def calculate_imbalance(self, bids: List[float], asks: List[float]) -> float:
-        """Calculate order book imbalance"""
+        prompt = f"""Based on the following context, propose a rigorous new high-signal trading idea:
+
+Context: {context}
+
+Provide:
+1. Clear hypothesis
+2. Mathematical foundation
+3. Data requirements
+4. Expected edge mechanism
+5. Risk considerations"""
+
+        return self._call_llm(prompt, system_prompt)
+        
+    def coder_agent(self, proposal: str) -> str:
+        """Coder agent implements the proposal"""
+        system_prompt = """You are an expert Python developer specializing in quantitative trading systems.
+        Write clean, efficient, well-documented code.
+        Follow existing code conventions.
+        Never duplicate existing functionality.
+        Include proper error handling."""
+        
+        prompt = f"""Implement the following proposal as a Python module:
+
+Proposal: {proposal}
+
+Requirements:
+1. Clean, production-ready Python code
+2. Proper type hints and docstrings
+3. Integration with existing system architecture
+4. Comprehensive error handling
+5. Unit test suggestions"""
+
+        return self._call_llm(prompt, system_prompt)
+        
+    def critic_agent(self, code: str, proposal: str) -> Dict[str, Any]:
+        """Critic agent reviews and critiques the code"""
+        system_prompt = """You are a senior code reviewer with expertise in quantitative finance.
+        Be thorough but constructive.
+        Focus on: correctness, efficiency, security, maintainability."""
+        
+        prompt = f"""Review this code implementation:
+
+Original Proposal: {proposal}
+
+Code:
+```python
+{code}
+```
+
+Provide:
+1. Bugs or logical errors found
+2. Security concerns
+3. Performance issues
+4. Suggestions for improvement
+5. Overall assessment (APPROVE/REVISE/REJECT)"""
+
+        response = self._call_llm(prompt, system_prompt)
+        
+        approved = "APPROVE" in response.upper()
+        
+        return {
+            "review": response,
+            "approved": approved,
+            "needs_revision": "REVISE" in response.upper(),
+            "rejected": "REJECT" in response.upper()
+        }
+        
+    def tester_agent(self, base_dir: str) -> Dict[str, Any]:
+        """Tester agent runs automated tests"""
+        result = {
+            "passed": False,
+            "metrics": PerformanceMetrics().to_dict(),
+            "test_output": "",
+            "errors": []
+        }
+        
+        try:
+            test_script = os.path.join(base_dir, "run_comprehensive_test.py")
+            if os.path.exists(test_script):
+                proc = subprocess.run(
+                    [sys.executable, test_script],
+                    cwd=base_dir,
+                    capture_output=True,
+                    text=True,
+                    timeout=300
+                )
+                
+                result["test_output"] = proc.stdout
+                result["passed"] = proc.returncode == 0 and "ALL TESTS PASSED" in proc.stdout
+                
+                if proc.stderr:
+                    result["errors"].append(proc.stderr)
+                    
+        except subprocess.TimeoutExpired:
+            result["errors"].append("Test timeout exceeded")
+        except Exception as e:
+            result["errors"].append(str(e))
+            
+        return result
+        
+    def _order_flow_template(self) -> str:
+        return '''
+class OrderFlowImbalanceDetector:
+    """Detects order flow imbalances for alpha generation"""
+    
+    def __init__(self, lookback: int = 100, threshold: float = 0.6):
+        self.lookback = lookback
+        self.threshold = threshold
+        
+    def calculate_imbalance(self, bids: list, asks: list) -> float:
         total_bids = sum(bids)
         total_asks = sum(asks)
         total = total_bids + total_asks
-        
         if total == 0:
             return 0.0
-            
         return (total_bids - total_asks) / total
         
-    def detect_absorption(self, prices: np.ndarray, volumes: np.ndarray) -> Dict[str, Any]:
-        """Detect absorption patterns"""
-        if len(prices) < 10:
-            return {"detected": False}
-            
-        price_change = np.abs(np.diff(prices))
-        volume_ratio = volumes[1:] / np.mean(volumes)
-        
-        absorption_score = np.where(
-            (price_change < np.std(price_change) * 0.5) & (volume_ratio > 1.5),
-            1, 0
-        )
-        
-        return {
-            "detected": np.sum(absorption_score[-10:]) > 3,
-            "score": float(np.mean(absorption_score[-10:])),
-            "direction": "BUY" if np.mean(np.diff(prices[-10:])) > 0 else "SELL"
-        }
-        
-    def analyze(self, market_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Full order flow analysis"""
-        result = {
-            "imbalance": 0.0,
-            "absorption": {"detected": False},
-            "signal": None,
-            "confidence": 0.0
-        }
-        
-        if "bids" in market_data and "asks" in market_data:
-            result["imbalance"] = self.calculate_imbalance(
-                market_data["bids"], 
-                market_data["asks"]
-            )
-            
-        if "prices" in market_data and "volumes" in market_data:
-            result["absorption"] = self.detect_absorption(
-                np.array(market_data["prices"]),
-                np.array(market_data["volumes"])
-            )
-            
-        if abs(result["imbalance"]) > self.imbalance_threshold:
-            result["signal"] = "BUY" if result["imbalance"] > 0 else "SELL"
-            result["confidence"] = abs(result["imbalance"])
-            
-        return result
+    def generate_signal(self, imbalance: float) -> str:
+        if imbalance > self.threshold:
+            return "BUY"
+        elif imbalance < -self.threshold:
+            return "SELL"
+        return "NEUTRAL"
 '''
 
-    def _generate_regime_template(self) -> str:
-        """Generate regime detection template"""
+    def _regime_template(self) -> str:
         return '''
-import numpy as np
-from typing import Dict, Any, List
-from enum import Enum
-
-class MarketRegime(Enum):
-    TRENDING_UP = "trending_up"
-    TRENDING_DOWN = "trending_down"
-    RANGING = "ranging"
-    HIGH_VOLATILITY = "high_volatility"
-    LOW_VOLATILITY = "low_volatility"
-
 class RegimeDetector:
-    """Detects market regime using multiple indicators"""
+    """Multi-timeframe regime detection"""
     
-    def __init__(self, lookback: int = 50):
+    def __init__(self, vol_lookback: int = 20):
+        self.vol_lookback = vol_lookback
+        
+    def detect_regime(self, returns: list) -> str:
+        import numpy as np
+        vol = np.std(returns[-self.vol_lookback:])
+        trend = np.mean(returns[-self.vol_lookback:])
+        
+        if vol > 0.02:
+            return "HIGH_VOLATILITY"
+        elif trend > 0.001:
+            return "TRENDING_UP"
+        elif trend < -0.001:
+            return "TRENDING_DOWN"
+        return "RANGING"
+'''
+
+    def _arbitrage_template(self) -> str:
+        return '''
+class StatisticalArbitrageDetector:
+    """Pairs trading with cointegration analysis"""
+    
+    def __init__(self, lookback: int = 60):
         self.lookback = lookback
-        self.volatility_threshold_high = 0.02
-        self.volatility_threshold_low = 0.005
-        self.trend_threshold = 0.6
         
-    def calculate_volatility(self, returns: np.ndarray) -> float:
-        """Calculate rolling volatility"""
-        return float(np.std(returns[-self.lookback:]))
+    def calculate_spread(self, series1: list, series2: list, hedge_ratio: float) -> list:
+        import numpy as np
+        s1 = np.array(series1)
+        s2 = np.array(series2)
+        return (s1 - hedge_ratio * s2).tolist()
         
-    def calculate_trend_strength(self, prices: np.ndarray) -> float:
-        """Calculate trend strength using linear regression"""
-        if len(prices) < self.lookback:
-            return 0.0
-            
-        x = np.arange(self.lookback)
-        y = prices[-self.lookback:]
+    def generate_signal(self, spread: list, threshold: float = 2.0) -> str:
+        import numpy as np
+        z_score = (spread[-1] - np.mean(spread)) / np.std(spread)
+        if z_score > threshold:
+            return "SHORT_SPREAD"
+        elif z_score < -threshold:
+            return "LONG_SPREAD"
+        return "NEUTRAL"
+'''
+
+    def _absorption_template(self) -> str:
+        return '''
+class AbsorptionClusterDetector:
+    """Detects absorption and exhaustion patterns"""
+    
+    def __init__(self, volume_threshold: float = 2.0):
+        self.volume_threshold = volume_threshold
         
-        slope = np.polyfit(x, y, 1)[0]
-        normalized_slope = slope / np.mean(y)
+    def detect_absorption(self, prices: list, volumes: list) -> dict:
+        import numpy as np
+        avg_vol = np.mean(volumes)
+        price_change = abs(prices[-1] - prices[-2]) if len(prices) > 1 else 0
         
-        return float(normalized_slope * 100)
+        is_absorption = (volumes[-1] > avg_vol * self.volume_threshold and 
+                        price_change < np.std(np.diff(prices)) * 0.5)
         
-    def detect_regime(self, prices: np.ndarray) -> Dict[str, Any]:
-        """Detect current market regime"""
-        if len(prices) < self.lookback + 1:
-            return {"regime": MarketRegime.RANGING, "confidence": 0.0}
-            
-        returns = np.diff(prices) / prices[:-1]
-        
-        volatility = self.calculate_volatility(returns)
-        trend_strength = self.calculate_trend_strength(prices)
-        
-        if volatility > self.volatility_threshold_high:
-            regime = MarketRegime.HIGH_VOLATILITY
-            confidence = min(1.0, volatility / self.volatility_threshold_high)
-        elif volatility < self.volatility_threshold_low:
-            regime = MarketRegime.LOW_VOLATILITY
-            confidence = min(1.0, self.volatility_threshold_low / max(volatility, 0.001))
-        elif abs(trend_strength) > self.trend_threshold:
-            regime = MarketRegime.TRENDING_UP if trend_strength > 0 else MarketRegime.TRENDING_DOWN
-            confidence = min(1.0, abs(trend_strength) / self.trend_threshold)
-        else:
-            regime = MarketRegime.RANGING
-            confidence = 1.0 - abs(trend_strength) / self.trend_threshold
-            
         return {
-            "regime": regime,
-            "regime_name": regime.value,
-            "confidence": float(confidence),
-            "volatility": float(volatility),
-            "trend_strength": float(trend_strength)
+            "detected": is_absorption,
+            "volume_ratio": volumes[-1] / avg_vol if avg_vol > 0 else 0,
+            "price_stability": price_change
         }
 '''
 
-    def _generate_fix_template(self, prompt: str) -> str:
-        """Generate fix template based on error description"""
-        return f'''
-# Auto-generated fix for: {prompt}
-# This is a template - manual review recommended
 
-def apply_fix():
-    """Apply the fix"""
-    # TODO: Implement specific fix logic
-    pass
+class ResearchIngestionModule:
+    """
+    Autonomous research ingestion from arXiv and SSRN.
+    
+    Fetches latest papers, summarizes them, and proposes implementations
+    for promising ideas.
+    """
+    
+    ARXIV_API = "http://export.arxiv.org/api/query"
+    CATEGORIES = ["q-fin.TR", "q-fin.PM", "q-fin.ST", "stat.ML", "cs.LG"]
+    
+    def __init__(self, llm_api_key: Optional[str] = None):
+        self.api_key = llm_api_key or LLM_API_KEY
+        self.papers_cache: List[Dict] = []
+        
+    def fetch_recent_papers(self, max_results: int = 20) -> List[Dict]:
+        """Fetch recent papers from arXiv"""
+        papers = []
+        
+        try:
+            query = "+OR+".join([f"cat:{cat}" for cat in self.CATEGORIES])
+            url = f"{self.ARXIV_API}?search_query={query}&sortBy=submittedDate&sortOrder=descending&max_results={max_results}"
+            
+            response = requests.get(url, timeout=30)
+            response.raise_for_status()
+            
+            root = ET.fromstring(response.content)
+            ns = {'atom': 'http://www.w3.org/2005/Atom'}
+            
+            for entry in root.findall('atom:entry', ns):
+                paper = {
+                    "title": entry.find('atom:title', ns).text.strip(),
+                    "summary": entry.find('atom:summary', ns).text.strip(),
+                    "published": entry.find('atom:published', ns).text,
+                    "authors": [a.find('atom:name', ns).text for a in entry.findall('atom:author', ns)],
+                    "link": entry.find('atom:id', ns).text
+                }
+                papers.append(paper)
+                
+            self.papers_cache = papers
+            logger.info(f"Fetched {len(papers)} papers from arXiv")
+            
+        except Exception as e:
+            logger.error(f"Failed to fetch papers: {e}")
+            
+        return papers
+        
+    def evaluate_paper(self, paper: Dict) -> Dict[str, Any]:
+        """Evaluate if a paper is worth implementing"""
+        keywords_positive = [
+            "order flow", "market microstructure", "high frequency",
+            "statistical arbitrage", "pairs trading", "cointegration",
+            "regime detection", "volatility", "momentum", "mean reversion",
+            "machine learning", "neural network", "reinforcement learning"
+        ]
+        
+        keywords_negative = [
+            "quantum", "sentiment", "social media", "news", "nlp",
+            "cryptocurrency prediction", "bitcoin forecast"
+        ]
+        
+        text = (paper["title"] + " " + paper["summary"]).lower()
+        
+        positive_score = sum(1 for kw in keywords_positive if kw in text)
+        negative_score = sum(1 for kw in keywords_negative if kw in text)
+        
+        score = positive_score - negative_score * 2
+        
+        return {
+            "paper": paper,
+            "score": score,
+            "recommend_implementation": score >= 2,
+            "positive_keywords": [kw for kw in keywords_positive if kw in text],
+            "negative_keywords": [kw for kw in keywords_negative if kw in text]
+        }
+        
+    def generate_implementation_task(self, paper: Dict) -> Optional[str]:
+        """Generate implementation task from paper"""
+        evaluation = self.evaluate_paper(paper)
+        
+        if not evaluation["recommend_implementation"]:
+            return None
+            
+        task_description = f"""Implement trading strategy based on research paper:
+Title: {paper['title']}
+Key concepts: {', '.join(evaluation['positive_keywords'])}
+Summary: {paper['summary'][:500]}..."""
 
-if __name__ == "__main__":
-    apply_fix()
-'''
+        return task_description
+
+
+class HallOfFame:
+    """
+    Maintains baseline performance metrics for comparison.
+    
+    New strategies must beat the hall of fame by a threshold
+    to be integrated into the system.
+    """
+    
+    def __init__(self, file_path: str = HALL_OF_FAME_FILE):
+        self.file_path = file_path
+        self.data = self._load()
+        
+    def _load(self) -> Dict:
+        if os.path.exists(self.file_path):
+            with open(self.file_path, 'r') as f:
+                return json.load(f)
+        return {
+            "baseline_metrics": PerformanceMetrics(
+                sharpe_ratio=1.5,
+                sortino_ratio=2.0,
+                max_drawdown=0.15,
+                win_rate=0.55
+            ).to_dict(),
+            "strategies": [],
+            "last_updated": datetime.now().isoformat()
+        }
+        
+    def _save(self):
+        self.data["last_updated"] = datetime.now().isoformat()
+        with open(self.file_path, 'w') as f:
+            json.dump(self.data, f, indent=2)
+            
+    def get_baseline(self) -> PerformanceMetrics:
+        """Get baseline metrics"""
+        m = self.data["baseline_metrics"]
+        return PerformanceMetrics(**m)
+        
+    def update_baseline(self, metrics: PerformanceMetrics):
+        """Update baseline if metrics are better"""
+        current = self.get_baseline()
+        if metrics.beats(current, threshold=0.05):
+            self.data["baseline_metrics"] = metrics.to_dict()
+            self._save()
+            logger.info("Hall of Fame baseline updated")
+            
+    def add_strategy(self, name: str, metrics: PerformanceMetrics, code_hash: str):
+        """Add strategy to hall of fame"""
+        self.data["strategies"].append({
+            "name": name,
+            "metrics": metrics.to_dict(),
+            "code_hash": code_hash,
+            "added_at": datetime.now().isoformat()
+        })
+        self._save()
 
 
 class SelfEvolutionAgent:
     """
-    Main self-evolution agent that orchestrates autonomous system improvement.
+    Main perpetual self-evolution agent.
     
     Features:
-    - Error detection from logs and tests
-    - Code analysis and improvement suggestions
-    - Safe code generation with LLM
-    - Automated testing and validation
-    - Version control for all changes
-    - Task queue for continuous improvement
+    - Multi-agent debate for code generation
+    - Autonomous research ingestion
+    - Hall of fame baseline comparison
+    - Perpetual innovation daemon
+    - Eternal safety guardrails
     """
     
     SAFETY_GUARDS = {
         "max_changes_per_cycle": 3,
         "require_test_pass": True,
-        "require_backtest_pass": True,
-        "min_sharpe_ratio": 0.5,
-        "max_drawdown": 0.15,
+        "require_baseline_improvement": True,
+        "improvement_threshold": 0.05,
         "forbidden_patterns": [
             r"os\.system",
             r"subprocess\.call.*shell=True",
             r"eval\(",
             r"exec\(",
             r"__import__\(",
-        ]
+            r"open\(.*/etc/",
+            r"rm\s+-rf",
+        ],
+        "max_single_trade_risk": 0.03,
+        "require_human_override_for_live": True
     }
     
     def __init__(self, 
                  base_dir: str = None,
                  llm_api_key: Optional[str] = None,
                  auto_apply: bool = False):
-        """
-        Initialize the self-evolution agent.
-        
-        Args:
-            base_dir: Base directory of the trading system
-            llm_api_key: API key for LLM code generation
-            auto_apply: Whether to automatically apply approved changes
-        """
-        self.base_dir = Path(base_dir or os.path.dirname(os.path.abspath(__file__)))
+        self.base_dir = Path(base_dir or REPO_PATH)
         self.auto_apply = auto_apply
         
         self.version_control = VersionControl(str(self.base_dir))
-        self.code_analyzer = CodeAnalyzer(str(self.base_dir))
-        self.test_runner = TestRunner(str(self.base_dir))
-        self.llm = LLMInterface(api_key=llm_api_key)
+        self.debate_system = MultiAgentDebateSystem(llm_api_key)
+        self.research_module = ResearchIngestionModule(llm_api_key)
+        self.hall_of_fame = HallOfFame()
         
         self.task_queue: deque = deque()
         self.completed_tasks: List[EvolutionTask] = []
         self.running = False
         self._thread: Optional[threading.Thread] = None
+        self._scheduler = None
         
         self.metrics = {
+            "cycles_completed": 0,
             "tasks_completed": 0,
             "tasks_failed": 0,
             "changes_applied": 0,
-            "tests_run": 0,
-            "last_cycle": None
+            "baseline_improvements": 0,
+            "last_cycle": None,
+            "daemon_started": None
         }
         
         self._load_state()
@@ -680,6 +717,23 @@ class SelfEvolutionAgent:
         with open(state_file, 'w') as f:
             json.dump(state, f, indent=2)
             
+    def _log_evolution(self, entry: Dict):
+        """Log evolution activity"""
+        log_file = self.base_dir / "evolution_log.json"
+        
+        logs = []
+        if log_file.exists():
+            with open(log_file, 'r') as f:
+                logs = json.load(f)
+                
+        entry["timestamp"] = datetime.now().isoformat()
+        logs.append(entry)
+        
+        logs = logs[-1000:]
+        
+        with open(log_file, 'w') as f:
+            json.dump(logs, f, indent=2)
+            
     def add_task(self, 
                  description: str, 
                  task_type: str = "improvement",
@@ -699,187 +753,119 @@ class SelfEvolutionAgent:
         self.task_queue.append(task)
         self._save_state()
         
-        logger.info(f"Added task {task_id}: {description}")
+        logger.info(f"Added task {task_id}: {description[:50]}...")
         return task_id
         
-    def detect_errors(self) -> List[EvolutionTask]:
-        """Detect errors from logs and create fix tasks"""
-        tasks = []
+    def generate_autonomous_tasks(self):
+        """Generate new tasks autonomously based on system state"""
+        autonomous_tasks = [
+            ("Discover new microstructural edge from recent order flow anomalies", "innovation"),
+            ("Evolve improved absorption cluster detector using genetic programming", "innovation"),
+            ("Propose funding rate cross-asset arbitrage strategy", "innovation"),
+            ("Optimize regime detection thresholds based on recent performance", "optimization"),
+            ("Add new statistical arbitrage pair based on correlation analysis", "innovation"),
+            ("Implement adaptive position sizing based on regime", "improvement"),
+            ("Create micro-price calculation from order book depth", "innovation"),
+            ("Add spoofing detection via order book dynamics", "innovation"),
+        ]
         
-        log_files = list(self.base_dir.glob("*.log"))
-        
-        for log_file in log_files:
-            try:
-                with open(log_file, 'r') as f:
-                    content = f.read()
-                    
-                errors = self.code_analyzer.find_error_patterns(content)
+        for description, task_type in autonomous_tasks:
+            existing = any(t.description == description for t in self.task_queue)
+            if not existing:
+                self.add_task(description, task_type, TaskPriority.MEDIUM)
                 
-                for error in errors:
-                    task_id = self.add_task(
-                        description=f"Fix {error['type']}: {error['content'][:100]}",
-                        task_type="error_fix",
-                        priority=TaskPriority.HIGH
-                    )
-                    tasks.append(self.task_queue[-1])
-                    
-            except Exception as e:
-                logger.error(f"Error reading log {log_file}: {e}")
+        logger.info(f"Generated {len(autonomous_tasks)} autonomous tasks")
+        
+    def ingest_research(self):
+        """Ingest and evaluate recent research papers"""
+        papers = self.research_module.fetch_recent_papers(max_results=10)
+        
+        tasks_added = 0
+        for paper in papers:
+            task_desc = self.research_module.generate_implementation_task(paper)
+            if task_desc:
+                self.add_task(task_desc, "research_implementation", TaskPriority.LOW)
+                tasks_added += 1
                 
-        return tasks
+        logger.info(f"Ingested {len(papers)} papers, added {tasks_added} implementation tasks")
         
-    def analyze_codebase(self) -> Dict[str, Any]:
-        """Analyze the entire codebase for improvement opportunities"""
-        results = {
-            "files_analyzed": 0,
-            "issues_found": [],
-            "suggestions": []
-        }
-        
-        python_files = list(self.base_dir.glob("**/*.py"))
-        
-        for py_file in python_files[:50]:
-            relative_path = py_file.relative_to(self.base_dir)
-            
-            if any(part.startswith('.') for part in relative_path.parts):
-                continue
-            if '__pycache__' in str(relative_path):
-                continue
-                
-            analysis = self.code_analyzer.analyze_file(str(relative_path))
-            results["files_analyzed"] += 1
-            
-            if analysis.get("syntax_errors"):
-                results["issues_found"].extend(analysis["syntax_errors"])
-                
-            if analysis.get("import_errors"):
-                results["issues_found"].extend(analysis["import_errors"])
-                
-            if analysis.get("complexity_issues"):
-                results["suggestions"].extend(analysis["complexity_issues"])
-                
-        return results
-        
-    def generate_improvement(self, task: EvolutionTask) -> Optional[CodeChange]:
-        """Generate code improvement for a task"""
-        context = f"Trading system at {self.base_dir}"
-        
-        generated_code = self.llm.generate_code(task.description, context)
-        
-        if not generated_code:
-            return None
-            
-        if not self._validate_generated_code(generated_code):
-            logger.warning(f"Generated code failed safety validation for task {task.id}")
-            return None
-            
-        if "order flow" in task.description.lower():
-            file_path = "advanced_modules/order_flow_analyzer.py"
-        elif "regime" in task.description.lower():
-            file_path = "advanced_modules/regime_detector.py"
-        else:
-            file_path = f"generated/{task.id}.py"
-            
-        full_path = self.base_dir / file_path
-        original_content = ""
-        if full_path.exists():
-            with open(full_path, 'r') as f:
-                original_content = f.read()
-                
-        change = CodeChange(
-            file_path=file_path,
-            original_content=original_content,
-            new_content=generated_code,
-            change_type="create" if not original_content else "modify",
-            description=task.description
-        )
-        change.compute_diff()
-        
-        return change
-        
-    def _validate_generated_code(self, code: str) -> bool:
+    def _validate_code(self, code: str) -> Tuple[bool, str]:
         """Validate generated code against safety rules"""
         for pattern in self.SAFETY_GUARDS["forbidden_patterns"]:
             if re.search(pattern, code):
-                logger.warning(f"Forbidden pattern found: {pattern}")
-                return False
+                return False, f"Forbidden pattern found: {pattern}"
                 
         try:
             ast.parse(code)
-        except SyntaxError:
-            return False
+        except SyntaxError as e:
+            return False, f"Syntax error: {e}"
             
-        return True
+        return True, "Valid"
         
-    def apply_change(self, change: CodeChange) -> bool:
-        """Apply a code change with version control"""
-        full_path = self.base_dir / change.file_path
-        
-        full_path.parent.mkdir(parents=True, exist_ok=True)
-        
-        if full_path.exists():
-            with open(full_path, 'r') as f:
-                current_content = f.read()
-            self.version_control.create_version(
-                str(change.file_path),
-                current_content,
-                f"Backup before: {change.description}"
-            )
-            
-        with open(full_path, 'w') as f:
-            f.write(change.new_content)
-            
-        logger.info(f"Applied change to {change.file_path}")
-        self.metrics["changes_applied"] += 1
-        
-        return True
-        
-    def process_task(self, task: EvolutionTask) -> bool:
-        """Process a single evolution task"""
+    def process_task_with_debate(self, task: EvolutionTask) -> bool:
+        """Process task using multi-agent debate"""
         task.status = TaskStatus.IN_PROGRESS
-        logger.info(f"Processing task {task.id}: {task.description}")
+        logger.info(f"Processing task {task.id} with multi-agent debate")
         
         try:
-            change = self.generate_improvement(task)
+            context = f"Task: {task.description}\nType: {task.task_type}"
+            proposal = self.debate_system.researcher_agent(context)
+            logger.info(f"Researcher proposed: {proposal[:100]}...")
             
-            if not change:
-                task.status = TaskStatus.FAILED
-                task.error = "Failed to generate improvement"
+            code = self.debate_system.coder_agent(proposal)
+            logger.info(f"Coder generated {len(code)} chars of code")
+            
+            is_valid, validation_msg = self._validate_code(code)
+            if not is_valid:
+                task.status = TaskStatus.REJECTED
+                task.error = f"Code validation failed: {validation_msg}"
                 return False
                 
+            review = self.debate_system.critic_agent(code, proposal)
+            logger.info(f"Critic review: approved={review['approved']}")
+            
+            if review["rejected"]:
+                task.status = TaskStatus.REJECTED
+                task.error = f"Critic rejected: {review['review'][:200]}"
+                return False
+                
+            test_results = self.debate_system.tester_agent(str(self.base_dir))
+            task.test_results = test_results
+            
+            if self.SAFETY_GUARDS["require_test_pass"] and not test_results["passed"]:
+                task.status = TaskStatus.FAILED
+                task.error = "Tests did not pass"
+                return False
+                
+            if self.SAFETY_GUARDS["require_baseline_improvement"]:
+                baseline = self.hall_of_fame.get_baseline()
+                new_metrics = PerformanceMetrics(**test_results.get("metrics", {}))
+                
+                if not new_metrics.beats(baseline, self.SAFETY_GUARDS["improvement_threshold"]):
+                    task.status = TaskStatus.REJECTED
+                    task.error = "Does not beat baseline by required threshold"
+                    return False
+                    
             task.proposed_changes.append({
-                "file_path": change.file_path,
-                "change_type": change.change_type,
-                "diff": change.diff
+                "proposal": proposal,
+                "code": code,
+                "review": review,
+                "test_results": test_results
             })
             
-            if self.SAFETY_GUARDS["require_test_pass"]:
-                test_results = self.test_runner.run_tests()
-                task.test_results = test_results
-                self.metrics["tests_run"] += 1
-                
-            if self.SAFETY_GUARDS["require_backtest_pass"]:
-                backtest_results = self.test_runner.run_backtest()
-                
-                if backtest_results["sharpe_ratio"] < self.SAFETY_GUARDS["min_sharpe_ratio"]:
-                    task.status = TaskStatus.REJECTED
-                    task.error = f"Sharpe ratio too low: {backtest_results['sharpe_ratio']}"
-                    return False
-                    
-                if backtest_results["max_drawdown"] > self.SAFETY_GUARDS["max_drawdown"]:
-                    task.status = TaskStatus.REJECTED
-                    task.error = f"Max drawdown too high: {backtest_results['max_drawdown']}"
-                    return False
-                    
-            if self.auto_apply:
-                self.apply_change(change)
+            if self.auto_apply and review["approved"]:
+                self._apply_change(task, code)
                 
             task.status = TaskStatus.COMPLETED
             task.completed_at = datetime.now().isoformat()
-            task.result = {"change_applied": self.auto_apply}
-            
             self.metrics["tasks_completed"] += 1
-            logger.info(f"Task {task.id} completed successfully")
+            
+            self._log_evolution({
+                "event": "task_completed",
+                "task_id": task.id,
+                "description": task.description,
+                "approved": review["approved"]
+            })
             
             return True
             
@@ -890,75 +876,139 @@ class SelfEvolutionAgent:
             logger.error(f"Task {task.id} failed: {e}")
             return False
             
-    def run_cycle(self) -> Dict[str, Any]:
-        """Run a single evolution cycle"""
-        cycle_results = {
-            "timestamp": datetime.now().isoformat(),
-            "tasks_processed": 0,
-            "tasks_completed": 0,
-            "tasks_failed": 0,
-            "changes_applied": 0
-        }
-        
-        self.detect_errors()
-        
-        tasks_to_process = min(
-            self.SAFETY_GUARDS["max_changes_per_cycle"],
-            len(self.task_queue)
-        )
-        
-        for _ in range(tasks_to_process):
-            if not self.task_queue:
-                break
-                
-            task = self.task_queue.popleft()
-            cycle_results["tasks_processed"] += 1
+    def _apply_change(self, task: EvolutionTask, code: str):
+        """Apply code change to the system"""
+        if "order flow" in task.description.lower():
+            file_path = "advanced_modules/evolved_order_flow.py"
+        elif "regime" in task.description.lower():
+            file_path = "advanced_modules/evolved_regime.py"
+        elif "arbitrage" in task.description.lower():
+            file_path = "advanced_modules/evolved_arbitrage.py"
+        else:
+            file_path = f"advanced_modules/evolved_{task.id}.py"
             
-            success = self.process_task(task)
+        full_path = self.base_dir / file_path
+        full_path.parent.mkdir(parents=True, exist_ok=True)
+        
+        if full_path.exists():
+            with open(full_path, 'r') as f:
+                original = f.read()
+            self.version_control.create_version(file_path, original, f"Before task {task.id}")
+        
+        with open(full_path, 'w') as f:
+            f.write(code)
+            
+        self.metrics["changes_applied"] += 1
+        logger.info(f"Applied change to {file_path}")
+        
+    def evolution_cycle(self):
+        """Run a single evolution cycle"""
+        cycle_start = datetime.now()
+        logger.info("Starting evolution cycle...")
+        
+        self._log_evolution({
+            "event": "cycle_start",
+            "pending_tasks": len(self.task_queue)
+        })
+        
+        self.generate_autonomous_tasks()
+        
+        self.ingest_research()
+        
+        tasks_processed = 0
+        max_tasks = self.SAFETY_GUARDS["max_changes_per_cycle"]
+        
+        while self.task_queue and tasks_processed < max_tasks:
+            task = self.task_queue.popleft()
+            
+            success = self.process_task_with_debate(task)
+            self.completed_tasks.append(task)
+            tasks_processed += 1
             
             if success:
-                cycle_results["tasks_completed"] += 1
-                if task.result and task.result.get("change_applied"):
-                    cycle_results["changes_applied"] += 1
+                logger.info(f"Task {task.id} completed successfully")
             else:
-                cycle_results["tasks_failed"] += 1
+                logger.warning(f"Task {task.id} failed: {task.error}")
                 
-            self.completed_tasks.append(task)
-            
-        self.metrics["last_cycle"] = cycle_results["timestamp"]
+        self.metrics["cycles_completed"] += 1
+        self.metrics["last_cycle"] = datetime.now().isoformat()
         self._save_state()
         
-        return cycle_results
+        cycle_duration = (datetime.now() - cycle_start).total_seconds()
         
-    def start_daemon(self, interval_hours: float = 24):
-        """Start the evolution agent as a background daemon"""
+        self._log_evolution({
+            "event": "cycle_complete",
+            "tasks_processed": tasks_processed,
+            "duration_seconds": cycle_duration
+        })
+        
+        logger.info(f"Evolution cycle complete. Processed {tasks_processed} tasks in {cycle_duration:.1f}s")
+        
+        return {
+            "tasks_processed": tasks_processed,
+            "duration": cycle_duration,
+            "metrics": self.metrics
+        }
+        
+    def start_perpetual_daemon(self, interval_hours: float = 24):
+        """Start the perpetual innovation daemon"""
         if self.running:
-            logger.warning("Agent already running")
+            logger.warning("Daemon already running")
             return
             
         self.running = True
+        self.metrics["daemon_started"] = datetime.now().isoformat()
         
-        def daemon_loop():
-            while self.running:
-                try:
-                    logger.info("Starting evolution cycle...")
-                    results = self.run_cycle()
-                    logger.info(f"Cycle complete: {results}")
-                except Exception as e:
-                    logger.error(f"Cycle error: {e}")
+        logger.info(f"Starting perpetual innovation daemon (interval: {interval_hours}h)")
+        
+        self._log_evolution({
+            "event": "daemon_started",
+            "interval_hours": interval_hours
+        })
+        
+        if SCHEDULER_AVAILABLE:
+            self._scheduler = BackgroundScheduler()
+            self._scheduler.add_job(
+                self.evolution_cycle, 
+                'interval', 
+                hours=interval_hours,
+                id='evolution_cycle'
+            )
+            self._scheduler.start()
+            
+            logger.info("Perpetual innovation daemon activated with APScheduler")
+            
+            try:
+                while self.running:
+                    time.sleep(60)
+            except KeyboardInterrupt:
+                self.stop_daemon()
+        else:
+            def daemon_loop():
+                while self.running:
+                    try:
+                        self.evolution_cycle()
+                    except Exception as e:
+                        logger.error(f"Cycle error: {e}")
+                    time.sleep(interval_hours * 3600)
                     
-                time.sleep(interval_hours * 3600)
-                
-        self._thread = threading.Thread(target=daemon_loop, daemon=True)
-        self._thread.start()
-        logger.info(f"Evolution daemon started (interval: {interval_hours}h)")
-        
+            self._thread = threading.Thread(target=daemon_loop, daemon=True)
+            self._thread.start()
+            
+            logger.info("Perpetual innovation daemon activated with simple loop")
+            
     def stop_daemon(self):
-        """Stop the evolution daemon"""
+        """Stop the perpetual daemon"""
         self.running = False
+        
+        if self._scheduler:
+            self._scheduler.shutdown()
+            
         if self._thread:
             self._thread.join(timeout=10)
-        logger.info("Evolution daemon stopped")
+            
+        self._log_evolution({"event": "daemon_stopped"})
+        logger.info("Perpetual innovation daemon stopped")
         
     def get_status(self) -> Dict[str, Any]:
         """Get agent status"""
@@ -967,64 +1017,65 @@ class SelfEvolutionAgent:
             "pending_tasks": len(self.task_queue),
             "completed_tasks": len(self.completed_tasks),
             "metrics": self.metrics,
-            "version_history": len(self.version_control.get_history()),
+            "hall_of_fame_baseline": self.hall_of_fame.get_baseline().to_dict(),
             "auto_apply": self.auto_apply
         }
         
-    def generate_innovation_tasks(self) -> List[str]:
-        """Generate new innovation tasks autonomously"""
-        innovation_ideas = [
-            "Add new order flow imbalance detector using tick data",
-            "Implement absorption/exhaustion cluster identification",
-            "Create multi-timeframe regime filter with volatility and correlation",
-            "Add Kalman filter for pairs trading cointegration",
-            "Implement micro-price calculation from order book",
-            "Add spoofing detection via order book dynamics",
-            "Create funding rate arbitrage detector for crypto",
-            "Implement cross-asset correlation break detector",
-            "Add online random forest for adaptive signal weighting",
-            "Create genetic programming module for feature discovery"
-        ]
+    def run_single_cycle_demo(self) -> Dict[str, Any]:
+        """Run a single cycle for demonstration"""
+        logger.info("Running single evolution cycle demo...")
         
-        task_ids = []
-        for idea in innovation_ideas:
-            task_id = self.add_task(
-                description=idea,
-                task_type="innovation",
-                priority=TaskPriority.MEDIUM
-            )
-            task_ids.append(task_id)
-            
-        return task_ids
+        self.add_task(
+            "Implement improved order flow imbalance detector",
+            "innovation",
+            TaskPriority.HIGH
+        )
+        
+        result = self.evolution_cycle()
+        
+        return {
+            "cycle_result": result,
+            "status": self.get_status(),
+            "recent_tasks": [t.to_dict() for t in self.completed_tasks[-5:]]
+        }
 
 
 def main():
-    """Demo of the self-evolution agent"""
-    agent = SelfEvolutionAgent(auto_apply=False)
+    """Main entry point - starts perpetual daemon or runs demo"""
+    import argparse
     
-    print("=== Self-Evolution Agent Demo ===\n")
+    parser = argparse.ArgumentParser(description="Self-Evolution Agent")
+    parser.add_argument("--daemon", action="store_true", help="Start perpetual daemon")
+    parser.add_argument("--interval", type=float, default=24, help="Daemon interval in hours")
+    parser.add_argument("--demo", action="store_true", help="Run single cycle demo")
+    parser.add_argument("--auto-apply", action="store_true", help="Auto-apply approved changes")
     
-    print("1. Adding innovation tasks...")
-    task_ids = agent.generate_innovation_tasks()
-    print(f"   Added {len(task_ids)} tasks\n")
+    args = parser.parse_args()
     
-    print("2. Analyzing codebase...")
-    analysis = agent.analyze_codebase()
-    print(f"   Files analyzed: {analysis['files_analyzed']}")
-    print(f"   Issues found: {len(analysis['issues_found'])}")
-    print(f"   Suggestions: {len(analysis['suggestions'])}\n")
+    agent = SelfEvolutionAgent(auto_apply=args.auto_apply)
     
-    print("3. Running evolution cycle...")
-    results = agent.run_cycle()
-    print(f"   Tasks processed: {results['tasks_processed']}")
-    print(f"   Tasks completed: {results['tasks_completed']}")
-    print(f"   Tasks failed: {results['tasks_failed']}\n")
-    
-    print("4. Agent status:")
-    status = agent.get_status()
-    print(json.dumps(status, indent=2))
-    
-    print("\n=== Demo Complete ===")
+    if args.daemon:
+        print("=" * 60)
+        print("PERPETUAL ASCENSION ENGINE")
+        print("Eternal Innovation Daemon Starting...")
+        print("=" * 60)
+        agent.start_perpetual_daemon(interval_hours=args.interval)
+    elif args.demo:
+        print("=" * 60)
+        print("SELF-EVOLUTION AGENT DEMO")
+        print("=" * 60)
+        result = agent.run_single_cycle_demo()
+        print(json.dumps(result, indent=2, default=str))
+    else:
+        print("=" * 60)
+        print("SELF-EVOLUTION AGENT STATUS")
+        print("=" * 60)
+        status = agent.get_status()
+        print(json.dumps(status, indent=2, default=str))
+        print("\nUsage:")
+        print("  --daemon     Start perpetual innovation daemon")
+        print("  --demo       Run single cycle demonstration")
+        print("  --auto-apply Auto-apply approved changes")
 
 
 if __name__ == "__main__":

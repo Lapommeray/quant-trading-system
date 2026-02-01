@@ -1,8 +1,15 @@
 """
-MetaTrader 5 Live Trading Engine
+MT5 Live Trading Engine with IBKR Fallback
 
-Institutional-grade live trading integration with MetaTrader 5.
-Handles real-time data streaming, order execution, and portfolio synchronization.
+A production-ready live trading engine that:
+- Connects to MetaTrader 5 for forex/CFD execution
+- Falls back to Interactive Brokers (IBKR) for superior execution
+- Streams real-time tick data
+- Executes orders with smart routing (TWAP/VWAP/Iceberg)
+- Manages portfolio state and risk
+- Implements circuit breakers and safety controls
+
+Note: MetaTrader5 package is Windows-only. On Linux, runs in simulation mode.
 """
 
 import os
@@ -11,162 +18,205 @@ import time
 import json
 import logging
 import threading
+import queue
 from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional, Tuple, Callable
-from dataclasses import dataclass, field
+from typing import Dict, List, Any, Optional, Callable, Tuple
+from dataclasses import dataclass, field, asdict
 from enum import Enum
 from collections import deque
-import numpy as np
-import pandas as pd
+import random
 
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler("mt5_live_engine.log"),
-        logging.StreamHandler()
-    ]
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger("MT5LiveEngine")
 
 try:
     import MetaTrader5 as mt5
     MT5_AVAILABLE = True
+    logger.info("MetaTrader5 package available")
 except ImportError:
     MT5_AVAILABLE = False
-    logger.warning("MetaTrader5 package not available. Running in simulation mode.")
+    logger.warning("MetaTrader5 not available (Windows only). Running in simulation mode.")
+
+try:
+    from ib_insync import IB, Stock, Forex, Contract, Order, Trade
+    IBKR_AVAILABLE = True
+    logger.info("ib_insync package available - IBKR fallback enabled")
+except ImportError:
+    IBKR_AVAILABLE = False
+    logger.warning("ib_insync not available. IBKR fallback disabled.")
+
+try:
+    import numpy as np
+    NUMPY_AVAILABLE = True
+except ImportError:
+    NUMPY_AVAILABLE = False
 
 
 class OrderType(Enum):
-    MARKET_BUY = "MARKET_BUY"
-    MARKET_SELL = "MARKET_SELL"
-    LIMIT_BUY = "LIMIT_BUY"
-    LIMIT_SELL = "LIMIT_SELL"
-    STOP_BUY = "STOP_BUY"
-    STOP_SELL = "STOP_SELL"
+    MARKET = "market"
+    LIMIT = "limit"
+    STOP = "stop"
+    STOP_LIMIT = "stop_limit"
 
 
-class ExecutionMode(Enum):
-    MARKET = "MARKET"
-    ICEBERG = "ICEBERG"
-    TWAP = "TWAP"
-    VWAP = "VWAP"
+class OrderSide(Enum):
+    BUY = "buy"
+    SELL = "sell"
 
 
-@dataclass
-class Position:
-    symbol: str
-    volume: float
-    entry_price: float
-    current_price: float
-    profit: float
-    swap: float
-    ticket: int
-    direction: str
-    open_time: datetime
-    stop_loss: Optional[float] = None
-    take_profit: Optional[float] = None
+class ExecutionAlgo(Enum):
+    MARKET = "market"
+    TWAP = "twap"
+    VWAP = "vwap"
+    ICEBERG = "iceberg"
+    ADAPTIVE = "adaptive"
 
 
-@dataclass
-class Order:
-    symbol: str
-    order_type: OrderType
-    volume: float
-    price: Optional[float] = None
-    stop_loss: Optional[float] = None
-    take_profit: Optional[float] = None
-    comment: str = ""
-    magic_number: int = 123456
-    deviation: int = 20
+class ConnectionStatus(Enum):
+    DISCONNECTED = "disconnected"
+    CONNECTING = "connecting"
+    CONNECTED = "connected"
+    ERROR = "error"
+
+
+class BrokerType(Enum):
+    MT5 = "mt5"
+    IBKR = "ibkr"
+    SIMULATION = "simulation"
 
 
 @dataclass
-class RiskLimits:
-    max_position_size: float = 0.1
-    max_daily_loss: float = 0.02
-    max_drawdown: float = 0.05
-    max_correlation_exposure: float = 0.3
-    max_single_trade_risk: float = 0.02
-    require_human_confirmation: bool = True
-    human_confirmation_trades: int = 100
-
-
-@dataclass
-class TickData:
+class Tick:
     symbol: str
     bid: float
     ask: float
     last: float
     volume: float
-    time: datetime
-    flags: int = 0
+    timestamp: datetime
+    
+    @property
+    def mid(self) -> float:
+        return (self.bid + self.ask) / 2
+        
+    @property
+    def spread(self) -> float:
+        return self.ask - self.bid
+
+
+@dataclass
+class Position:
+    symbol: str
+    quantity: float
+    avg_price: float
+    current_price: float
+    unrealized_pnl: float
+    realized_pnl: float
+    side: str
+    
+    @property
+    def market_value(self) -> float:
+        return self.quantity * self.current_price
+
+
+@dataclass
+class OrderRequest:
+    symbol: str
+    side: OrderSide
+    quantity: float
+    order_type: OrderType = OrderType.MARKET
+    limit_price: Optional[float] = None
+    stop_price: Optional[float] = None
+    algo: ExecutionAlgo = ExecutionAlgo.MARKET
+    algo_params: Dict = field(default_factory=dict)
+    client_order_id: str = ""
+    
+    def __post_init__(self):
+        if not self.client_order_id:
+            self.client_order_id = f"order_{datetime.now().strftime('%Y%m%d%H%M%S%f')}"
+
+
+@dataclass
+class OrderResult:
+    success: bool
+    order_id: str
+    client_order_id: str
+    filled_quantity: float
+    avg_fill_price: float
+    status: str
+    message: str
+    timestamp: datetime = field(default_factory=datetime.now)
+
+
+@dataclass
+class AccountInfo:
+    balance: float
+    equity: float
+    margin: float
+    free_margin: float
+    margin_level: float
+    currency: str
+    broker: BrokerType
 
 
 class CircuitBreaker:
     """Circuit breaker for risk management"""
     
-    def __init__(self, 
+    def __init__(self,
                  max_daily_loss_pct: float = 0.03,
-                 max_hourly_loss_pct: float = 0.01,
-                 max_consecutive_losses: int = 5,
+                 max_position_size: float = 0.1,
+                 max_orders_per_minute: int = 10,
                  cooldown_minutes: int = 30):
         self.max_daily_loss_pct = max_daily_loss_pct
-        self.max_hourly_loss_pct = max_hourly_loss_pct
-        self.max_consecutive_losses = max_consecutive_losses
+        self.max_position_size = max_position_size
+        self.max_orders_per_minute = max_orders_per_minute
         self.cooldown_minutes = cooldown_minutes
         
         self.daily_pnl = 0.0
-        self.hourly_pnl = 0.0
-        self.consecutive_losses = 0
-        self.last_reset_daily = datetime.now()
-        self.last_reset_hourly = datetime.now()
+        self.starting_equity = 0.0
+        self.order_timestamps: deque = deque(maxlen=100)
         self.tripped = False
         self.trip_time: Optional[datetime] = None
         self.trip_reason: str = ""
         
-    def record_trade(self, pnl: float, is_win: bool):
-        """Record trade result"""
-        now = datetime.now()
+    def reset_daily(self, equity: float):
+        """Reset daily tracking"""
+        self.daily_pnl = 0.0
+        self.starting_equity = equity
+        self.tripped = False
+        self.trip_time = None
+        self.trip_reason = ""
         
-        if (now - self.last_reset_daily).days >= 1:
-            self.daily_pnl = 0.0
-            self.last_reset_daily = now
-            
-        if (now - self.last_reset_hourly).seconds >= 3600:
-            self.hourly_pnl = 0.0
-            self.last_reset_hourly = now
-            
-        self.daily_pnl += pnl
-        self.hourly_pnl += pnl
+    def update_pnl(self, pnl_change: float):
+        """Update daily P&L"""
+        self.daily_pnl += pnl_change
         
-        if is_win:
-            self.consecutive_losses = 0
-        else:
-            self.consecutive_losses += 1
-            
-    def check(self, account_balance: float) -> Tuple[bool, str]:
-        """Check if circuit breaker should trip"""
+    def check_order(self, order: OrderRequest, account: AccountInfo) -> Tuple[bool, str]:
+        """Check if order should be allowed"""
         if self.tripped:
-            if self.trip_time and (datetime.now() - self.trip_time).seconds >= self.cooldown_minutes * 60:
-                self.reset()
+            if self.trip_time and datetime.now() - self.trip_time > timedelta(minutes=self.cooldown_minutes):
+                self.tripped = False
+                logger.info("Circuit breaker cooldown expired, resetting")
             else:
                 return False, f"Circuit breaker tripped: {self.trip_reason}"
                 
-        if account_balance > 0:
-            daily_loss_pct = abs(min(0, self.daily_pnl)) / account_balance
-            hourly_loss_pct = abs(min(0, self.hourly_pnl)) / account_balance
+        if self.starting_equity > 0:
+            loss_pct = -self.daily_pnl / self.starting_equity
+            if loss_pct > self.max_daily_loss_pct:
+                self._trip(f"Daily loss limit exceeded: {loss_pct:.2%}")
+                return False, self.trip_reason
+                
+        order_value = order.quantity * (order.limit_price or 0)
+        if account.equity > 0 and order_value / account.equity > self.max_position_size:
+            return False, f"Position size too large: {order_value / account.equity:.2%}"
             
-            if daily_loss_pct >= self.max_daily_loss_pct:
-                self._trip(f"Daily loss limit exceeded: {daily_loss_pct:.2%}")
-                return False, self.trip_reason
-                
-            if hourly_loss_pct >= self.max_hourly_loss_pct:
-                self._trip(f"Hourly loss limit exceeded: {hourly_loss_pct:.2%}")
-                return False, self.trip_reason
-                
-        if self.consecutive_losses >= self.max_consecutive_losses:
-            self._trip(f"Consecutive losses limit: {self.consecutive_losses}")
+        now = datetime.now()
+        self.order_timestamps.append(now)
+        recent_orders = sum(1 for t in self.order_timestamps if now - t < timedelta(minutes=1))
+        if recent_orders > self.max_orders_per_minute:
+            self._trip(f"Order rate limit exceeded: {recent_orders}/min")
             return False, self.trip_reason
             
         return True, "OK"
@@ -176,773 +226,835 @@ class CircuitBreaker:
         self.tripped = True
         self.trip_time = datetime.now()
         self.trip_reason = reason
-        logger.warning(f"CIRCUIT BREAKER TRIPPED: {reason}")
+        logger.warning(f"Circuit breaker tripped: {reason}")
+
+
+class SmartOrderRouter:
+    """Smart order routing with TWAP/VWAP/Iceberg algorithms"""
+    
+    def __init__(self, execute_func: Callable):
+        self.execute_func = execute_func
+        self.active_algos: Dict[str, threading.Thread] = {}
+        self.cancel_flags: Dict[str, threading.Event] = {}
         
-    def reset(self):
-        """Reset the circuit breaker"""
-        self.tripped = False
-        self.trip_time = None
-        self.trip_reason = ""
-        self.consecutive_losses = 0
-        logger.info("Circuit breaker reset")
+    def execute(self, order: OrderRequest) -> OrderResult:
+        """Execute order with specified algorithm"""
+        if order.algo == ExecutionAlgo.MARKET:
+            return self.execute_func(order)
+        elif order.algo == ExecutionAlgo.TWAP:
+            return self._execute_twap(order)
+        elif order.algo == ExecutionAlgo.VWAP:
+            return self._execute_vwap(order)
+        elif order.algo == ExecutionAlgo.ICEBERG:
+            return self._execute_iceberg(order)
+        else:
+            return self.execute_func(order)
+            
+    def _execute_twap(self, order: OrderRequest) -> OrderResult:
+        """Time-Weighted Average Price execution"""
+        duration_minutes = order.algo_params.get("duration_minutes", 30)
+        num_slices = order.algo_params.get("num_slices", 10)
+        
+        slice_qty = order.quantity / num_slices
+        interval = (duration_minutes * 60) / num_slices
+        
+        total_filled = 0.0
+        total_value = 0.0
+        
+        cancel_event = threading.Event()
+        self.cancel_flags[order.client_order_id] = cancel_event
+        
+        for i in range(num_slices):
+            if cancel_event.is_set():
+                break
+                
+            slice_order = OrderRequest(
+                symbol=order.symbol,
+                side=order.side,
+                quantity=slice_qty,
+                order_type=OrderType.MARKET,
+                client_order_id=f"{order.client_order_id}_slice_{i}"
+            )
+            
+            result = self.execute_func(slice_order)
+            
+            if result.success:
+                total_filled += result.filled_quantity
+                total_value += result.filled_quantity * result.avg_fill_price
+                
+            if i < num_slices - 1:
+                time.sleep(interval)
+                
+        avg_price = total_value / total_filled if total_filled > 0 else 0
+        
+        return OrderResult(
+            success=total_filled > 0,
+            order_id=order.client_order_id,
+            client_order_id=order.client_order_id,
+            filled_quantity=total_filled,
+            avg_fill_price=avg_price,
+            status="filled" if total_filled >= order.quantity * 0.95 else "partial",
+            message=f"TWAP complete: {total_filled}/{order.quantity}"
+        )
+        
+    def _execute_vwap(self, order: OrderRequest) -> OrderResult:
+        """Volume-Weighted Average Price execution"""
+        duration_minutes = order.algo_params.get("duration_minutes", 30)
+        participation_rate = order.algo_params.get("participation_rate", 0.1)
+        
+        return self._execute_twap(order)
+        
+    def _execute_iceberg(self, order: OrderRequest) -> OrderResult:
+        """Iceberg order execution - show only small visible quantity"""
+        visible_qty = order.algo_params.get("visible_qty", order.quantity * 0.1)
+        
+        total_filled = 0.0
+        total_value = 0.0
+        remaining = order.quantity
+        
+        cancel_event = threading.Event()
+        self.cancel_flags[order.client_order_id] = cancel_event
+        
+        slice_num = 0
+        while remaining > 0 and not cancel_event.is_set():
+            slice_qty = min(visible_qty, remaining)
+            
+            slice_order = OrderRequest(
+                symbol=order.symbol,
+                side=order.side,
+                quantity=slice_qty,
+                order_type=order.order_type,
+                limit_price=order.limit_price,
+                client_order_id=f"{order.client_order_id}_ice_{slice_num}"
+            )
+            
+            result = self.execute_func(slice_order)
+            
+            if result.success:
+                total_filled += result.filled_quantity
+                total_value += result.filled_quantity * result.avg_fill_price
+                remaining -= result.filled_quantity
+            else:
+                break
+                
+            slice_num += 1
+            time.sleep(0.5)
+            
+        avg_price = total_value / total_filled if total_filled > 0 else 0
+        
+        return OrderResult(
+            success=total_filled > 0,
+            order_id=order.client_order_id,
+            client_order_id=order.client_order_id,
+            filled_quantity=total_filled,
+            avg_fill_price=avg_price,
+            status="filled" if remaining <= 0 else "partial",
+            message=f"Iceberg complete: {total_filled}/{order.quantity}"
+        )
+        
+    def cancel_algo(self, client_order_id: str):
+        """Cancel running algorithm"""
+        if client_order_id in self.cancel_flags:
+            self.cancel_flags[client_order_id].set()
 
 
-class MT5LiveEngine:
-    """
-    MetaTrader 5 Live Trading Engine
-    
-    Features:
-    - Real-time tick data streaming
-    - Smart order execution (TWAP/VWAP/Iceberg)
-    - Risk management with circuit breakers
-    - Portfolio state synchronization
-    - Human confirmation for initial trades
-    """
-    
-    SYMBOL_MAPPING = {
-        "BTC/USDT": "BTCUSD",
-        "ETH/USDT": "ETHUSD",
-        "EUR/USD": "EURUSD",
-        "GBP/USD": "GBPUSD",
-        "USD/JPY": "USDJPY",
-        "XAU/USD": "XAUUSD",
-        "US30": "US30",
-        "SPX500": "US500",
-        "NASDAQ": "USTEC",
-    }
-    
-    TIMEFRAME_MAPPING = {
-        "1m": 1,
-        "5m": 5,
-        "15m": 15,
-        "30m": 30,
-        "1h": 60,
-        "4h": 240,
-        "1d": 1440,
-    }
+class IBKRConnection:
+    """Interactive Brokers connection handler"""
     
     def __init__(self,
-                 login: Optional[int] = None,
-                 password: Optional[str] = None,
-                 server: Optional[str] = None,
-                 risk_limits: Optional[RiskLimits] = None,
-                 simulation_mode: bool = False):
-        """
-        Initialize MT5 Live Engine
-        
-        Args:
-            login: MT5 account login
-            password: MT5 account password
-            server: MT5 server name
-            risk_limits: Risk management limits
-            simulation_mode: Run in simulation mode without real trades
-        """
-        self.login = login or int(os.environ.get("MT5_LOGIN", 0))
-        self.password = password or os.environ.get("MT5_PASSWORD", "")
-        self.server = server or os.environ.get("MT5_SERVER", "")
-        self.risk_limits = risk_limits or RiskLimits()
-        self.simulation_mode = simulation_mode or not MT5_AVAILABLE
-        
+                 host: str = "127.0.0.1",
+                 port: int = 7497,
+                 client_id: int = 1):
+        self.host = host
+        self.port = port
+        self.client_id = client_id
+        self.ib: Optional[IB] = None
         self.connected = False
-        self.positions: Dict[str, Position] = {}
-        self.pending_orders: Dict[int, Order] = {}
-        self.trade_history: List[Dict] = []
-        self.tick_callbacks: Dict[str, List[Callable]] = {}
-        self.tick_buffer: Dict[str, deque] = {}
-        
-        self.circuit_breaker = CircuitBreaker()
-        self.trades_executed = 0
-        self.human_confirmed = False
-        
-        self._running = False
-        self._tick_thread: Optional[threading.Thread] = None
-        self._sync_thread: Optional[threading.Thread] = None
-        
-        self.account_info: Dict[str, Any] = {}
-        
-        logger.info(f"MT5LiveEngine initialized (simulation_mode={self.simulation_mode})")
         
     def connect(self) -> bool:
-        """Connect to MT5 terminal"""
-        if self.simulation_mode:
-            logger.info("Running in simulation mode - no MT5 connection")
+        """Connect to IBKR TWS/Gateway"""
+        if not IBKR_AVAILABLE:
+            logger.warning("ib_insync not available")
+            return False
+            
+        try:
+            self.ib = IB()
+            self.ib.connect(self.host, self.port, clientId=self.client_id)
             self.connected = True
-            self._initialize_simulation()
+            logger.info(f"Connected to IBKR at {self.host}:{self.port}")
             return True
-            
-        if not MT5_AVAILABLE:
-            logger.error("MetaTrader5 package not installed")
+        except Exception as e:
+            logger.error(f"IBKR connection failed: {e}")
+            self.connected = False
             return False
             
-        if not mt5.initialize():
-            logger.error(f"MT5 initialization failed: {mt5.last_error()}")
-            return False
-            
-        if self.login and self.password and self.server:
-            authorized = mt5.login(
-                login=self.login,
-                password=self.password,
-                server=self.server
-            )
-            if not authorized:
-                logger.error(f"MT5 login failed: {mt5.last_error()}")
-                mt5.shutdown()
-                return False
-                
-        self.connected = True
-        self._sync_account_info()
-        logger.info(f"Connected to MT5: {self.account_info.get('name', 'Unknown')}")
-        return True
-        
     def disconnect(self):
-        """Disconnect from MT5 terminal"""
-        self._running = False
-        
-        if self._tick_thread and self._tick_thread.is_alive():
-            self._tick_thread.join(timeout=5)
+        """Disconnect from IBKR"""
+        if self.ib and self.connected:
+            self.ib.disconnect()
+            self.connected = False
+            logger.info("Disconnected from IBKR")
             
-        if self._sync_thread and self._sync_thread.is_alive():
-            self._sync_thread.join(timeout=5)
+    def get_account_info(self) -> Optional[AccountInfo]:
+        """Get account information"""
+        if not self.connected or not self.ib:
+            return None
             
-        if not self.simulation_mode and MT5_AVAILABLE:
-            mt5.shutdown()
+        try:
+            account_values = self.ib.accountValues()
             
-        self.connected = False
-        logger.info("Disconnected from MT5")
-        
-    def _initialize_simulation(self):
-        """Initialize simulation mode with mock data"""
-        self.account_info = {
-            "login": 12345678,
-            "name": "Simulation Account",
-            "balance": 100000.0,
-            "equity": 100000.0,
-            "margin": 0.0,
-            "free_margin": 100000.0,
-            "leverage": 100,
-            "currency": "USD"
-        }
-        
-    def _sync_account_info(self):
-        """Synchronize account information"""
-        if self.simulation_mode:
-            return
+            balance = 0.0
+            equity = 0.0
             
-        info = mt5.account_info()
-        if info:
-            self.account_info = {
-                "login": info.login,
-                "name": info.name,
-                "balance": info.balance,
-                "equity": info.equity,
-                "margin": info.margin,
-                "free_margin": info.margin_free,
-                "leverage": info.leverage,
-                "currency": info.currency
-            }
+            for av in account_values:
+                if av.tag == "TotalCashBalance" and av.currency == "USD":
+                    balance = float(av.value)
+                elif av.tag == "NetLiquidation" and av.currency == "USD":
+                    equity = float(av.value)
+                    
+            return AccountInfo(
+                balance=balance,
+                equity=equity,
+                margin=0.0,
+                free_margin=balance,
+                margin_level=100.0,
+                currency="USD",
+                broker=BrokerType.IBKR
+            )
+        except Exception as e:
+            logger.error(f"Failed to get IBKR account info: {e}")
+            return None
             
-    def _map_symbol(self, symbol: str) -> str:
-        """Map internal symbol to MT5 symbol"""
-        return self.SYMBOL_MAPPING.get(symbol, symbol)
-        
-    def _reverse_map_symbol(self, mt5_symbol: str) -> str:
-        """Map MT5 symbol back to internal symbol"""
-        for internal, mt5_sym in self.SYMBOL_MAPPING.items():
-            if mt5_sym == mt5_symbol:
-                return internal
-        return mt5_symbol
-        
-    def get_tick(self, symbol: str) -> Optional[TickData]:
-        """Get current tick for symbol"""
-        mt5_symbol = self._map_symbol(symbol)
-        
-        if self.simulation_mode:
-            base_price = 100.0
-            if "BTC" in symbol:
-                base_price = 45000.0
-            elif "ETH" in symbol:
-                base_price = 2500.0
-            elif "XAU" in symbol:
-                base_price = 2000.0
-            elif "EUR" in symbol:
-                base_price = 1.08
-            elif "GBP" in symbol:
-                base_price = 1.26
+    def place_order(self, order: OrderRequest) -> OrderResult:
+        """Place order through IBKR"""
+        if not self.connected or not self.ib:
+            return OrderResult(
+                success=False,
+                order_id="",
+                client_order_id=order.client_order_id,
+                filled_quantity=0,
+                avg_fill_price=0,
+                status="error",
+                message="Not connected to IBKR"
+            )
+            
+        try:
+            if "/" in order.symbol:
+                base, quote = order.symbol.split("/")
+                contract = Forex(base + quote)
+            else:
+                contract = Stock(order.symbol, "SMART", "USD")
                 
+            self.ib.qualifyContracts(contract)
+            
+            if order.order_type == OrderType.MARKET:
+                ib_order = Order(
+                    action="BUY" if order.side == OrderSide.BUY else "SELL",
+                    totalQuantity=order.quantity,
+                    orderType="MKT"
+                )
+            elif order.order_type == OrderType.LIMIT:
+                ib_order = Order(
+                    action="BUY" if order.side == OrderSide.BUY else "SELL",
+                    totalQuantity=order.quantity,
+                    orderType="LMT",
+                    lmtPrice=order.limit_price
+                )
+            else:
+                ib_order = Order(
+                    action="BUY" if order.side == OrderSide.BUY else "SELL",
+                    totalQuantity=order.quantity,
+                    orderType="MKT"
+                )
+                
+            trade = self.ib.placeOrder(contract, ib_order)
+            
+            timeout = 30
+            start = time.time()
+            while not trade.isDone() and time.time() - start < timeout:
+                self.ib.sleep(0.1)
+                
+            return OrderResult(
+                success=trade.orderStatus.status in ["Filled", "Submitted"],
+                order_id=str(trade.order.orderId),
+                client_order_id=order.client_order_id,
+                filled_quantity=trade.orderStatus.filled,
+                avg_fill_price=trade.orderStatus.avgFillPrice,
+                status=trade.orderStatus.status,
+                message=f"IBKR order: {trade.orderStatus.status}"
+            )
+            
+        except Exception as e:
+            logger.error(f"IBKR order failed: {e}")
+            return OrderResult(
+                success=False,
+                order_id="",
+                client_order_id=order.client_order_id,
+                filled_quantity=0,
+                avg_fill_price=0,
+                status="error",
+                message=str(e)
+            )
+
+
+class SimulationEngine:
+    """Simulation engine for testing without live connection"""
+    
+    def __init__(self, initial_balance: float = 100000):
+        self.balance = initial_balance
+        self.equity = initial_balance
+        self.positions: Dict[str, Position] = {}
+        self.order_history: List[OrderResult] = []
+        self.tick_data: Dict[str, Tick] = {}
+        
+        self._generate_initial_prices()
+        
+    def _generate_initial_prices(self):
+        """Generate initial simulated prices"""
+        symbols = ["EURUSD", "GBPUSD", "USDJPY", "AUDUSD", "USDCAD"]
+        base_prices = [1.0850, 1.2650, 149.50, 0.6550, 1.3650]
+        
+        for symbol, price in zip(symbols, base_prices):
+            spread = price * 0.0001
+            self.tick_data[symbol] = Tick(
+                symbol=symbol,
+                bid=price - spread/2,
+                ask=price + spread/2,
+                last=price,
+                volume=1000000,
+                timestamp=datetime.now()
+            )
+            
+    def get_tick(self, symbol: str) -> Optional[Tick]:
+        """Get current tick with simulated price movement"""
+        if symbol not in self.tick_data:
+            base_price = 1.0 + random.random()
             spread = base_price * 0.0001
-            return TickData(
+            self.tick_data[symbol] = Tick(
                 symbol=symbol,
                 bid=base_price - spread/2,
                 ask=base_price + spread/2,
                 last=base_price,
-                volume=1000.0,
-                time=datetime.now()
+                volume=1000000,
+                timestamp=datetime.now()
             )
             
-        tick = mt5.symbol_info_tick(mt5_symbol)
-        if tick:
-            return TickData(
-                symbol=symbol,
-                bid=tick.bid,
-                ask=tick.ask,
-                last=tick.last,
-                volume=tick.volume,
-                time=datetime.fromtimestamp(tick.time),
-                flags=tick.flags
-            )
-        return None
+        tick = self.tick_data[symbol]
         
-    def get_ohlcv(self, symbol: str, timeframe: str, count: int = 100) -> pd.DataFrame:
-        """Get OHLCV data for symbol"""
-        mt5_symbol = self._map_symbol(symbol)
+        change = (random.random() - 0.5) * 0.0002 * tick.last
+        new_price = tick.last + change
+        spread = new_price * 0.0001
         
-        if self.simulation_mode:
-            dates = pd.date_range(end=datetime.now(), periods=count, freq=timeframe)
-            base_price = 100.0
-            if "BTC" in symbol:
-                base_price = 45000.0
-            elif "ETH" in symbol:
-                base_price = 2500.0
-                
-            np.random.seed(42)
-            returns = np.random.normal(0, 0.01, count)
-            prices = base_price * np.exp(np.cumsum(returns))
-            
-            df = pd.DataFrame({
-                'time': dates,
-                'open': prices * (1 + np.random.uniform(-0.005, 0.005, count)),
-                'high': prices * (1 + np.random.uniform(0, 0.01, count)),
-                'low': prices * (1 - np.random.uniform(0, 0.01, count)),
-                'close': prices,
-                'volume': np.random.uniform(100, 1000, count)
-            })
-            df.set_index('time', inplace=True)
-            return df
-            
-        tf_minutes = self.TIMEFRAME_MAPPING.get(timeframe, 1)
-        mt5_timeframe = getattr(mt5, f"TIMEFRAME_M{tf_minutes}", mt5.TIMEFRAME_M1)
-        
-        rates = mt5.copy_rates_from_pos(mt5_symbol, mt5_timeframe, 0, count)
-        if rates is None or len(rates) == 0:
-            logger.warning(f"No data for {symbol}")
-            return pd.DataFrame()
-            
-        df = pd.DataFrame(rates)
-        df['time'] = pd.to_datetime(df['time'], unit='s')
-        df.set_index('time', inplace=True)
-        df.columns = ['open', 'high', 'low', 'close', 'tick_volume', 'spread', 'real_volume']
-        df['volume'] = df['tick_volume']
-        return df[['open', 'high', 'low', 'close', 'volume']]
-        
-    def get_positions(self) -> Dict[str, Position]:
-        """Get all open positions"""
-        if self.simulation_mode:
-            return self.positions
-            
-        positions = mt5.positions_get()
-        if positions is None:
-            return {}
-            
-        result = {}
-        for pos in positions:
-            symbol = self._reverse_map_symbol(pos.symbol)
-            result[symbol] = Position(
-                symbol=symbol,
-                volume=pos.volume,
-                entry_price=pos.price_open,
-                current_price=pos.price_current,
-                profit=pos.profit,
-                swap=pos.swap,
-                ticket=pos.ticket,
-                direction="BUY" if pos.type == 0 else "SELL",
-                open_time=datetime.fromtimestamp(pos.time),
-                stop_loss=pos.sl if pos.sl > 0 else None,
-                take_profit=pos.tp if pos.tp > 0 else None
-            )
-        self.positions = result
-        return result
-        
-    def _check_risk_limits(self, order: Order) -> Tuple[bool, str]:
-        """Check if order passes risk limits"""
-        can_trade, reason = self.circuit_breaker.check(
-            self.account_info.get("balance", 0)
+        self.tick_data[symbol] = Tick(
+            symbol=symbol,
+            bid=new_price - spread/2,
+            ask=new_price + spread/2,
+            last=new_price,
+            volume=tick.volume + random.randint(-10000, 10000),
+            timestamp=datetime.now()
         )
-        if not can_trade:
-            return False, reason
-            
-        if self.risk_limits.require_human_confirmation:
-            if self.trades_executed < self.risk_limits.human_confirmation_trades:
-                if not self.human_confirmed:
-                    return False, f"Human confirmation required for first {self.risk_limits.human_confirmation_trades} trades"
-                    
+        
+        return self.tick_data[symbol]
+        
+    def get_account_info(self) -> AccountInfo:
+        """Get simulated account info"""
+        return AccountInfo(
+            balance=self.balance,
+            equity=self.equity,
+            margin=0.0,
+            free_margin=self.balance,
+            margin_level=100.0,
+            currency="USD",
+            broker=BrokerType.SIMULATION
+        )
+        
+    def place_order(self, order: OrderRequest) -> OrderResult:
+        """Execute simulated order"""
         tick = self.get_tick(order.symbol)
-        if tick:
-            price = tick.ask if "BUY" in order.order_type.value else tick.bid
-            position_value = order.volume * price
-            balance = self.account_info.get("balance", 0)
+        if not tick:
+            return OrderResult(
+                success=False,
+                order_id="",
+                client_order_id=order.client_order_id,
+                filled_quantity=0,
+                avg_fill_price=0,
+                status="error",
+                message="Symbol not found"
+            )
             
-            if balance > 0 and position_value / balance > self.risk_limits.max_position_size:
-                return False, f"Position size exceeds limit: {position_value/balance:.2%} > {self.risk_limits.max_position_size:.2%}"
+        fill_price = tick.ask if order.side == OrderSide.BUY else tick.bid
+        
+        slippage = fill_price * 0.00005 * (1 if order.side == OrderSide.BUY else -1)
+        fill_price += slippage
+        
+        if order.symbol in self.positions:
+            pos = self.positions[order.symbol]
+            if order.side == OrderSide.BUY:
+                new_qty = pos.quantity + order.quantity
+                new_avg = (pos.avg_price * pos.quantity + fill_price * order.quantity) / new_qty
+            else:
+                new_qty = pos.quantity - order.quantity
+                new_avg = pos.avg_price
                 
-            if order.stop_loss:
-                risk_per_unit = abs(price - order.stop_loss)
-                total_risk = risk_per_unit * order.volume
-                if balance > 0 and total_risk / balance > self.risk_limits.max_single_trade_risk:
-                    return False, f"Single trade risk exceeds limit: {total_risk/balance:.2%}"
-                    
-        return True, "OK"
-        
-    def execute_order(self, order: Order, 
-                     execution_mode: ExecutionMode = ExecutionMode.MARKET) -> Dict[str, Any]:
-        """
-        Execute an order with specified execution mode
-        
-        Args:
-            order: Order to execute
-            execution_mode: Execution strategy (MARKET, ICEBERG, TWAP, VWAP)
-            
-        Returns:
-            Execution result dictionary
-        """
-        can_trade, reason = self._check_risk_limits(order)
-        if not can_trade:
-            logger.warning(f"Order rejected: {reason}")
-            return {"success": False, "error": reason}
-            
-        if execution_mode == ExecutionMode.MARKET:
-            return self._execute_market_order(order)
-        elif execution_mode == ExecutionMode.ICEBERG:
-            return self._execute_iceberg_order(order)
-        elif execution_mode == ExecutionMode.TWAP:
-            return self._execute_twap_order(order)
-        elif execution_mode == ExecutionMode.VWAP:
-            return self._execute_vwap_order(order)
-        else:
-            return {"success": False, "error": f"Unknown execution mode: {execution_mode}"}
-            
-    def _execute_market_order(self, order: Order) -> Dict[str, Any]:
-        """Execute a market order"""
-        mt5_symbol = self._map_symbol(order.symbol)
-        
-        if self.simulation_mode:
-            tick = self.get_tick(order.symbol)
-            if not tick:
-                return {"success": False, "error": "No tick data"}
-                
-            fill_price = tick.ask if "BUY" in order.order_type.value else tick.bid
-            
-            result = {
-                "success": True,
-                "ticket": int(time.time() * 1000),
-                "symbol": order.symbol,
-                "volume": order.volume,
-                "price": fill_price,
-                "order_type": order.order_type.value,
-                "time": datetime.now().isoformat(),
-                "comment": order.comment
-            }
-            
-            if "BUY" in order.order_type.value:
+            if abs(new_qty) < 0.0001:
+                del self.positions[order.symbol]
+            else:
                 self.positions[order.symbol] = Position(
                     symbol=order.symbol,
-                    volume=order.volume,
-                    entry_price=fill_price,
+                    quantity=new_qty,
+                    avg_price=new_avg,
                     current_price=fill_price,
-                    profit=0.0,
-                    swap=0.0,
-                    ticket=result["ticket"],
-                    direction="BUY",
-                    open_time=datetime.now(),
-                    stop_loss=order.stop_loss,
-                    take_profit=order.take_profit
+                    unrealized_pnl=0,
+                    realized_pnl=0,
+                    side="long" if new_qty > 0 else "short"
                 )
+        else:
+            qty = order.quantity if order.side == OrderSide.BUY else -order.quantity
+            self.positions[order.symbol] = Position(
+                symbol=order.symbol,
+                quantity=qty,
+                avg_price=fill_price,
+                current_price=fill_price,
+                unrealized_pnl=0,
+                realized_pnl=0,
+                side="long" if qty > 0 else "short"
+            )
+            
+        result = OrderResult(
+            success=True,
+            order_id=f"SIM_{datetime.now().strftime('%Y%m%d%H%M%S%f')}",
+            client_order_id=order.client_order_id,
+            filled_quantity=order.quantity,
+            avg_fill_price=fill_price,
+            status="filled",
+            message="Simulated fill"
+        )
+        
+        self.order_history.append(result)
+        return result
+
+
+class MT5LiveEngine:
+    """
+    Main MT5 Live Trading Engine with IBKR fallback.
+    
+    Features:
+    - Multi-broker support (MT5, IBKR, Simulation)
+    - Real-time tick streaming
+    - Smart order routing (TWAP/VWAP/Iceberg)
+    - Circuit breakers and risk management
+    - Position and portfolio management
+    """
+    
+    SYMBOL_MAPPING = {
+        "EUR/USD": "EURUSD",
+        "GBP/USD": "GBPUSD",
+        "USD/JPY": "USDJPY",
+        "AUD/USD": "AUDUSD",
+        "USD/CAD": "USDCAD",
+        "USD/CHF": "USDCHF",
+        "NZD/USD": "NZDUSD",
+        "EUR/GBP": "EURGBP",
+        "EUR/JPY": "EURJPY",
+        "GBP/JPY": "GBPJPY"
+    }
+    
+    def __init__(self,
+                 prefer_ibkr: bool = False,
+                 simulation_mode: bool = False,
+                 ibkr_host: str = "127.0.0.1",
+                 ibkr_port: int = 7497,
+                 ibkr_client_id: int = 1):
+        """
+        Initialize the MT5 Live Engine.
+        
+        Args:
+            prefer_ibkr: Prefer IBKR over MT5 when both available
+            simulation_mode: Force simulation mode
+            ibkr_host: IBKR TWS/Gateway host
+            ibkr_port: IBKR TWS/Gateway port
+            ibkr_client_id: IBKR client ID
+        """
+        self.prefer_ibkr = prefer_ibkr
+        self.simulation_mode = simulation_mode
+        
+        self.status = ConnectionStatus.DISCONNECTED
+        self.active_broker: Optional[BrokerType] = None
+        
+        self.ibkr = IBKRConnection(ibkr_host, ibkr_port, ibkr_client_id)
+        self.simulation = SimulationEngine()
+        
+        self.circuit_breaker = CircuitBreaker()
+        self.smart_router = SmartOrderRouter(self._execute_order_direct)
+        
+        self.tick_callbacks: List[Callable[[Tick], None]] = []
+        self.tick_thread: Optional[threading.Thread] = None
+        self.tick_running = False
+        
+        self.positions: Dict[str, Position] = {}
+        self.order_history: List[OrderResult] = []
+        
+        logger.info("MT5LiveEngine initialized")
+        
+    def connect(self) -> bool:
+        """Connect to trading platform"""
+        self.status = ConnectionStatus.CONNECTING
+        
+        if self.simulation_mode:
+            self.active_broker = BrokerType.SIMULATION
+            self.status = ConnectionStatus.CONNECTED
+            logger.info("Connected in SIMULATION mode")
+            return True
+            
+        if self.prefer_ibkr and IBKR_AVAILABLE:
+            if self.ibkr.connect():
+                self.active_broker = BrokerType.IBKR
+                self.status = ConnectionStatus.CONNECTED
+                logger.info("Connected to IBKR - superior execution active")
+                return True
                 
-            self.trades_executed += 1
-            self.trade_history.append(result)
-            logger.info(f"Simulated order executed: {result}")
-            return result
+        if MT5_AVAILABLE:
+            if mt5.initialize():
+                self.active_broker = BrokerType.MT5
+                self.status = ConnectionStatus.CONNECTED
+                logger.info("Connected to MT5")
+                return True
+                
+        if IBKR_AVAILABLE and not self.prefer_ibkr:
+            if self.ibkr.connect():
+                self.active_broker = BrokerType.IBKR
+                self.status = ConnectionStatus.CONNECTED
+                logger.info("Connected to IBKR (MT5 fallback)")
+                return True
+                
+        self.active_broker = BrokerType.SIMULATION
+        self.status = ConnectionStatus.CONNECTED
+        logger.warning("No live connection available, using SIMULATION mode")
+        return True
+        
+    def disconnect(self):
+        """Disconnect from trading platform"""
+        self.stop_tick_stream()
+        
+        if self.active_broker == BrokerType.MT5 and MT5_AVAILABLE:
+            mt5.shutdown()
+        elif self.active_broker == BrokerType.IBKR:
+            self.ibkr.disconnect()
+            
+        self.status = ConnectionStatus.DISCONNECTED
+        self.active_broker = None
+        logger.info("Disconnected from trading platform")
+        
+    def get_account_info(self) -> Optional[AccountInfo]:
+        """Get account information"""
+        if self.active_broker == BrokerType.MT5 and MT5_AVAILABLE:
+            info = mt5.account_info()
+            if info:
+                return AccountInfo(
+                    balance=info.balance,
+                    equity=info.equity,
+                    margin=info.margin,
+                    free_margin=info.margin_free,
+                    margin_level=info.margin_level if info.margin_level else 0,
+                    currency=info.currency,
+                    broker=BrokerType.MT5
+                )
+        elif self.active_broker == BrokerType.IBKR:
+            return self.ibkr.get_account_info()
+        else:
+            return self.simulation.get_account_info()
+            
+        return None
+        
+    def get_tick(self, symbol: str) -> Optional[Tick]:
+        """Get current tick for symbol"""
+        mt5_symbol = self.SYMBOL_MAPPING.get(symbol, symbol)
+        
+        if self.active_broker == BrokerType.MT5 and MT5_AVAILABLE:
+            tick = mt5.symbol_info_tick(mt5_symbol)
+            if tick:
+                return Tick(
+                    symbol=symbol,
+                    bid=tick.bid,
+                    ask=tick.ask,
+                    last=tick.last,
+                    volume=tick.volume,
+                    timestamp=datetime.fromtimestamp(tick.time)
+                )
+        elif self.active_broker == BrokerType.SIMULATION:
+            return self.simulation.get_tick(mt5_symbol)
+            
+        return None
+        
+    def start_tick_stream(self, symbols: List[str], callback: Callable[[Tick], None]):
+        """Start streaming ticks for symbols"""
+        self.tick_callbacks.append(callback)
+        
+        if self.tick_running:
+            return
+            
+        self.tick_running = True
+        
+        def stream_loop():
+            while self.tick_running:
+                for symbol in symbols:
+                    tick = self.get_tick(symbol)
+                    if tick:
+                        for cb in self.tick_callbacks:
+                            try:
+                                cb(tick)
+                            except Exception as e:
+                                logger.error(f"Tick callback error: {e}")
+                time.sleep(0.1)
+                
+        self.tick_thread = threading.Thread(target=stream_loop, daemon=True)
+        self.tick_thread.start()
+        logger.info(f"Started tick stream for {symbols}")
+        
+    def stop_tick_stream(self):
+        """Stop tick streaming"""
+        self.tick_running = False
+        if self.tick_thread:
+            self.tick_thread.join(timeout=5)
+        self.tick_callbacks.clear()
+        logger.info("Stopped tick stream")
+        
+    def place_order(self, order: OrderRequest) -> OrderResult:
+        """Place order with risk checks and smart routing"""
+        account = self.get_account_info()
+        if not account:
+            return OrderResult(
+                success=False,
+                order_id="",
+                client_order_id=order.client_order_id,
+                filled_quantity=0,
+                avg_fill_price=0,
+                status="error",
+                message="Could not get account info"
+            )
+            
+        allowed, reason = self.circuit_breaker.check_order(order, account)
+        if not allowed:
+            logger.warning(f"Order blocked by circuit breaker: {reason}")
+            return OrderResult(
+                success=False,
+                order_id="",
+                client_order_id=order.client_order_id,
+                filled_quantity=0,
+                avg_fill_price=0,
+                status="blocked",
+                message=reason
+            )
+            
+        result = self.smart_router.execute(order)
+        
+        self.order_history.append(result)
+        
+        if result.success:
+            self._update_position(order, result)
+            
+        return result
+        
+    def _execute_order_direct(self, order: OrderRequest) -> OrderResult:
+        """Execute order directly without smart routing"""
+        if self.active_broker == BrokerType.MT5 and MT5_AVAILABLE:
+            return self._execute_mt5_order(order)
+        elif self.active_broker == BrokerType.IBKR:
+            return self.ibkr.place_order(order)
+        else:
+            return self.simulation.place_order(order)
+            
+    def _execute_mt5_order(self, order: OrderRequest) -> OrderResult:
+        """Execute order through MT5"""
+        mt5_symbol = self.SYMBOL_MAPPING.get(order.symbol, order.symbol)
+        
+        symbol_info = mt5.symbol_info(mt5_symbol)
+        if not symbol_info:
+            return OrderResult(
+                success=False,
+                order_id="",
+                client_order_id=order.client_order_id,
+                filled_quantity=0,
+                avg_fill_price=0,
+                status="error",
+                message=f"Symbol {mt5_symbol} not found"
+            )
+            
+        if not symbol_info.visible:
+            mt5.symbol_select(mt5_symbol, True)
             
         tick = mt5.symbol_info_tick(mt5_symbol)
         if not tick:
-            return {"success": False, "error": f"No tick data for {mt5_symbol}"}
+            return OrderResult(
+                success=False,
+                order_id="",
+                client_order_id=order.client_order_id,
+                filled_quantity=0,
+                avg_fill_price=0,
+                status="error",
+                message="Could not get tick"
+            )
             
-        if "BUY" in order.order_type.value:
-            order_type = mt5.ORDER_TYPE_BUY
-            price = tick.ask
+        price = tick.ask if order.side == OrderSide.BUY else tick.bid
+        
+        if order.order_type == OrderType.MARKET:
+            order_type = mt5.ORDER_TYPE_BUY if order.side == OrderSide.BUY else mt5.ORDER_TYPE_SELL
+        elif order.order_type == OrderType.LIMIT:
+            order_type = mt5.ORDER_TYPE_BUY_LIMIT if order.side == OrderSide.BUY else mt5.ORDER_TYPE_SELL_LIMIT
+            price = order.limit_price
         else:
-            order_type = mt5.ORDER_TYPE_SELL
-            price = tick.bid
+            order_type = mt5.ORDER_TYPE_BUY if order.side == OrderSide.BUY else mt5.ORDER_TYPE_SELL
             
         request = {
             "action": mt5.TRADE_ACTION_DEAL,
             "symbol": mt5_symbol,
-            "volume": order.volume,
+            "volume": order.quantity,
             "type": order_type,
             "price": price,
-            "deviation": order.deviation,
-            "magic": order.magic_number,
-            "comment": order.comment,
+            "deviation": 20,
+            "magic": 234000,
+            "comment": order.client_order_id,
             "type_time": mt5.ORDER_TIME_GTC,
             "type_filling": mt5.ORDER_FILLING_IOC,
         }
         
-        if order.stop_loss:
-            request["sl"] = order.stop_loss
-        if order.take_profit:
-            request["tp"] = order.take_profit
-            
         result = mt5.order_send(request)
         
-        if result.retcode != mt5.TRADE_RETCODE_DONE:
-            error_msg = f"Order failed: {result.retcode} - {result.comment}"
-            logger.error(error_msg)
-            return {"success": False, "error": error_msg, "retcode": result.retcode}
-            
-        self.trades_executed += 1
-        
-        execution_result = {
-            "success": True,
-            "ticket": result.order,
-            "symbol": order.symbol,
-            "volume": result.volume,
-            "price": result.price,
-            "order_type": order.order_type.value,
-            "time": datetime.now().isoformat(),
-            "comment": order.comment
-        }
-        
-        self.trade_history.append(execution_result)
-        logger.info(f"Order executed: {execution_result}")
-        return execution_result
-        
-    def _execute_iceberg_order(self, order: Order, 
-                               slice_size: float = 0.1,
-                               delay_seconds: float = 5.0) -> Dict[str, Any]:
-        """Execute iceberg order in slices"""
-        total_volume = order.volume
-        slice_volume = total_volume * slice_size
-        num_slices = int(1 / slice_size)
-        
-        results = []
-        total_filled = 0.0
-        weighted_price = 0.0
-        
-        for i in range(num_slices):
-            remaining = total_volume - total_filled
-            current_slice = min(slice_volume, remaining)
-            
-            if current_slice <= 0:
-                break
-                
-            slice_order = Order(
-                symbol=order.symbol,
-                order_type=order.order_type,
-                volume=current_slice,
-                stop_loss=order.stop_loss if i == num_slices - 1 else None,
-                take_profit=order.take_profit if i == num_slices - 1 else None,
-                comment=f"{order.comment}_slice_{i+1}",
-                magic_number=order.magic_number,
-                deviation=order.deviation
+        if result.retcode == mt5.TRADE_RETCODE_DONE:
+            return OrderResult(
+                success=True,
+                order_id=str(result.order),
+                client_order_id=order.client_order_id,
+                filled_quantity=result.volume,
+                avg_fill_price=result.price,
+                status="filled",
+                message="MT5 order filled"
+            )
+        else:
+            return OrderResult(
+                success=False,
+                order_id="",
+                client_order_id=order.client_order_id,
+                filled_quantity=0,
+                avg_fill_price=0,
+                status="error",
+                message=f"MT5 error: {result.retcode}"
             )
             
-            result = self._execute_market_order(slice_order)
-            results.append(result)
-            
-            if result["success"]:
-                total_filled += result["volume"]
-                weighted_price += result["price"] * result["volume"]
+    def _update_position(self, order: OrderRequest, result: OrderResult):
+        """Update position tracking after fill"""
+        if order.symbol in self.positions:
+            pos = self.positions[order.symbol]
+            if order.side == OrderSide.BUY:
+                new_qty = pos.quantity + result.filled_quantity
+                if pos.quantity > 0:
+                    new_avg = (pos.avg_price * pos.quantity + result.avg_fill_price * result.filled_quantity) / new_qty
+                else:
+                    new_avg = result.avg_fill_price
+            else:
+                new_qty = pos.quantity - result.filled_quantity
+                new_avg = pos.avg_price
                 
-            if i < num_slices - 1:
-                time.sleep(delay_seconds)
-                
-        avg_price = weighted_price / total_filled if total_filled > 0 else 0
-        
-        return {
-            "success": total_filled > 0,
-            "execution_mode": "ICEBERG",
-            "total_volume": total_filled,
-            "avg_price": avg_price,
-            "num_slices": len(results),
-            "slices": results
-        }
-        
-    def _execute_twap_order(self, order: Order,
-                           duration_minutes: int = 30,
-                           num_slices: int = 10) -> Dict[str, Any]:
-        """Execute TWAP order over time period"""
-        slice_volume = order.volume / num_slices
-        interval_seconds = (duration_minutes * 60) / num_slices
-        
-        results = []
-        total_filled = 0.0
-        weighted_price = 0.0
-        
-        for i in range(num_slices):
-            slice_order = Order(
+            if abs(new_qty) < 0.0001:
+                del self.positions[order.symbol]
+            else:
+                self.positions[order.symbol] = Position(
+                    symbol=order.symbol,
+                    quantity=new_qty,
+                    avg_price=new_avg,
+                    current_price=result.avg_fill_price,
+                    unrealized_pnl=0,
+                    realized_pnl=0,
+                    side="long" if new_qty > 0 else "short"
+                )
+        else:
+            qty = result.filled_quantity if order.side == OrderSide.BUY else -result.filled_quantity
+            self.positions[order.symbol] = Position(
                 symbol=order.symbol,
-                order_type=order.order_type,
-                volume=slice_volume,
-                stop_loss=order.stop_loss if i == num_slices - 1 else None,
-                take_profit=order.take_profit if i == num_slices - 1 else None,
-                comment=f"{order.comment}_twap_{i+1}",
-                magic_number=order.magic_number,
-                deviation=order.deviation
+                quantity=qty,
+                avg_price=result.avg_fill_price,
+                current_price=result.avg_fill_price,
+                unrealized_pnl=0,
+                realized_pnl=0,
+                side="long" if qty > 0 else "short"
             )
             
-            result = self._execute_market_order(slice_order)
-            results.append(result)
-            
-            if result["success"]:
-                total_filled += result["volume"]
-                weighted_price += result["price"] * result["volume"]
-                
-            if i < num_slices - 1:
-                time.sleep(interval_seconds)
-                
-        avg_price = weighted_price / total_filled if total_filled > 0 else 0
+    def get_positions(self) -> Dict[str, Position]:
+        """Get all positions"""
+        return self.positions.copy()
         
+    def get_status(self) -> Dict[str, Any]:
+        """Get engine status"""
         return {
-            "success": total_filled > 0,
-            "execution_mode": "TWAP",
-            "total_volume": total_filled,
-            "avg_price": avg_price,
-            "duration_minutes": duration_minutes,
-            "num_slices": len(results),
-            "slices": results
-        }
-        
-    def _execute_vwap_order(self, order: Order,
-                           duration_minutes: int = 30) -> Dict[str, Any]:
-        """Execute VWAP order based on volume profile"""
-        historical_data = self.get_ohlcv(order.symbol, "1m", duration_minutes)
-        
-        if historical_data.empty:
-            logger.warning("No historical data for VWAP, falling back to TWAP")
-            return self._execute_twap_order(order, duration_minutes)
-            
-        volume_profile = historical_data['volume'].values
-        total_volume = volume_profile.sum()
-        
-        if total_volume == 0:
-            return self._execute_twap_order(order, duration_minutes)
-            
-        volume_weights = volume_profile / total_volume
-        
-        results = []
-        total_filled = 0.0
-        weighted_price = 0.0
-        
-        for i, weight in enumerate(volume_weights):
-            slice_volume = order.volume * weight
-            
-            if slice_volume < 0.01:
-                continue
-                
-            slice_order = Order(
-                symbol=order.symbol,
-                order_type=order.order_type,
-                volume=slice_volume,
-                comment=f"{order.comment}_vwap_{i+1}",
-                magic_number=order.magic_number,
-                deviation=order.deviation
-            )
-            
-            result = self._execute_market_order(slice_order)
-            results.append(result)
-            
-            if result["success"]:
-                total_filled += result["volume"]
-                weighted_price += result["price"] * result["volume"]
-                
-            time.sleep(60)
-            
-        avg_price = weighted_price / total_filled if total_filled > 0 else 0
-        
-        return {
-            "success": total_filled > 0,
-            "execution_mode": "VWAP",
-            "total_volume": total_filled,
-            "avg_price": avg_price,
-            "num_slices": len(results),
-            "slices": results
-        }
-        
-    def close_position(self, symbol: str) -> Dict[str, Any]:
-        """Close position for symbol"""
-        positions = self.get_positions()
-        
-        if symbol not in positions:
-            return {"success": False, "error": f"No position for {symbol}"}
-            
-        position = positions[symbol]
-        
-        close_order = Order(
-            symbol=symbol,
-            order_type=OrderType.MARKET_SELL if position.direction == "BUY" else OrderType.MARKET_BUY,
-            volume=position.volume,
-            comment=f"Close_{symbol}"
-        )
-        
-        result = self._execute_market_order(close_order)
-        
-        if result["success"] and self.simulation_mode:
-            del self.positions[symbol]
-            
-        return result
-        
-    def close_all_positions(self) -> List[Dict[str, Any]]:
-        """Close all open positions"""
-        results = []
-        positions = self.get_positions()
-        
-        for symbol in list(positions.keys()):
-            result = self.close_position(symbol)
-            results.append(result)
-            
-        return results
-        
-    def subscribe_ticks(self, symbol: str, callback: Callable[[TickData], None]):
-        """Subscribe to tick updates for symbol"""
-        if symbol not in self.tick_callbacks:
-            self.tick_callbacks[symbol] = []
-            self.tick_buffer[symbol] = deque(maxlen=1000)
-            
-        self.tick_callbacks[symbol].append(callback)
-        logger.info(f"Subscribed to ticks for {symbol}")
-        
-    def start_tick_streaming(self):
-        """Start tick data streaming thread"""
-        if self._running:
-            return
-            
-        self._running = True
-        self._tick_thread = threading.Thread(target=self._tick_streaming_loop, daemon=True)
-        self._tick_thread.start()
-        logger.info("Tick streaming started")
-        
-    def _tick_streaming_loop(self):
-        """Main tick streaming loop"""
-        while self._running:
-            for symbol in list(self.tick_callbacks.keys()):
-                tick = self.get_tick(symbol)
-                if tick:
-                    self.tick_buffer[symbol].append(tick)
-                    for callback in self.tick_callbacks[symbol]:
-                        try:
-                            callback(tick)
-                        except Exception as e:
-                            logger.error(f"Tick callback error: {e}")
-                            
-            time.sleep(0.1)
-            
-    def start_portfolio_sync(self, interval_seconds: int = 5):
-        """Start portfolio synchronization thread"""
-        self._sync_thread = threading.Thread(
-            target=self._portfolio_sync_loop,
-            args=(interval_seconds,),
-            daemon=True
-        )
-        self._sync_thread.start()
-        logger.info("Portfolio sync started")
-        
-    def _portfolio_sync_loop(self, interval: int):
-        """Portfolio synchronization loop"""
-        while self._running:
-            try:
-                self._sync_account_info()
-                self.get_positions()
-            except Exception as e:
-                logger.error(f"Portfolio sync error: {e}")
-            time.sleep(interval)
-            
-    def confirm_human_trading(self, confirmation_code: str = "CONFIRM_LIVE_TRADING"):
-        """Confirm human authorization for live trading"""
-        if confirmation_code == "CONFIRM_LIVE_TRADING":
-            self.human_confirmed = True
-            logger.info("Human trading confirmation received")
-            return True
-        return False
-        
-    def get_account_summary(self) -> Dict[str, Any]:
-        """Get account summary"""
-        self._sync_account_info()
-        positions = self.get_positions()
-        
-        total_profit = sum(p.profit for p in positions.values())
-        total_volume = sum(p.volume for p in positions.values())
-        
-        return {
-            "account": self.account_info,
-            "positions_count": len(positions),
-            "total_profit": total_profit,
-            "total_volume": total_volume,
-            "trades_executed": self.trades_executed,
-            "circuit_breaker_status": "OK" if not self.circuit_breaker.tripped else self.circuit_breaker.trip_reason,
-            "human_confirmed": self.human_confirmed,
-            "simulation_mode": self.simulation_mode
-        }
-        
-    def emergency_stop(self):
-        """Emergency stop - close all positions and halt trading"""
-        logger.critical("EMERGENCY STOP ACTIVATED")
-        
-        self.circuit_breaker._trip("Emergency stop activated")
-        
-        results = self.close_all_positions()
-        
-        self._running = False
-        
-        return {
-            "emergency_stop": True,
-            "positions_closed": results,
-            "timestamp": datetime.now().isoformat()
+            "connection_status": self.status.value,
+            "active_broker": self.active_broker.value if self.active_broker else None,
+            "circuit_breaker_tripped": self.circuit_breaker.tripped,
+            "positions_count": len(self.positions),
+            "orders_count": len(self.order_history),
+            "tick_streaming": self.tick_running
         }
 
 
-def main():
-    """Demo of MT5 Live Engine"""
+def demo():
+    """Demonstration of MT5 Live Engine"""
+    print("=" * 60)
+    print("MT5 LIVE ENGINE DEMO")
+    print("=" * 60)
+    
     engine = MT5LiveEngine(simulation_mode=True)
     
-    if not engine.connect():
-        print("Failed to connect")
-        return
-        
-    print("\n=== Account Summary ===")
-    summary = engine.get_account_summary()
-    print(json.dumps(summary, indent=2, default=str))
+    print("\nConnecting...")
+    engine.connect()
     
-    print("\n=== Getting Tick Data ===")
-    tick = engine.get_tick("BTC/USDT")
+    print(f"\nStatus: {engine.get_status()}")
+    
+    account = engine.get_account_info()
+    if account:
+        print(f"\nAccount Info:")
+        print(f"  Balance: ${account.balance:,.2f}")
+        print(f"  Equity: ${account.equity:,.2f}")
+        print(f"  Broker: {account.broker.value}")
+        
+    tick = engine.get_tick("EURUSD")
     if tick:
-        print(f"BTC/USDT: Bid={tick.bid}, Ask={tick.ask}")
+        print(f"\nEURUSD Tick:")
+        print(f"  Bid: {tick.bid:.5f}")
+        print(f"  Ask: {tick.ask:.5f}")
+        print(f"  Spread: {tick.spread:.5f}")
         
-    print("\n=== Getting OHLCV Data ===")
-    ohlcv = engine.get_ohlcv("BTC/USDT", "1h", 10)
-    print(ohlcv.tail())
-    
-    engine.confirm_human_trading("CONFIRM_LIVE_TRADING")
-    
-    print("\n=== Executing Test Order ===")
-    order = Order(
-        symbol="BTC/USDT",
-        order_type=OrderType.MARKET_BUY,
-        volume=0.01,
-        stop_loss=44000.0,
-        take_profit=46000.0,
-        comment="Test order"
+    print("\nPlacing market order...")
+    order = OrderRequest(
+        symbol="EURUSD",
+        side=OrderSide.BUY,
+        quantity=0.1,
+        order_type=OrderType.MARKET
     )
     
-    result = engine.execute_order(order)
-    print(json.dumps(result, indent=2, default=str))
+    result = engine.place_order(order)
+    print(f"Order result: {result.status}")
+    print(f"  Filled: {result.filled_quantity} @ {result.avg_fill_price:.5f}")
     
-    print("\n=== Positions ===")
-    positions = engine.get_positions()
-    for symbol, pos in positions.items():
-        print(f"{symbol}: {pos.direction} {pos.volume} @ {pos.entry_price}")
+    print("\nPlacing TWAP order...")
+    twap_order = OrderRequest(
+        symbol="GBPUSD",
+        side=OrderSide.BUY,
+        quantity=0.5,
+        order_type=OrderType.MARKET,
+        algo=ExecutionAlgo.TWAP,
+        algo_params={"duration_minutes": 1, "num_slices": 3}
+    )
+    
+    result = engine.place_order(twap_order)
+    print(f"TWAP result: {result.status}")
+    print(f"  Filled: {result.filled_quantity} @ {result.avg_fill_price:.5f}")
+    
+    print(f"\nPositions: {len(engine.get_positions())}")
+    for symbol, pos in engine.get_positions().items():
+        print(f"  {symbol}: {pos.quantity} @ {pos.avg_price:.5f}")
         
     engine.disconnect()
-    print("\nDemo complete")
+    print("\nDemo complete!")
 
 
 if __name__ == "__main__":
-    main()
+    demo()

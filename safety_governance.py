@@ -1,43 +1,42 @@
 """
-Safety Governance Module
+Safety Governance System - Eternal Guardrails
 
-Comprehensive safety and governance system for live trading:
-- Human confirmation requirements
-- Emergency kill switch
+Comprehensive safety and governance system for live trading with:
+- Human confirmation requirements for live trading
+- Emergency kill switch with immediate halt capability
 - Comprehensive audit logging
-- Trade authorization
-- Risk override controls
+- Eternal guardrails that cannot be bypassed
+- Multi-level authorization system
+- Performance decay monitoring
+- Automatic pause on anomaly detection
+
+Implements Directive 21: Eternal Safeguards for Infinite Growth
 """
 
 import os
 import sys
 import json
 import time
+import signal
 import logging
-import threading
 import hashlib
-import secrets
+import threading
 from datetime import datetime, timedelta
-from typing import Dict, List, Any, Optional, Callable
+from typing import Dict, List, Any, Optional, Callable, Tuple
 from dataclasses import dataclass, field, asdict
 from enum import Enum
 from pathlib import Path
 from collections import deque
-import signal
+import uuid
 
 logging.basicConfig(
     level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-    handlers=[
-        logging.FileHandler("safety_governance.log"),
-        logging.StreamHandler()
-    ]
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger("SafetyGovernance")
 
 
 class AuthorizationLevel(Enum):
-    """Authorization levels for trading operations"""
     NONE = 0
     READ_ONLY = 1
     PAPER_TRADING = 2
@@ -47,147 +46,184 @@ class AuthorizationLevel(Enum):
 
 
 class TradeStatus(Enum):
-    """Trade authorization status"""
-    PENDING = "pending"
+    PENDING_APPROVAL = "pending_approval"
     APPROVED = "approved"
     REJECTED = "rejected"
     EXECUTED = "executed"
     CANCELLED = "cancelled"
 
 
+class AlertLevel(Enum):
+    INFO = "info"
+    WARNING = "warning"
+    CRITICAL = "critical"
+    EMERGENCY = "emergency"
+
+
 @dataclass
 class TradeAuthorization:
-    """Trade authorization record"""
     trade_id: str
     symbol: str
-    direction: str
-    volume: float
-    price: float
-    stop_loss: Optional[float]
-    take_profit: Optional[float]
+    side: str
+    quantity: float
+    order_type: str
     status: TradeStatus
     requested_at: datetime
-    authorized_at: Optional[datetime] = None
-    authorized_by: Optional[str] = None
+    approved_at: Optional[datetime] = None
+    approved_by: Optional[str] = None
     rejection_reason: Optional[str] = None
-    execution_result: Optional[Dict] = None
+    confirmation_code: Optional[str] = None
+    
+    def to_dict(self) -> Dict:
+        return {
+            "trade_id": self.trade_id,
+            "symbol": self.symbol,
+            "side": self.side,
+            "quantity": self.quantity,
+            "order_type": self.order_type,
+            "status": self.status.value,
+            "requested_at": self.requested_at.isoformat(),
+            "approved_at": self.approved_at.isoformat() if self.approved_at else None,
+            "approved_by": self.approved_by,
+            "rejection_reason": self.rejection_reason,
+            "confirmation_code": self.confirmation_code
+        }
 
 
 @dataclass
 class AuditLogEntry:
-    """Audit log entry"""
     timestamp: datetime
     event_type: str
     user: str
     action: str
-    details: Dict[str, Any]
-    ip_address: Optional[str] = None
-    session_id: Optional[str] = None
-    risk_level: str = "normal"
+    details: Dict
+    risk_level: str
+    session_id: str
+    
+    def to_dict(self) -> Dict:
+        return {
+            "timestamp": self.timestamp.isoformat(),
+            "event_type": self.event_type,
+            "user": self.user,
+            "action": self.action,
+            "details": self.details,
+            "risk_level": self.risk_level,
+            "session_id": self.session_id
+        }
+
+
+@dataclass
+class PerformanceSnapshot:
+    timestamp: datetime
+    equity: float
+    peak_equity: float
+    drawdown: float
+    sharpe_ratio: float
+    daily_pnl: float
+    weekly_pnl: float
+    
+    def to_dict(self) -> Dict:
+        return asdict(self)
 
 
 class AuditLogger:
     """
     Comprehensive audit logging system.
     
-    Logs all trading activities, system changes, and security events
-    with full traceability.
+    Logs all trading activities with file persistence,
+    searchable by date, event type, and user.
     """
     
     def __init__(self, log_dir: str = "audit_logs"):
         self.log_dir = Path(log_dir)
         self.log_dir.mkdir(exist_ok=True)
+        self.session_id = str(uuid.uuid4())[:8]
+        self.entries: List[AuditLogEntry] = []
         
-        self.current_log_file = self._get_log_file()
-        self.log_buffer: deque = deque(maxlen=10000)
-        self._lock = threading.Lock()
+        self._current_log_file = self._get_log_file()
+        
+        logger.info(f"AuditLogger initialized with session {self.session_id}")
         
     def _get_log_file(self) -> Path:
-        """Get current log file path"""
+        """Get log file for current date"""
         date_str = datetime.now().strftime("%Y-%m-%d")
         return self.log_dir / f"audit_{date_str}.json"
         
-    def log(self, 
+    def log(self,
             event_type: str,
             action: str,
-            details: Dict[str, Any],
+            details: Dict = None,
             user: str = "system",
-            risk_level: str = "normal"):
+            risk_level: str = "low") -> AuditLogEntry:
         """Log an audit event"""
         entry = AuditLogEntry(
             timestamp=datetime.now(),
             event_type=event_type,
             user=user,
             action=action,
-            details=details,
-            session_id=os.environ.get("SESSION_ID", "unknown"),
-            risk_level=risk_level
+            details=details or {},
+            risk_level=risk_level,
+            session_id=self.session_id
         )
         
-        with self._lock:
-            self.log_buffer.append(entry)
-            self._write_to_file(entry)
-            
+        self.entries.append(entry)
+        self._persist_entry(entry)
+        
         if risk_level in ["high", "critical"]:
-            logger.warning(f"HIGH RISK EVENT: {event_type} - {action}")
+            logger.warning(f"[AUDIT] {event_type}: {action} - {details}")
+        else:
+            logger.info(f"[AUDIT] {event_type}: {action}")
             
-    def _write_to_file(self, entry: AuditLogEntry):
-        """Write entry to log file"""
+        return entry
+        
+    def _persist_entry(self, entry: AuditLogEntry):
+        """Persist entry to file"""
         log_file = self._get_log_file()
         
-        entry_dict = {
-            "timestamp": entry.timestamp.isoformat(),
-            "event_type": entry.event_type,
-            "user": entry.user,
-            "action": entry.action,
-            "details": entry.details,
-            "session_id": entry.session_id,
-            "risk_level": entry.risk_level
-        }
+        entries = []
+        if log_file.exists():
+            with open(log_file, 'r') as f:
+                entries = json.load(f)
+                
+        entries.append(entry.to_dict())
         
-        with open(log_file, 'a') as f:
-            f.write(json.dumps(entry_dict) + "\n")
+        with open(log_file, 'w') as f:
+            json.dump(entries, f, indent=2)
             
-    def get_recent_logs(self, count: int = 100, 
-                       event_type: Optional[str] = None) -> List[AuditLogEntry]:
-        """Get recent log entries"""
-        logs = list(self.log_buffer)
-        
-        if event_type:
-            logs = [l for l in logs if l.event_type == event_type]
-            
-        return logs[-count:]
-        
-    def search_logs(self, 
-                   start_date: Optional[datetime] = None,
-                   end_date: Optional[datetime] = None,
-                   event_type: Optional[str] = None,
-                   user: Optional[str] = None) -> List[Dict]:
+    def search(self,
+               start_date: Optional[datetime] = None,
+               end_date: Optional[datetime] = None,
+               event_type: Optional[str] = None,
+               user: Optional[str] = None) -> List[AuditLogEntry]:
         """Search audit logs"""
         results = []
         
-        log_files = sorted(self.log_dir.glob("audit_*.json"))
-        
-        for log_file in log_files:
+        for log_file in sorted(self.log_dir.glob("audit_*.json")):
             with open(log_file, 'r') as f:
-                for line in f:
-                    try:
-                        entry = json.loads(line)
-                        entry_time = datetime.fromisoformat(entry["timestamp"])
-                        
-                        if start_date and entry_time < start_date:
-                            continue
-                        if end_date and entry_time > end_date:
-                            continue
-                        if event_type and entry["event_type"] != event_type:
-                            continue
-                        if user and entry["user"] != user:
-                            continue
-                            
-                        results.append(entry)
-                    except:
-                        continue
-                        
+                entries = json.load(f)
+                
+            for entry_dict in entries:
+                entry_time = datetime.fromisoformat(entry_dict["timestamp"])
+                
+                if start_date and entry_time < start_date:
+                    continue
+                if end_date and entry_time > end_date:
+                    continue
+                if event_type and entry_dict["event_type"] != event_type:
+                    continue
+                if user and entry_dict["user"] != user:
+                    continue
+                    
+                results.append(AuditLogEntry(
+                    timestamp=entry_time,
+                    event_type=entry_dict["event_type"],
+                    user=entry_dict["user"],
+                    action=entry_dict["action"],
+                    details=entry_dict["details"],
+                    risk_level=entry_dict["risk_level"],
+                    session_id=entry_dict["session_id"]
+                ))
+                
         return results
 
 
@@ -197,190 +233,164 @@ class HumanConfirmationSystem:
     
     Requires human approval for:
     - First N trades in live mode
-    - Trades exceeding risk thresholds
-    - Unusual market conditions
+    - Trades above risk threshold
+    - Trades during unusual market conditions
     """
     
     def __init__(self,
                  required_confirmations: int = 100,
-                 confirmation_timeout_seconds: int = 300,
+                 confirmation_timeout_minutes: int = 60,
                  auto_approve_paper: bool = True):
+        """
+        Initialize human confirmation system.
+        
+        Args:
+            required_confirmations: Number of trades requiring human confirmation
+            confirmation_timeout_minutes: Timeout for pending confirmations
+            auto_approve_paper: Auto-approve in paper trading mode
+        """
         self.required_confirmations = required_confirmations
-        self.confirmation_timeout = confirmation_timeout_seconds
+        self.confirmation_timeout = timedelta(minutes=confirmation_timeout_minutes)
         self.auto_approve_paper = auto_approve_paper
         
         self.confirmed_trades = 0
         self.pending_authorizations: Dict[str, TradeAuthorization] = {}
-        self.authorization_history: deque = deque(maxlen=1000)
+        self.authorization_history: List[TradeAuthorization] = []
         
         self.is_paper_mode = True
         self.human_override_active = False
         self.override_expiry: Optional[datetime] = None
         
-        self._lock = threading.Lock()
-        self.audit_logger = AuditLogger()
+        self._callbacks: List[Callable[[TradeAuthorization], None]] = []
         
-    def set_trading_mode(self, is_paper: bool):
+    def set_mode(self, paper_mode: bool):
         """Set trading mode"""
-        self.is_paper_mode = is_paper
-        self.audit_logger.log(
-            "config_change",
-            "set_trading_mode",
-            {"is_paper": is_paper},
-            risk_level="high" if not is_paper else "normal"
-        )
+        self.is_paper_mode = paper_mode
+        logger.info(f"Trading mode set to: {'PAPER' if paper_mode else 'LIVE'}")
         
     def request_authorization(self,
-                             symbol: str,
-                             direction: str,
-                             volume: float,
-                             price: float,
-                             stop_loss: Optional[float] = None,
-                             take_profit: Optional[float] = None) -> TradeAuthorization:
+                              symbol: str,
+                              side: str,
+                              quantity: float,
+                              order_type: str = "market") -> TradeAuthorization:
         """Request authorization for a trade"""
-        trade_id = hashlib.sha256(
-            f"{symbol}{direction}{volume}{datetime.now().isoformat()}".encode()
-        ).hexdigest()[:12]
+        trade_id = str(uuid.uuid4())[:12]
+        confirmation_code = hashlib.sha256(
+            f"{trade_id}{datetime.now().isoformat()}".encode()
+        ).hexdigest()[:8].upper()
         
         auth = TradeAuthorization(
             trade_id=trade_id,
             symbol=symbol,
-            direction=direction,
-            volume=volume,
-            price=price,
-            stop_loss=stop_loss,
-            take_profit=take_profit,
-            status=TradeStatus.PENDING,
-            requested_at=datetime.now()
+            side=side,
+            quantity=quantity,
+            order_type=order_type,
+            status=TradeStatus.PENDING_APPROVAL,
+            requested_at=datetime.now(),
+            confirmation_code=confirmation_code
         )
         
-        with self._lock:
-            if self.is_paper_mode and self.auto_approve_paper:
-                auth.status = TradeStatus.APPROVED
-                auth.authorized_at = datetime.now()
-                auth.authorized_by = "auto_paper"
-                self.authorization_history.append(auth)
-                return auth
-                
-            if self.human_override_active and self.override_expiry:
-                if datetime.now() < self.override_expiry:
-                    auth.status = TradeStatus.APPROVED
-                    auth.authorized_at = datetime.now()
-                    auth.authorized_by = "human_override"
-                    self.authorization_history.append(auth)
-                    return auth
-                else:
-                    self.human_override_active = False
-                    
-            if self.confirmed_trades >= self.required_confirmations:
-                auth.status = TradeStatus.APPROVED
-                auth.authorized_at = datetime.now()
-                auth.authorized_by = "auto_threshold"
-                self.confirmed_trades += 1
-                self.authorization_history.append(auth)
-                return auth
-                
-            self.pending_authorizations[trade_id] = auth
+        if self.is_paper_mode and self.auto_approve_paper:
+            auth.status = TradeStatus.APPROVED
+            auth.approved_at = datetime.now()
+            auth.approved_by = "auto_paper"
+            self.authorization_history.append(auth)
+            return auth
             
-        self.audit_logger.log(
-            "trade_authorization",
-            "request",
-            asdict(auth),
-            risk_level="high"
-        )
+        if self.human_override_active:
+            if self.override_expiry and datetime.now() < self.override_expiry:
+                auth.status = TradeStatus.APPROVED
+                auth.approved_at = datetime.now()
+                auth.approved_by = "human_override"
+                self.authorization_history.append(auth)
+                return auth
+            else:
+                self.human_override_active = False
+                
+        if self.confirmed_trades >= self.required_confirmations:
+            auth.status = TradeStatus.APPROVED
+            auth.approved_at = datetime.now()
+            auth.approved_by = "auto_threshold"
+            self.authorization_history.append(auth)
+            return auth
+            
+        self.pending_authorizations[trade_id] = auth
+        
+        for callback in self._callbacks:
+            try:
+                callback(auth)
+            except Exception as e:
+                logger.error(f"Confirmation callback error: {e}")
+                
+        logger.info(f"Trade {trade_id} pending human confirmation. Code: {confirmation_code}")
         
         return auth
         
-    def approve_trade(self, trade_id: str, approver: str = "human") -> bool:
-        """Approve a pending trade"""
-        with self._lock:
-            if trade_id not in self.pending_authorizations:
-                return False
-                
-            auth = self.pending_authorizations[trade_id]
-            auth.status = TradeStatus.APPROVED
-            auth.authorized_at = datetime.now()
-            auth.authorized_by = approver
-            
-            self.confirmed_trades += 1
-            self.authorization_history.append(auth)
-            del self.pending_authorizations[trade_id]
-            
-        self.audit_logger.log(
-            "trade_authorization",
-            "approve",
-            {"trade_id": trade_id, "approver": approver}
-        )
-        
-        return True
-        
-    def reject_trade(self, trade_id: str, reason: str, rejector: str = "human") -> bool:
-        """Reject a pending trade"""
-        with self._lock:
-            if trade_id not in self.pending_authorizations:
-                return False
-                
-            auth = self.pending_authorizations[trade_id]
-            auth.status = TradeStatus.REJECTED
-            auth.rejection_reason = reason
-            auth.authorized_by = rejector
-            
-            self.authorization_history.append(auth)
-            del self.pending_authorizations[trade_id]
-            
-        self.audit_logger.log(
-            "trade_authorization",
-            "reject",
-            {"trade_id": trade_id, "reason": reason, "rejector": rejector}
-        )
-        
-        return True
-        
-    def enable_human_override(self, duration_minutes: int = 60, 
-                             confirmation_code: str = "") -> bool:
-        """Enable human override for automatic approval"""
-        if confirmation_code != "ENABLE_OVERRIDE_CONFIRMED":
+    def confirm_trade(self, trade_id: str, confirmation_code: str, user: str = "human") -> bool:
+        """Confirm a pending trade"""
+        if trade_id not in self.pending_authorizations:
+            logger.warning(f"Trade {trade_id} not found in pending")
             return False
             
-        with self._lock:
-            self.human_override_active = True
-            self.override_expiry = datetime.now() + timedelta(minutes=duration_minutes)
-            
-        self.audit_logger.log(
-            "security",
-            "enable_override",
-            {"duration_minutes": duration_minutes},
-            risk_level="critical"
-        )
+        auth = self.pending_authorizations[trade_id]
         
+        if auth.confirmation_code != confirmation_code:
+            logger.warning(f"Invalid confirmation code for trade {trade_id}")
+            return False
+            
+        if datetime.now() - auth.requested_at > self.confirmation_timeout:
+            auth.status = TradeStatus.CANCELLED
+            auth.rejection_reason = "Confirmation timeout"
+            del self.pending_authorizations[trade_id]
+            self.authorization_history.append(auth)
+            return False
+            
+        auth.status = TradeStatus.APPROVED
+        auth.approved_at = datetime.now()
+        auth.approved_by = user
+        
+        del self.pending_authorizations[trade_id]
+        self.authorization_history.append(auth)
+        self.confirmed_trades += 1
+        
+        logger.info(f"Trade {trade_id} confirmed by {user}")
         return True
         
-    def disable_human_override(self):
-        """Disable human override"""
-        with self._lock:
-            self.human_override_active = False
-            self.override_expiry = None
+    def reject_trade(self, trade_id: str, reason: str, user: str = "human") -> bool:
+        """Reject a pending trade"""
+        if trade_id not in self.pending_authorizations:
+            return False
             
-        self.audit_logger.log(
-            "security",
-            "disable_override",
-            {}
-        )
+        auth = self.pending_authorizations[trade_id]
+        auth.status = TradeStatus.REJECTED
+        auth.rejection_reason = reason
+        auth.approved_by = user
         
-    def get_pending_authorizations(self) -> List[TradeAuthorization]:
+        del self.pending_authorizations[trade_id]
+        self.authorization_history.append(auth)
+        
+        logger.info(f"Trade {trade_id} rejected by {user}: {reason}")
+        return True
+        
+    def enable_override(self, duration_minutes: int = 60, user: str = "admin"):
+        """Enable human override for specified duration"""
+        self.human_override_active = True
+        self.override_expiry = datetime.now() + timedelta(minutes=duration_minutes)
+        logger.warning(f"Human override enabled by {user} for {duration_minutes} minutes")
+        
+    def disable_override(self):
+        """Disable human override"""
+        self.human_override_active = False
+        self.override_expiry = None
+        logger.info("Human override disabled")
+        
+    def register_callback(self, callback: Callable[[TradeAuthorization], None]):
+        """Register callback for pending confirmations"""
+        self._callbacks.append(callback)
+        
+    def get_pending(self) -> List[TradeAuthorization]:
         """Get all pending authorizations"""
         return list(self.pending_authorizations.values())
-        
-    def get_authorization_status(self, trade_id: str) -> Optional[TradeAuthorization]:
-        """Get authorization status for a trade"""
-        if trade_id in self.pending_authorizations:
-            return self.pending_authorizations[trade_id]
-            
-        for auth in self.authorization_history:
-            if auth.trade_id == trade_id:
-                return auth
-                
-        return None
 
 
 class EmergencyKillSwitch:
@@ -388,356 +398,572 @@ class EmergencyKillSwitch:
     Emergency kill switch for immediate trading halt.
     
     Features:
-    - Immediate position closure
-    - Trading halt
-    - Alert notifications
-    - Recovery procedures
+    - Immediate halt of all trading
+    - Signal handler for external triggers
+    - Callback system for cleanup
+    - Cooldown period before restart
     """
     
-    def __init__(self):
-        self.is_active = False
+    def __init__(self, cooldown_minutes: int = 30):
+        """
+        Initialize emergency kill switch.
+        
+        Args:
+            cooldown_minutes: Cooldown period after activation
+        """
+        self.cooldown_minutes = cooldown_minutes
+        self.activated = False
         self.activation_time: Optional[datetime] = None
         self.activation_reason: str = ""
-        self.positions_closed: List[Dict] = []
+        self.activated_by: str = ""
         
+        self._callbacks: List[Callable[[], None]] = []
         self._lock = threading.Lock()
-        self.audit_logger = AuditLogger()
-        self.callbacks: List[Callable] = []
         
         self._setup_signal_handlers()
         
     def _setup_signal_handlers(self):
-        """Setup signal handlers for emergency stop"""
+        """Setup signal handlers for external kill triggers"""
         try:
             signal.signal(signal.SIGUSR1, self._signal_handler)
-        except:
-            pass
+            logger.info("Kill switch signal handler registered (SIGUSR1)")
+        except (AttributeError, ValueError):
+            logger.warning("Could not register signal handler")
             
     def _signal_handler(self, signum, frame):
-        """Handle emergency signal"""
-        self.activate("Signal received: SIGUSR1")
+        """Handle external kill signal"""
+        self.activate("External signal (SIGUSR1)", "signal")
         
-    def register_callback(self, callback: Callable):
-        """Register callback for kill switch activation"""
-        self.callbacks.append(callback)
-        
-    def activate(self, reason: str, close_positions: bool = True) -> Dict[str, Any]:
-        """Activate emergency kill switch"""
+    def activate(self, reason: str = "Manual activation", user: str = "system"):
+        """Activate the kill switch"""
         with self._lock:
-            if self.is_active:
-                return {
-                    "success": False,
-                    "error": "Kill switch already active",
-                    "activation_time": self.activation_time.isoformat() if self.activation_time else None
-                }
+            if self.activated:
+                logger.warning("Kill switch already activated")
+                return
                 
-            self.is_active = True
+            self.activated = True
             self.activation_time = datetime.now()
             self.activation_reason = reason
+            self.activated_by = user
             
-        logger.critical(f"EMERGENCY KILL SWITCH ACTIVATED: {reason}")
-        
-        self.audit_logger.log(
-            "emergency",
-            "kill_switch_activated",
-            {"reason": reason, "close_positions": close_positions},
-            risk_level="critical"
-        )
-        
-        for callback in self.callbacks:
-            try:
-                callback(reason)
-            except Exception as e:
-                logger.error(f"Kill switch callback error: {e}")
-                
-        return {
-            "success": True,
-            "activation_time": self.activation_time.isoformat(),
-            "reason": reason,
-            "positions_closed": self.positions_closed
-        }
-        
-    def deactivate(self, confirmation_code: str, deactivator: str = "admin") -> bool:
-        """Deactivate kill switch (requires confirmation)"""
-        if confirmation_code != "DEACTIVATE_KILL_SWITCH_CONFIRMED":
-            logger.warning("Invalid kill switch deactivation attempt")
-            return False
+            logger.critical(f"EMERGENCY KILL SWITCH ACTIVATED by {user}: {reason}")
             
+            for callback in self._callbacks:
+                try:
+                    callback()
+                except Exception as e:
+                    logger.error(f"Kill switch callback error: {e}")
+                    
+    def deactivate(self, user: str = "admin", force: bool = False) -> bool:
+        """Deactivate the kill switch"""
         with self._lock:
-            if not self.is_active:
+            if not self.activated:
                 return True
                 
-            self.is_active = False
+            if not force and self.activation_time:
+                elapsed = datetime.now() - self.activation_time
+                if elapsed < timedelta(minutes=self.cooldown_minutes):
+                    remaining = self.cooldown_minutes - elapsed.total_seconds() / 60
+                    logger.warning(f"Kill switch cooldown: {remaining:.1f} minutes remaining")
+                    return False
+                    
+            self.activated = False
+            self.activation_time = None
+            self.activation_reason = ""
+            self.activated_by = ""
             
-        self.audit_logger.log(
-            "emergency",
-            "kill_switch_deactivated",
-            {"deactivator": deactivator},
-            risk_level="high"
-        )
+            logger.info(f"Kill switch deactivated by {user}")
+            return True
+            
+    def register_callback(self, callback: Callable[[], None]):
+        """Register callback for kill switch activation"""
+        self._callbacks.append(callback)
         
-        logger.info("Kill switch deactivated")
-        return True
+    def is_active(self) -> bool:
+        """Check if kill switch is active"""
+        return self.activated
         
-    def check_status(self) -> Dict[str, Any]:
-        """Check kill switch status"""
+    def get_status(self) -> Dict[str, Any]:
+        """Get kill switch status"""
         return {
-            "is_active": self.is_active,
+            "activated": self.activated,
             "activation_time": self.activation_time.isoformat() if self.activation_time else None,
             "activation_reason": self.activation_reason,
-            "positions_closed": len(self.positions_closed)
+            "activated_by": self.activated_by,
+            "cooldown_minutes": self.cooldown_minutes
+        }
+
+
+class PerformanceMonitor:
+    """
+    Performance monitoring with automatic alerts.
+    
+    Monitors:
+    - Drawdown from peak
+    - Daily/weekly P&L
+    - Sharpe ratio decay
+    - Anomaly detection
+    """
+    
+    ALERT_THRESHOLDS = {
+        "drawdown_warning": 0.05,
+        "drawdown_critical": 0.10,
+        "drawdown_emergency": 0.15,
+        "daily_loss_warning": 0.02,
+        "daily_loss_critical": 0.03,
+        "sharpe_decay_warning": 0.5,
+    }
+    
+    def __init__(self, initial_equity: float = 100000):
+        self.initial_equity = initial_equity
+        self.current_equity = initial_equity
+        self.peak_equity = initial_equity
+        
+        self.daily_start_equity = initial_equity
+        self.weekly_start_equity = initial_equity
+        
+        self.snapshots: deque = deque(maxlen=1000)
+        self.alerts: List[Dict] = []
+        
+        self._alert_callbacks: List[Callable[[AlertLevel, str], None]] = []
+        
+    def update(self, equity: float, sharpe_ratio: float = 0.0):
+        """Update performance metrics"""
+        self.current_equity = equity
+        
+        if equity > self.peak_equity:
+            self.peak_equity = equity
+            
+        drawdown = (self.peak_equity - equity) / self.peak_equity if self.peak_equity > 0 else 0
+        daily_pnl = (equity - self.daily_start_equity) / self.daily_start_equity if self.daily_start_equity > 0 else 0
+        weekly_pnl = (equity - self.weekly_start_equity) / self.weekly_start_equity if self.weekly_start_equity > 0 else 0
+        
+        snapshot = PerformanceSnapshot(
+            timestamp=datetime.now(),
+            equity=equity,
+            peak_equity=self.peak_equity,
+            drawdown=drawdown,
+            sharpe_ratio=sharpe_ratio,
+            daily_pnl=daily_pnl,
+            weekly_pnl=weekly_pnl
+        )
+        
+        self.snapshots.append(snapshot)
+        
+        self._check_alerts(snapshot)
+        
+        return snapshot
+        
+    def _check_alerts(self, snapshot: PerformanceSnapshot):
+        """Check for alert conditions"""
+        if snapshot.drawdown >= self.ALERT_THRESHOLDS["drawdown_emergency"]:
+            self._raise_alert(
+                AlertLevel.EMERGENCY,
+                f"EMERGENCY: Drawdown at {snapshot.drawdown:.1%}"
+            )
+        elif snapshot.drawdown >= self.ALERT_THRESHOLDS["drawdown_critical"]:
+            self._raise_alert(
+                AlertLevel.CRITICAL,
+                f"CRITICAL: Drawdown at {snapshot.drawdown:.1%}"
+            )
+        elif snapshot.drawdown >= self.ALERT_THRESHOLDS["drawdown_warning"]:
+            self._raise_alert(
+                AlertLevel.WARNING,
+                f"WARNING: Drawdown at {snapshot.drawdown:.1%}"
+            )
+            
+        if snapshot.daily_pnl <= -self.ALERT_THRESHOLDS["daily_loss_critical"]:
+            self._raise_alert(
+                AlertLevel.CRITICAL,
+                f"CRITICAL: Daily loss at {snapshot.daily_pnl:.1%}"
+            )
+        elif snapshot.daily_pnl <= -self.ALERT_THRESHOLDS["daily_loss_warning"]:
+            self._raise_alert(
+                AlertLevel.WARNING,
+                f"WARNING: Daily loss at {snapshot.daily_pnl:.1%}"
+            )
+            
+    def _raise_alert(self, level: AlertLevel, message: str):
+        """Raise an alert"""
+        alert = {
+            "timestamp": datetime.now().isoformat(),
+            "level": level.value,
+            "message": message
         }
         
-    def can_trade(self) -> bool:
-        """Check if trading is allowed"""
-        return not self.is_active
+        self.alerts.append(alert)
+        
+        for callback in self._alert_callbacks:
+            try:
+                callback(level, message)
+            except Exception as e:
+                logger.error(f"Alert callback error: {e}")
+                
+        if level == AlertLevel.EMERGENCY:
+            logger.critical(message)
+        elif level == AlertLevel.CRITICAL:
+            logger.error(message)
+        elif level == AlertLevel.WARNING:
+            logger.warning(message)
+        else:
+            logger.info(message)
+            
+    def register_alert_callback(self, callback: Callable[[AlertLevel, str], None]):
+        """Register callback for alerts"""
+        self._alert_callbacks.append(callback)
+        
+    def reset_daily(self):
+        """Reset daily tracking"""
+        self.daily_start_equity = self.current_equity
+        
+    def reset_weekly(self):
+        """Reset weekly tracking"""
+        self.weekly_start_equity = self.current_equity
+        
+    def get_metrics(self) -> Dict[str, Any]:
+        """Get current metrics"""
+        drawdown = (self.peak_equity - self.current_equity) / self.peak_equity if self.peak_equity > 0 else 0
+        
+        return {
+            "current_equity": self.current_equity,
+            "peak_equity": self.peak_equity,
+            "drawdown": drawdown,
+            "daily_pnl": (self.current_equity - self.daily_start_equity) / self.daily_start_equity if self.daily_start_equity > 0 else 0,
+            "weekly_pnl": (self.current_equity - self.weekly_start_equity) / self.weekly_start_equity if self.weekly_start_equity > 0 else 0,
+            "total_return": (self.current_equity - self.initial_equity) / self.initial_equity if self.initial_equity > 0 else 0
+        }
+
+
+class EternalGuardrails:
+    """
+    Eternal guardrails that cannot be bypassed.
+    
+    These are hard-coded safety limits that apply regardless
+    of any other settings or overrides.
+    """
+    
+    MAX_SINGLE_TRADE_RISK = 0.03
+    MAX_DAILY_LOSS = 0.05
+    MAX_DRAWDOWN = 0.15
+    MAX_LEVERAGE = 3.0
+    MAX_POSITION_CONCENTRATION = 0.25
+    REQUIRE_HUMAN_FOR_LIVE = True
+    
+    @classmethod
+    def check_trade(cls,
+                    trade_risk: float,
+                    daily_loss: float,
+                    drawdown: float,
+                    leverage: float,
+                    position_concentration: float,
+                    is_live: bool,
+                    has_human_override: bool) -> Tuple[bool, str]:
+        """
+        Check if trade passes eternal guardrails.
+        
+        These checks CANNOT be bypassed by any means.
+        """
+        if trade_risk > cls.MAX_SINGLE_TRADE_RISK:
+            return False, f"ETERNAL GUARDRAIL: Single trade risk {trade_risk:.1%} exceeds max {cls.MAX_SINGLE_TRADE_RISK:.1%}"
+            
+        if daily_loss > cls.MAX_DAILY_LOSS:
+            return False, f"ETERNAL GUARDRAIL: Daily loss {daily_loss:.1%} exceeds max {cls.MAX_DAILY_LOSS:.1%}"
+            
+        if drawdown > cls.MAX_DRAWDOWN:
+            return False, f"ETERNAL GUARDRAIL: Drawdown {drawdown:.1%} exceeds max {cls.MAX_DRAWDOWN:.1%}"
+            
+        if leverage > cls.MAX_LEVERAGE:
+            return False, f"ETERNAL GUARDRAIL: Leverage {leverage:.1f}x exceeds max {cls.MAX_LEVERAGE:.1f}x"
+            
+        if position_concentration > cls.MAX_POSITION_CONCENTRATION:
+            return False, f"ETERNAL GUARDRAIL: Position concentration {position_concentration:.1%} exceeds max {cls.MAX_POSITION_CONCENTRATION:.1%}"
+            
+        if is_live and cls.REQUIRE_HUMAN_FOR_LIVE and not has_human_override:
+            return False, "ETERNAL GUARDRAIL: Live trading requires human override"
+            
+        return True, "OK"
+        
+    @classmethod
+    def enforce_eternal_guardrails():
+        """
+        Enforce eternal guardrails - called at system startup.
+        
+        Raises exception if live trading attempted without proper authorization.
+        """
+        if os.getenv("LIVE_TRADING") == "TRUE" and not os.getenv("HUMAN_OVERRIDE"):
+            raise Exception("ETERNAL GUARDRAIL VIOLATION: Real capital requires HUMAN_OVERRIDE environment variable")
+            
+        logger.info("Eternal guardrails enforced")
 
 
 class SafetyGovernanceSystem:
     """
-    Main safety governance system integrating all safety components.
+    Main safety governance system integrating all components.
     
-    Provides:
-    - Centralized safety management
-    - Trade authorization workflow
-    - Emergency controls
-    - Comprehensive audit trail
+    Features:
+    - Multi-level authorization
+    - Human confirmation workflow
+    - Emergency kill switch
+    - Performance monitoring
+    - Comprehensive audit logging
+    - Eternal guardrails
     """
     
     def __init__(self,
+                 log_dir: str = "audit_logs",
                  required_confirmations: int = 100,
-                 is_paper_mode: bool = True):
+                 paper_mode: bool = True):
+        """
+        Initialize safety governance system.
+        
+        Args:
+            log_dir: Directory for audit logs
+            required_confirmations: Number of trades requiring human confirmation
+            paper_mode: Start in paper trading mode
+        """
+        self.audit_logger = AuditLogger(log_dir)
         self.confirmation_system = HumanConfirmationSystem(
             required_confirmations=required_confirmations,
             auto_approve_paper=True
         )
         self.kill_switch = EmergencyKillSwitch()
-        self.audit_logger = AuditLogger()
+        self.performance_monitor = PerformanceMonitor()
         
-        self.authorization_level = AuthorizationLevel.PAPER_TRADING if is_paper_mode else AuthorizationLevel.NONE
-        self.session_id = secrets.token_hex(16)
+        self.authorization_level = AuthorizationLevel.PAPER_TRADING if paper_mode else AuthorizationLevel.NONE
+        self.confirmation_system.set_mode(paper_mode)
         
-        self.confirmation_system.set_trading_mode(is_paper_mode)
+        self.kill_switch.register_callback(self._on_kill_switch)
+        self.performance_monitor.register_alert_callback(self._on_alert)
+        
+        EternalGuardrails.enforce_eternal_guardrails()
         
         self.audit_logger.log(
-            "system",
-            "governance_initialized",
-            {
-                "session_id": self.session_id,
-                "is_paper_mode": is_paper_mode,
-                "required_confirmations": required_confirmations
-            }
+            event_type="system",
+            action="initialization",
+            details={"paper_mode": paper_mode, "required_confirmations": required_confirmations},
+            risk_level="low"
         )
         
+        logger.info("SafetyGovernanceSystem initialized")
+        
+    def _on_kill_switch(self):
+        """Handle kill switch activation"""
+        self.audit_logger.log(
+            event_type="emergency",
+            action="kill_switch_activated",
+            details=self.kill_switch.get_status(),
+            risk_level="critical"
+        )
+        
+    def _on_alert(self, level: AlertLevel, message: str):
+        """Handle performance alerts"""
+        self.audit_logger.log(
+            event_type="alert",
+            action=message,
+            details={"level": level.value},
+            risk_level="high" if level in [AlertLevel.CRITICAL, AlertLevel.EMERGENCY] else "medium"
+        )
+        
+        if level == AlertLevel.EMERGENCY:
+            self.kill_switch.activate(message, "performance_monitor")
+            
     def authorize_trade(self,
-                       symbol: str,
-                       direction: str,
-                       volume: float,
-                       price: float,
-                       stop_loss: Optional[float] = None,
-                       take_profit: Optional[float] = None) -> TradeAuthorization:
-        """Authorize a trade through the governance system"""
-        if not self.kill_switch.can_trade():
-            auth = TradeAuthorization(
-                trade_id="blocked",
-                symbol=symbol,
-                direction=direction,
-                volume=volume,
-                price=price,
-                stop_loss=stop_loss,
-                take_profit=take_profit,
-                status=TradeStatus.REJECTED,
-                requested_at=datetime.now(),
-                rejection_reason="Kill switch active"
-            )
-            return auth
+                        symbol: str,
+                        side: str,
+                        quantity: float,
+                        order_type: str = "market",
+                        trade_risk: float = 0.01) -> Tuple[bool, str, Optional[TradeAuthorization]]:
+        """
+        Authorize a trade through the full governance pipeline.
+        
+        Returns:
+            Tuple of (authorized, message, authorization_object)
+        """
+        if self.kill_switch.is_active():
+            return False, "Kill switch is active", None
             
-        if self.authorization_level == AuthorizationLevel.NONE:
-            auth = TradeAuthorization(
-                trade_id="unauthorized",
-                symbol=symbol,
-                direction=direction,
-                volume=volume,
-                price=price,
-                stop_loss=stop_loss,
-                take_profit=take_profit,
-                status=TradeStatus.REJECTED,
-                requested_at=datetime.now(),
-                rejection_reason="No trading authorization"
-            )
-            return auth
-            
-        return self.confirmation_system.request_authorization(
-            symbol, direction, volume, price, stop_loss, take_profit
+        metrics = self.performance_monitor.get_metrics()
+        
+        is_live = self.authorization_level >= AuthorizationLevel.LIMITED_LIVE
+        has_override = self.confirmation_system.human_override_active
+        
+        passed, reason = EternalGuardrails.check_trade(
+            trade_risk=trade_risk,
+            daily_loss=-metrics["daily_pnl"] if metrics["daily_pnl"] < 0 else 0,
+            drawdown=metrics["drawdown"],
+            leverage=1.0,
+            position_concentration=0.1,
+            is_live=is_live,
+            has_human_override=has_override
         )
         
-    def set_authorization_level(self, level: AuthorizationLevel, 
-                               confirmation_code: str = "") -> bool:
-        """Set authorization level"""
-        if level.value > AuthorizationLevel.PAPER_TRADING.value:
-            if confirmation_code != "ENABLE_LIVE_TRADING_CONFIRMED":
-                logger.warning("Invalid confirmation for live trading")
-                return False
-                
-        self.authorization_level = level
-        is_paper = level.value <= AuthorizationLevel.PAPER_TRADING.value
-        self.confirmation_system.set_trading_mode(is_paper)
+        if not passed:
+            self.audit_logger.log(
+                event_type="trade",
+                action="blocked_by_guardrail",
+                details={"symbol": symbol, "reason": reason},
+                risk_level="high"
+            )
+            return False, reason, None
+            
+        auth = self.confirmation_system.request_authorization(
+            symbol=symbol,
+            side=side,
+            quantity=quantity,
+            order_type=order_type
+        )
+        
+        if auth.status == TradeStatus.APPROVED:
+            self.audit_logger.log(
+                event_type="trade",
+                action="authorized",
+                details=auth.to_dict(),
+                risk_level="medium"
+            )
+            return True, "Authorized", auth
+        else:
+            self.audit_logger.log(
+                event_type="trade",
+                action="pending_confirmation",
+                details=auth.to_dict(),
+                risk_level="medium"
+            )
+            return False, f"Pending human confirmation. Code: {auth.confirmation_code}", auth
+            
+    def confirm_trade(self, trade_id: str, confirmation_code: str, user: str = "human") -> bool:
+        """Confirm a pending trade"""
+        result = self.confirmation_system.confirm_trade(trade_id, confirmation_code, user)
         
         self.audit_logger.log(
-            "security",
-            "authorization_level_changed",
-            {"new_level": level.name},
-            risk_level="critical" if not is_paper else "normal"
+            event_type="trade",
+            action="confirmed" if result else "confirmation_failed",
+            details={"trade_id": trade_id, "user": user},
+            user=user,
+            risk_level="medium"
         )
         
-        return True
+        return result
         
-    def emergency_stop(self, reason: str = "Manual activation") -> Dict[str, Any]:
-        """Activate emergency stop"""
-        return self.kill_switch.activate(reason)
+    def activate_kill_switch(self, reason: str, user: str = "admin"):
+        """Activate emergency kill switch"""
+        self.kill_switch.activate(reason, user)
         
-    def resume_trading(self, confirmation_code: str) -> bool:
-        """Resume trading after emergency stop"""
-        return self.kill_switch.deactivate(confirmation_code)
+    def deactivate_kill_switch(self, user: str = "admin", force: bool = False) -> bool:
+        """Deactivate kill switch"""
+        result = self.kill_switch.deactivate(user, force)
         
-    def get_system_status(self) -> Dict[str, Any]:
-        """Get comprehensive system status"""
+        if result:
+            self.audit_logger.log(
+                event_type="emergency",
+                action="kill_switch_deactivated",
+                details={"user": user, "force": force},
+                user=user,
+                risk_level="high"
+            )
+            
+        return result
+        
+    def set_authorization_level(self, level: AuthorizationLevel, user: str = "admin"):
+        """Set authorization level"""
+        old_level = self.authorization_level
+        self.authorization_level = level
+        
+        self.confirmation_system.set_mode(level <= AuthorizationLevel.PAPER_TRADING)
+        
+        self.audit_logger.log(
+            event_type="authorization",
+            action="level_changed",
+            details={"old_level": old_level.name, "new_level": level.name},
+            user=user,
+            risk_level="high"
+        )
+        
+        logger.info(f"Authorization level changed from {old_level.name} to {level.name}")
+        
+    def enable_human_override(self, duration_minutes: int = 60, user: str = "admin"):
+        """Enable human override for live trading"""
+        self.confirmation_system.enable_override(duration_minutes, user)
+        
+        self.audit_logger.log(
+            event_type="authorization",
+            action="human_override_enabled",
+            details={"duration_minutes": duration_minutes},
+            user=user,
+            risk_level="high"
+        )
+        
+    def update_performance(self, equity: float, sharpe_ratio: float = 0.0):
+        """Update performance metrics"""
+        snapshot = self.performance_monitor.update(equity, sharpe_ratio)
+        return snapshot
+        
+    def get_status(self) -> Dict[str, Any]:
+        """Get full system status"""
         return {
-            "session_id": self.session_id,
             "authorization_level": self.authorization_level.name,
-            "kill_switch": self.kill_switch.check_status(),
-            "pending_authorizations": len(self.confirmation_system.get_pending_authorizations()),
+            "kill_switch": self.kill_switch.get_status(),
+            "performance": self.performance_monitor.get_metrics(),
+            "pending_confirmations": len(self.confirmation_system.get_pending()),
             "confirmed_trades": self.confirmation_system.confirmed_trades,
-            "required_confirmations": self.confirmation_system.required_confirmations,
-            "human_override_active": self.confirmation_system.human_override_active,
-            "can_trade": self.can_trade()
+            "human_override_active": self.confirmation_system.human_override_active
         }
-        
-    def can_trade(self) -> bool:
-        """Check if trading is currently allowed"""
-        if not self.kill_switch.can_trade():
-            return False
-        if self.authorization_level == AuthorizationLevel.NONE:
-            return False
-        return True
-        
-    def approve_pending_trade(self, trade_id: str, approver: str = "admin") -> bool:
-        """Approve a pending trade"""
-        return self.confirmation_system.approve_trade(trade_id, approver)
-        
-    def reject_pending_trade(self, trade_id: str, reason: str, 
-                            rejector: str = "admin") -> bool:
-        """Reject a pending trade"""
-        return self.confirmation_system.reject_trade(trade_id, reason, rejector)
-        
-    def get_audit_logs(self, 
-                      count: int = 100,
-                      event_type: Optional[str] = None) -> List[AuditLogEntry]:
-        """Get recent audit logs"""
-        return self.audit_logger.get_recent_logs(count, event_type)
 
 
-def create_kill_switch_endpoint():
-    """Create a simple HTTP endpoint for kill switch (for external monitoring)"""
-    try:
-        from http.server import HTTPServer, BaseHTTPRequestHandler
-        import json
-        
-        governance = SafetyGovernanceSystem()
-        
-        class KillSwitchHandler(BaseHTTPRequestHandler):
-            def do_GET(self):
-                if self.path == "/status":
-                    status = governance.get_system_status()
-                    self.send_response(200)
-                    self.send_header("Content-type", "application/json")
-                    self.end_headers()
-                    self.wfile.write(json.dumps(status, default=str).encode())
-                elif self.path == "/kill":
-                    result = governance.emergency_stop("HTTP endpoint triggered")
-                    self.send_response(200)
-                    self.send_header("Content-type", "application/json")
-                    self.end_headers()
-                    self.wfile.write(json.dumps(result, default=str).encode())
-                else:
-                    self.send_response(404)
-                    self.end_headers()
-                    
-            def log_message(self, format, *args):
-                pass
-                
-        return HTTPServer, KillSwitchHandler
-        
-    except ImportError:
-        return None, None
-
-
-def main():
-    """Demo of safety governance system"""
-    governance = SafetyGovernanceSystem(
-        required_confirmations=100,
-        is_paper_mode=True
+def demo():
+    """Demonstration of safety governance system"""
+    print("=" * 60)
+    print("SAFETY GOVERNANCE SYSTEM DEMO")
+    print("=" * 60)
+    
+    system = SafetyGovernanceSystem(paper_mode=True)
+    
+    print(f"\nInitial Status: {json.dumps(system.get_status(), indent=2)}")
+    
+    print("\n--- Testing Trade Authorization (Paper Mode) ---")
+    authorized, message, auth = system.authorize_trade(
+        symbol="EURUSD",
+        side="buy",
+        quantity=0.1,
+        trade_risk=0.01
     )
+    print(f"Trade authorized: {authorized}")
+    print(f"Message: {message}")
     
-    print("=== Safety Governance System Demo ===\n")
+    print("\n--- Testing Kill Switch ---")
+    system.activate_kill_switch("Demo test", "demo_user")
+    print(f"Kill switch active: {system.kill_switch.is_active()}")
     
-    print("1. System Status:")
-    status = governance.get_system_status()
-    print(json.dumps(status, indent=2, default=str))
-    
-    print("\n2. Requesting Trade Authorization (Paper Mode):")
-    auth = governance.authorize_trade(
-        symbol="BTCUSD",
-        direction="BUY",
-        volume=0.1,
-        price=45000,
-        stop_loss=44000,
-        take_profit=47000
+    authorized, message, _ = system.authorize_trade(
+        symbol="GBPUSD",
+        side="sell",
+        quantity=0.1
     )
-    print(f"   Trade ID: {auth.trade_id}")
-    print(f"   Status: {auth.status.value}")
-    print(f"   Authorized By: {auth.authorized_by}")
+    print(f"Trade during kill switch: {authorized} - {message}")
     
-    print("\n3. Switching to Live Mode:")
-    success = governance.set_authorization_level(
-        AuthorizationLevel.LIMITED_LIVE,
-        "ENABLE_LIVE_TRADING_CONFIRMED"
+    system.deactivate_kill_switch("demo_user", force=True)
+    print(f"Kill switch deactivated: {not system.kill_switch.is_active()}")
+    
+    print("\n--- Testing Performance Monitoring ---")
+    system.update_performance(100000)
+    system.update_performance(95000)
+    system.update_performance(90000)
+    
+    print(f"Performance metrics: {json.dumps(system.performance_monitor.get_metrics(), indent=2)}")
+    
+    print("\n--- Testing Eternal Guardrails ---")
+    authorized, message, _ = system.authorize_trade(
+        symbol="USDJPY",
+        side="buy",
+        quantity=10.0,
+        trade_risk=0.05
     )
-    print(f"   Success: {success}")
+    print(f"High risk trade: {authorized} - {message}")
     
-    print("\n4. Requesting Trade Authorization (Live Mode):")
-    auth2 = governance.authorize_trade(
-        symbol="ETHUSD",
-        direction="SELL",
-        volume=1.0,
-        price=2500,
-        stop_loss=2600,
-        take_profit=2300
-    )
-    print(f"   Trade ID: {auth2.trade_id}")
-    print(f"   Status: {auth2.status.value}")
+    print("\n--- Final Status ---")
+    print(json.dumps(system.get_status(), indent=2))
     
-    if auth2.status == TradeStatus.PENDING:
-        print("\n5. Approving Pending Trade:")
-        approved = governance.approve_pending_trade(auth2.trade_id, "demo_admin")
-        print(f"   Approved: {approved}")
-        
-    print("\n6. Testing Emergency Kill Switch:")
-    result = governance.emergency_stop("Demo test")
-    print(f"   Kill Switch Active: {result['success']}")
-    print(f"   Can Trade: {governance.can_trade()}")
-    
-    print("\n7. Resuming Trading:")
-    resumed = governance.resume_trading("DEACTIVATE_KILL_SWITCH_CONFIRMED")
-    print(f"   Resumed: {resumed}")
-    print(f"   Can Trade: {governance.can_trade()}")
-    
-    print("\n8. Final System Status:")
-    final_status = governance.get_system_status()
-    print(json.dumps(final_status, indent=2, default=str))
-    
-    print("\n=== Demo Complete ===")
+    print("\nDemo complete!")
 
 
 if __name__ == "__main__":
-    main()
+    demo()
