@@ -267,10 +267,13 @@ class MultiAgentDebateSystem:
     - Coder: Implements the proposals
     - Critic: Reviews and critiques the code
     - Tester: Validates through automated testing
+    
+    LLM Provider Configuration:
+    - Set LLM_PROVIDER env var to "grok" or "openai" (default: "openai")
+    - Set LLM_MODEL env var to override model (default: "gpt-4o-mini" for OpenAI, "grok-beta" for Grok)
+    - Set LLM_API_KEY env var with your API key
     """
     
-    GROK_BASE_URL = "https://api.x.ai/v1"
-    DEFAULT_MODEL = "grok-beta"
     MAX_RETRIES = 3
     INITIAL_BACKOFF = 1.0
     
@@ -280,6 +283,16 @@ class MultiAgentDebateSystem:
         self.llm_call_count = 0
         self.llm_success_count = 0
         self.llm_failure_count = 0
+        
+        provider = os.getenv("LLM_PROVIDER", "openai").lower()
+        if provider == "grok":
+            self.base_url = "https://api.x.ai/v1"
+            self.model = os.getenv("LLM_MODEL", "grok-beta")
+        else:
+            self.base_url = "https://api.openai.com/v1"
+            self.model = os.getenv("LLM_MODEL", "gpt-4o-mini")
+        
+        logger.info(f"LLM provider: {provider}, model: {self.model}, base_url: {self.base_url}")
         
     def _call_llm_with_retry(self, prompt: str, system_prompt: str = "") -> str:
         """Call LLM API with exponential backoff retry"""
@@ -314,12 +327,12 @@ class MultiAgentDebateSystem:
         return self._call_llm_with_retry(prompt, system_prompt)
         
     def _call_llm_internal(self, prompt: str, system_prompt: str = "") -> str:
-        """Internal LLM call using Grok API (OpenAI compatible)"""
+        """Internal LLM call using configurable provider (OpenAI compatible)"""
         import openai
         
         client = openai.OpenAI(
             api_key=self.api_key,
-            base_url=self.GROK_BASE_URL
+            base_url=self.base_url
         )
         
         messages = []
@@ -328,7 +341,7 @@ class MultiAgentDebateSystem:
         messages.append({"role": "user", "content": prompt})
         
         response = client.chat.completions.create(
-            model=self.DEFAULT_MODEL,
+            model=self.model,
             messages=messages,
             max_tokens=2000,
             temperature=0.3
