@@ -81,6 +81,11 @@ def install_additional_packages():
         "websocket-client",
         "apscheduler",
         "river",
+        "gplearn",
+        "geomstats",
+        "giotto-tda",
+        "qiskit",
+        "openai",
     ]
     
     print("\nInstalling additional packages...")
