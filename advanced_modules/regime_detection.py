@@ -6,6 +6,7 @@ Advanced market regime detection using:
 - Correlation regime analysis
 - Hidden Markov Models for regime switching
 - Multi-timeframe aggregation
+- Information gain-based entropy modulation for faster regime resolution
 """
 
 import numpy as np
@@ -18,6 +19,16 @@ import logging
 import warnings
 
 logger = logging.getLogger("RegimeDetection")
+
+try:
+    from .bayesian_market_state import BayesianMarketState
+    BAYESIAN_AVAILABLE = True
+except ImportError:
+    try:
+        from bayesian_market_state import BayesianMarketState
+        BAYESIAN_AVAILABLE = True
+    except ImportError:
+        BAYESIAN_AVAILABLE = False
 
 try:
     from hmmlearn import hmm
@@ -533,6 +544,134 @@ class MultiTimeframeRegimeFilter:
             take_profit_multiplier=tp_mult,
             recommended_strategy=strategy
         )
+
+
+class InformationGainRegimeModulator:
+    """
+    Modulates regime detection using information gain from Bayesian market state.
+    
+    High IG indicates the system can learn a lot from the current market state,
+    which effectively lowers the entropy of regime classification. This enables
+    faster regime resolution in uncertain periods.
+    
+    Integration:
+    - High IG → Lower effective entropy → Quicker regime convergence
+    - Low IG → Normal entropy → Standard regime detection
+    """
+    
+    def __init__(self, 
+                 ig_weight: float = 0.3,
+                 entropy_floor: float = 0.1):
+        """
+        Initialize the IG regime modulator.
+        
+        Args:
+            ig_weight: Weight for IG in entropy modulation (0-1)
+            entropy_floor: Minimum entropy to prevent over-confidence
+        """
+        self.ig_weight = ig_weight
+        self.entropy_floor = entropy_floor
+        
+        if BAYESIAN_AVAILABLE:
+            self.market_state = BayesianMarketState()
+        else:
+            self.market_state = None
+            logger.warning("BayesianMarketState not available. IG modulation disabled.")
+            
+        self.metrics = {
+            "total_modulations": 0,
+            "avg_ig": 0.0,
+            "avg_entropy_reduction": 0.0,
+        }
+        
+    def update_market_state(self, event_data: Dict[str, Any]):
+        """Update the underlying market state with new event"""
+        if self.market_state:
+            self.market_state.update_from_event(event_data)
+            
+    def modulate_entropy(self, 
+                         base_entropy: float,
+                         expected_energy: float = 1.0) -> Tuple[float, float]:
+        """
+        Modulate entropy score based on information gain.
+        
+        Higher IG → Lower effective entropy → Faster regime resolution.
+        
+        Args:
+            base_entropy: Original entropy score (0-1)
+            expected_energy: Expected energy for IG computation
+            
+        Returns:
+            Tuple of (modulated_entropy, ig_value)
+        """
+        if not self.market_state:
+            return base_entropy, 0.0
+            
+        ig = self.market_state.expected_info_gain(hypothetical_E=expected_energy)
+        ig_normalized = min(ig, 1.0)
+        
+        entropy_reduction = ig_normalized * self.ig_weight
+        modulated_entropy = max(
+            self.entropy_floor,
+            base_entropy * (1.0 - entropy_reduction)
+        )
+        
+        self.metrics["total_modulations"] += 1
+        n = self.metrics["total_modulations"]
+        self.metrics["avg_ig"] = ((n - 1) * self.metrics["avg_ig"] + ig) / n
+        self.metrics["avg_entropy_reduction"] = (
+            (n - 1) * self.metrics["avg_entropy_reduction"] + entropy_reduction
+        ) / n
+        
+        return modulated_entropy, ig
+        
+    def modulate_confidence(self, 
+                            base_confidence: float,
+                            expected_energy: float = 1.0) -> float:
+        """
+        Modulate confidence score based on information gain.
+        
+        Higher IG in low-confidence states → Boost confidence (learning opportunity).
+        Higher IG in high-confidence states → Slight reduction (regime may be shifting).
+        
+        Args:
+            base_confidence: Original confidence score (0-1)
+            expected_energy: Expected energy for IG computation
+            
+        Returns:
+            Modulated confidence score
+        """
+        if not self.market_state:
+            return base_confidence
+            
+        ig = self.market_state.expected_info_gain(hypothetical_E=expected_energy)
+        belief = self.market_state.get_state()
+        
+        if belief.confidence < 0.5 and ig > 0.1:
+            confidence_boost = ig * 0.2
+            return min(1.0, base_confidence + confidence_boost)
+        elif belief.confidence > 0.7 and ig > 0.15:
+            confidence_reduction = ig * 0.1
+            return max(0.3, base_confidence - confidence_reduction)
+            
+        return base_confidence
+        
+    def get_regime_recommendation(self) -> str:
+        """Get recommendation based on current IG state"""
+        if not self.market_state:
+            return "NORMAL"
+            
+        recommendation = self.market_state.get_exploration_recommendation()
+        return recommendation
+        
+    def get_metrics(self) -> Dict[str, Any]:
+        """Get modulator metrics"""
+        belief = self.market_state.get_state_dict() if self.market_state else {}
+        return {
+            **self.metrics,
+            "recommendation": self.get_regime_recommendation(),
+            "belief_state": belief,
+        }
 
 
 class RegimeAwareRiskManager:

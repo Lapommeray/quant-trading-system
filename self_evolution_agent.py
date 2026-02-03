@@ -62,6 +62,14 @@ except ImportError:
     GIT_AVAILABLE = False
     logger.warning("GitPython not available. Using subprocess for git operations.")
 
+try:
+    from advanced_modules.bayesian_market_state import BayesianMarketState
+    from advanced_modules.trade_scheduler import UtilityFrontierScheduler
+    BAYESIAN_AVAILABLE = True
+except ImportError:
+    BAYESIAN_AVAILABLE = False
+    logger.warning("Bayesian modules not available. IG fitness disabled.")
+
 
 LLM_API_KEY = os.getenv("LLM_API_KEY") or os.getenv("OPENAI_API_KEY") or os.getenv("GROK_API_KEY")
 REPO_PATH = os.path.dirname(os.path.abspath(__file__))
@@ -128,6 +136,9 @@ class PerformanceMetrics:
     profit_factor: float = 0.0
     total_return: float = 0.0
     volatility: float = 0.0
+    p_accept: float = 0.5
+    confidence: float = 0.5
+    info_gain: float = 0.0
     
     def to_dict(self) -> Dict:
         return asdict(self)
@@ -138,6 +149,25 @@ class PerformanceMetrics:
             return self.sharpe_ratio > 0
         improvement = (self.sharpe_ratio - other.sharpe_ratio) / abs(other.sharpe_ratio)
         return improvement >= threshold
+        
+    def compute_fitness(self, lambda_ig: float = 0.2) -> float:
+        """
+        Compute fitness score with information gain component.
+        
+        F = E[Sharpe] * E[p_accept] * E[confidence] + lambda_IG * E[IG]
+        
+        This balances profit-seeking with curiosity-driven exploration,
+        rewarding agents that "learn faster" rather than just "earn more."
+        
+        Args:
+            lambda_ig: Weight for information gain term (default 0.2)
+            
+        Returns:
+            Fitness score
+        """
+        base_fitness = self.sharpe_ratio * self.p_accept * self.confidence
+        ig_bonus = lambda_ig * self.info_gain
+        return base_fitness + ig_bonus
 
 
 @dataclass

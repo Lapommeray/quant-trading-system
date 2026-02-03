@@ -6,9 +6,11 @@ Advanced loss prevention system with:
 - Auto-pause trading on projected drawdown threshold
 - Counter-alpha generation for detected weaknesses
 - Real-time loss forecasting and preemptive adaptation
+- Information gain-based trade evaluation for exploration/exploitation balance
 
 This module enables the system to proactively avoid losses
-rather than just react to them.
+rather than just react to them, while also making active epistemic
+decisions about when to explore vs exploit.
 """
 
 import os
@@ -23,6 +25,16 @@ from enum import Enum
 from pathlib import Path
 from collections import deque
 import threading
+
+try:
+    from .bayesian_market_state import BayesianMarketState, BeliefState, CommitmentAccountingSystem
+    BAYESIAN_AVAILABLE = True
+except ImportError:
+    try:
+        from bayesian_market_state import BayesianMarketState, BeliefState, CommitmentAccountingSystem
+        BAYESIAN_AVAILABLE = True
+    except ImportError:
+        BAYESIAN_AVAILABLE = False
 
 logging.basicConfig(
     level=logging.INFO,
@@ -517,6 +529,157 @@ class LossPreventionCore:
         })
         
         logger.warning(f"Forced state change: {old_state.value} -> {state.value} ({reason})")
+
+
+class InformationGainTradeEvaluator:
+    """
+    Trade evaluator that uses information gain for exploration/exploitation balance.
+    
+    Integrates with BayesianMarketState to make active epistemic decisions:
+    - High IG + low confidence → Exploration (micro-sized probes)
+    - High p_accept + high confidence → Exploitation (full-sized trades)
+    - Low p_accept + high confidence → Rejection
+    
+    This enables curiosity-driven evolution where the system seeks trades
+    that "teach it" most, accelerating regime resolution and self-evolution.
+    """
+    
+    def __init__(self,
+                 ig_threshold: float = 0.1,
+                 confidence_threshold: float = 0.6,
+                 exploration_size_factor: float = 0.1,
+                 min_p_accept: float = 0.3):
+        """
+        Initialize the IG-based trade evaluator.
+        
+        Args:
+            ig_threshold: IG threshold for exploration mode (in nats)
+            confidence_threshold: Confidence threshold for exploitation
+            exploration_size_factor: Size multiplier for exploration trades
+            min_p_accept: Minimum acceptance probability for any trade
+        """
+        self.ig_threshold = ig_threshold
+        self.confidence_threshold = confidence_threshold
+        self.exploration_size_factor = exploration_size_factor
+        self.min_p_accept = min_p_accept
+        
+        if BAYESIAN_AVAILABLE:
+            self.market_state = BayesianMarketState()
+            self.commitment_accounting = CommitmentAccountingSystem()
+        else:
+            self.market_state = None
+            self.commitment_accounting = None
+            logger.warning("BayesianMarketState not available. IG evaluation disabled.")
+            
+        self.metrics = {
+            "total_evaluated": 0,
+            "exploration_trades": 0,
+            "exploitation_trades": 0,
+            "rejections": 0,
+            "avg_ig": 0.0,
+        }
+        
+    def update_market_state(self, event_data: Dict[str, Any]):
+        """Update the underlying market state with new event"""
+        if self.market_state:
+            self.market_state.update_from_event(event_data)
+            
+    def evaluate_trade(self, 
+                       signal: Dict[str, Any],
+                       loss_prevention_core: Optional[LossPreventionCore] = None) -> Tuple[bool, Dict[str, Any]]:
+        """
+        Evaluate a trade signal using information gain.
+        
+        Args:
+            signal: Signal dict with 'size', 'expected_energy', 'risk', etc.
+            loss_prevention_core: Optional LossPreventionCore for state checks
+            
+        Returns:
+            Tuple of (should_trade, modified_signal)
+        """
+        self.metrics["total_evaluated"] += 1
+        
+        if loss_prevention_core and not loss_prevention_core.should_trade():
+            self.metrics["rejections"] += 1
+            return False, {"reason": "Trading paused by loss prevention"}
+            
+        if not self.market_state:
+            return True, signal
+            
+        belief = self.market_state.get_state()
+        expected_energy = signal.get("expected_energy", 1.0)
+        ig = self.market_state.expected_info_gain(hypothetical_E=expected_energy)
+        
+        n = self.metrics["total_evaluated"]
+        self.metrics["avg_ig"] = ((n - 1) * self.metrics["avg_ig"] + ig) / n
+        
+        result_signal = signal.copy()
+        result_signal["ig"] = ig
+        result_signal["ig_bits"] = ig / np.log(2)
+        result_signal["p_accept"] = belief.p_accept
+        result_signal["confidence"] = belief.confidence
+        
+        if ig > self.ig_threshold and belief.confidence < self.confidence_threshold:
+            result_signal["mode"] = "exploration"
+            result_signal["size"] = signal.get("size", 0.1) * self.exploration_size_factor
+            result_signal["reason"] = "High IG, low confidence - exploration probe"
+            self.metrics["exploration_trades"] += 1
+            logger.info(f"Exploration trade: IG={ig:.4f}, conf={belief.confidence:.3f}")
+            return True, result_signal
+            
+        if belief.p_accept < self.min_p_accept and belief.confidence > self.confidence_threshold:
+            result_signal["mode"] = "rejected"
+            result_signal["reason"] = f"Confident rejection: p_accept={belief.p_accept:.3f}"
+            self.metrics["rejections"] += 1
+            return False, result_signal
+            
+        sizing = signal.get("size", 0.1) * belief.p_accept * belief.confidence
+        result_signal["size"] = max(0.01, sizing)
+        result_signal["mode"] = "exploitation"
+        result_signal["reason"] = "Normal exploitation trade"
+        self.metrics["exploitation_trades"] += 1
+        
+        if self.commitment_accounting:
+            can_commit = self.commitment_accounting.can_commit(result_signal, belief.p_accept)
+            if not can_commit:
+                result_signal["mode"] = "rejected"
+                result_signal["reason"] = "Commitment limit exceeded"
+                self.metrics["rejections"] += 1
+                return False, result_signal
+                
+        return True, result_signal
+        
+    def get_exploration_recommendation(self) -> str:
+        """Get current exploration/exploitation recommendation"""
+        if not self.market_state:
+            return "UNKNOWN"
+        return self.market_state.get_exploration_recommendation(
+            ig_threshold=self.ig_threshold,
+            confidence_threshold=self.confidence_threshold
+        )
+        
+    def get_metrics(self) -> Dict[str, Any]:
+        """Get evaluator metrics"""
+        belief = self.market_state.get_state_dict() if self.market_state else {}
+        return {
+            **self.metrics,
+            "recommendation": self.get_exploration_recommendation(),
+            "belief_state": belief,
+        }
+        
+    def reset(self):
+        """Reset evaluator state"""
+        if self.market_state:
+            self.market_state.reset()
+        if self.commitment_accounting:
+            self.commitment_accounting.reset()
+        self.metrics = {
+            "total_evaluated": 0,
+            "exploration_trades": 0,
+            "exploitation_trades": 0,
+            "rejections": 0,
+            "avg_ig": 0.0,
+        }
 
 
 def demo():
