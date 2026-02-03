@@ -232,35 +232,72 @@ class MultiAgentDebateSystem:
     - Tester: Validates through automated testing
     """
     
+    GROK_BASE_URL = "https://api.x.ai/v1"
+    DEFAULT_MODEL = "grok-beta"
+    MAX_RETRIES = 3
+    INITIAL_BACKOFF = 1.0
+    
     def __init__(self, llm_api_key: Optional[str] = None):
         self.api_key = llm_api_key or LLM_API_KEY
         self.available = self.api_key is not None
+        self.llm_call_count = 0
+        self.llm_success_count = 0
+        self.llm_failure_count = 0
+        
+    def _call_llm_with_retry(self, prompt: str, system_prompt: str = "") -> str:
+        """Call LLM API with exponential backoff retry"""
+        last_error = None
+        backoff = self.INITIAL_BACKOFF
+        
+        for attempt in range(self.MAX_RETRIES):
+            try:
+                result = self._call_llm_internal(prompt, system_prompt)
+                self.llm_success_count += 1
+                return result
+            except Exception as e:
+                last_error = e
+                self.llm_failure_count += 1
+                logger.warning(f"LLM call attempt {attempt + 1}/{self.MAX_RETRIES} failed: {e}")
+                
+                if attempt < self.MAX_RETRIES - 1:
+                    logger.info(f"Retrying in {backoff:.1f}s...")
+                    time.sleep(backoff)
+                    backoff *= 2
+                    
+        logger.error(f"All LLM retry attempts failed. Last error: {last_error}")
+        return self._template_response(prompt)
         
     def _call_llm(self, prompt: str, system_prompt: str = "") -> str:
-        """Call LLM API (OpenAI compatible)"""
+        """Call LLM API with retry logic"""
+        self.llm_call_count += 1
+        
         if not self.available:
             return self._template_response(prompt)
             
-        try:
-            import openai
-            client = openai.OpenAI(api_key=self.api_key)
-            
-            messages = []
-            if system_prompt:
-                messages.append({"role": "system", "content": system_prompt})
-            messages.append({"role": "user", "content": prompt})
-            
-            response = client.chat.completions.create(
-                model="gpt-4",
-                messages=messages,
-                max_tokens=2000,
-                temperature=0.3
-            )
-            
-            return response.choices[0].message.content
-        except Exception as e:
-            logger.error(f"LLM API error: {e}")
-            return self._template_response(prompt)
+        return self._call_llm_with_retry(prompt, system_prompt)
+        
+    def _call_llm_internal(self, prompt: str, system_prompt: str = "") -> str:
+        """Internal LLM call using Grok API (OpenAI compatible)"""
+        import openai
+        
+        client = openai.OpenAI(
+            api_key=self.api_key,
+            base_url=self.GROK_BASE_URL
+        )
+        
+        messages = []
+        if system_prompt:
+            messages.append({"role": "system", "content": system_prompt})
+        messages.append({"role": "user", "content": prompt})
+        
+        response = client.chat.completions.create(
+            model=self.DEFAULT_MODEL,
+            messages=messages,
+            max_tokens=2000,
+            temperature=0.3
+        )
+        
+        return response.choices[0].message.content
             
     def _template_response(self, prompt: str) -> str:
         """Template-based fallback when LLM unavailable"""
@@ -648,7 +685,7 @@ class SelfEvolutionAgent:
     """
     
     SAFETY_GUARDS = {
-        "max_changes_per_cycle": 3,
+        "max_changes_per_cycle": 10,
         "require_test_pass": True,
         "require_baseline_improvement": True,
         "improvement_threshold": 0.05,
@@ -664,6 +701,15 @@ class SelfEvolutionAgent:
         "max_single_trade_risk": 0.03,
         "require_human_override_for_live": True
     }
+    
+    TASK_PRIORITY_ORDER = [
+        "loss_prevention",
+        "risk_management",
+        "signal_generation",
+        "research_implementation",
+        "innovation",
+        "radical_innovation"
+    ]
     
     def __init__(self, 
                  base_dir: str = None,
@@ -953,6 +999,7 @@ class SelfEvolutionAgent:
             if not is_valid:
                 task.status = TaskStatus.REJECTED
                 task.error = f"Code validation failed: {validation_msg}"
+                self._generate_diagnostic_task(task, "validation", validation_msg)
                 return False
                 
             review = self.debate_system.critic_agent(code, proposal)
@@ -960,7 +1007,22 @@ class SelfEvolutionAgent:
             
             if review["rejected"]:
                 task.status = TaskStatus.REJECTED
-                task.error = f"Critic rejected: {review['review'][:200]}"
+                rejection_reason = review['review']
+                task.error = f"Critic rejected: {rejection_reason[:200]}"
+                
+                self._log_evolution({
+                    "event": "critic_rejection",
+                    "task_id": task.id,
+                    "reason": rejection_reason,
+                    "proposal": proposal[:500],
+                    "code_snippet": code[:500],
+                    "suggestions": self._extract_suggestions(rejection_reason)
+                })
+                logger.warning(f"Critic rejection details for {task.id}:")
+                logger.warning(f"  Reason: {rejection_reason[:300]}")
+                logger.warning(f"  Suggestions: {self._extract_suggestions(rejection_reason)}")
+                
+                self._generate_diagnostic_task(task, "critic_rejection", rejection_reason)
                 return False
                 
             test_results = self.debate_system.tester_agent(str(self.base_dir))
@@ -969,6 +1031,7 @@ class SelfEvolutionAgent:
             if self.SAFETY_GUARDS["require_test_pass"] and not test_results["passed"]:
                 task.status = TaskStatus.FAILED
                 task.error = "Tests did not pass"
+                self._generate_diagnostic_task(task, "test_failure", str(test_results.get("errors", [])))
                 return False
                 
             if self.SAFETY_GUARDS["require_baseline_improvement"]:
@@ -1008,7 +1071,49 @@ class SelfEvolutionAgent:
             task.error = str(e)
             self.metrics["tasks_failed"] += 1
             logger.error(f"Task {task.id} failed: {e}")
+            self._generate_diagnostic_task(task, "exception", str(e))
             return False
+            
+    def _generate_diagnostic_task(self, failed_task: EvolutionTask, failure_type: str, error_details: str):
+        """Generate a self-diagnostic task based on failure"""
+        diagnostic_descriptions = {
+            "validation": f"Fix code validation error: {error_details[:200]}",
+            "critic_rejection": f"Address critic feedback: {error_details[:200]}",
+            "test_failure": f"Fix test failures: {error_details[:200]}",
+            "exception": f"Debug exception in task processing: {error_details[:200]}",
+            "import_error": f"Fix import error: {error_details[:200]}"
+        }
+        
+        description = diagnostic_descriptions.get(
+            failure_type, 
+            f"Diagnose and fix: {failure_type} - {error_details[:150]}"
+        )
+        
+        self.add_task(
+            description,
+            "self_diagnostic",
+            TaskPriority.HIGH
+        )
+        
+        logger.info(f"Generated diagnostic task for {failure_type}: {description[:100]}...")
+        
+    def _extract_suggestions(self, review_text: str) -> List[str]:
+        """Extract actionable suggestions from critic review"""
+        suggestions = []
+        
+        suggestion_patterns = [
+            r"suggest(?:ion)?[s]?:?\s*(.+?)(?:\.|$)",
+            r"recommend[s]?:?\s*(.+?)(?:\.|$)",
+            r"should\s+(.+?)(?:\.|$)",
+            r"consider\s+(.+?)(?:\.|$)",
+            r"improve[ment]?[s]?:?\s*(.+?)(?:\.|$)"
+        ]
+        
+        for pattern in suggestion_patterns:
+            matches = re.findall(pattern, review_text.lower(), re.IGNORECASE)
+            suggestions.extend([m.strip() for m in matches if len(m.strip()) > 10])
+            
+        return suggestions[:5]
             
     def _apply_change(self, task: EvolutionTask, code: str):
         """Apply code change to the system"""
@@ -1094,8 +1199,13 @@ class SelfEvolutionAgent:
             "metrics": self.metrics
         }
         
-    def start_perpetual_daemon(self, interval_hours: float = 24):
-        """Start the perpetual innovation daemon"""
+    def start_perpetual_daemon(self, interval_hours: float = 24, interval_minutes: float = None):
+        """Start the perpetual innovation daemon
+        
+        Args:
+            interval_hours: Interval in hours (default 24, ignored if interval_minutes set)
+            interval_minutes: Interval in minutes (takes precedence over hours)
+        """
         if self.running:
             logger.warning("Daemon already running")
             return
@@ -1103,21 +1213,39 @@ class SelfEvolutionAgent:
         self.running = True
         self.metrics["daemon_started"] = datetime.now().isoformat()
         
-        logger.info(f"Starting perpetual innovation daemon (interval: {interval_hours}h)")
+        if interval_minutes is not None:
+            interval_seconds = interval_minutes * 60
+            interval_display = f"{interval_minutes}m"
+        else:
+            interval_seconds = interval_hours * 3600
+            interval_display = f"{interval_hours}h"
+        
+        logger.info(f"Starting perpetual innovation daemon (interval: {interval_display})")
         
         self._log_evolution({
             "event": "daemon_started",
-            "interval_hours": interval_hours
+            "interval_minutes": interval_minutes,
+            "interval_hours": interval_hours,
+            "interval_seconds": interval_seconds
         })
         
         if SCHEDULER_AVAILABLE:
             self._scheduler = BackgroundScheduler()
-            self._scheduler.add_job(
-                self.evolution_cycle, 
-                'interval', 
-                hours=interval_hours,
-                id='evolution_cycle'
-            )
+            
+            if interval_minutes is not None:
+                self._scheduler.add_job(
+                    self.evolution_cycle, 
+                    'interval', 
+                    minutes=interval_minutes,
+                    id='evolution_cycle'
+                )
+            else:
+                self._scheduler.add_job(
+                    self.evolution_cycle, 
+                    'interval', 
+                    hours=interval_hours,
+                    id='evolution_cycle'
+                )
             self._scheduler.start()
             
             logger.info("Perpetual innovation daemon activated with APScheduler")
@@ -1134,7 +1262,7 @@ class SelfEvolutionAgent:
                         self.evolution_cycle()
                     except Exception as e:
                         logger.error(f"Cycle error: {e}")
-                    time.sleep(interval_hours * 3600)
+                    time.sleep(interval_seconds)
                     
             self._thread = threading.Thread(target=daemon_loop, daemon=True)
             self._thread.start()
@@ -1191,6 +1319,7 @@ def main():
     parser = argparse.ArgumentParser(description="Self-Evolution Agent")
     parser.add_argument("--daemon", action="store_true", help="Start perpetual daemon")
     parser.add_argument("--interval", type=float, default=24, help="Daemon interval in hours")
+    parser.add_argument("--interval-minutes", type=float, default=None, help="Daemon interval in minutes (overrides --interval)")
     parser.add_argument("--demo", action="store_true", help="Run single cycle demo")
     parser.add_argument("--auto-apply", action="store_true", help="Auto-apply approved changes")
     
@@ -1202,8 +1331,15 @@ def main():
         print("=" * 60)
         print("PERPETUAL ASCENSION ENGINE")
         print("Eternal Innovation Daemon Starting...")
+        if args.interval_minutes:
+            print(f"Cycle Interval: {args.interval_minutes} minutes")
+        else:
+            print(f"Cycle Interval: {args.interval} hours")
         print("=" * 60)
-        agent.start_perpetual_daemon(interval_hours=args.interval)
+        agent.start_perpetual_daemon(
+            interval_hours=args.interval,
+            interval_minutes=args.interval_minutes
+        )
     elif args.demo:
         print("=" * 60)
         print("SELF-EVOLUTION AGENT DEMO")
@@ -1217,9 +1353,11 @@ def main():
         status = agent.get_status()
         print(json.dumps(status, indent=2, default=str))
         print("\nUsage:")
-        print("  --daemon     Start perpetual innovation daemon")
-        print("  --demo       Run single cycle demonstration")
-        print("  --auto-apply Auto-apply approved changes")
+        print("  --daemon            Start perpetual innovation daemon")
+        print("  --interval HOURS    Daemon interval in hours (default: 24)")
+        print("  --interval-minutes  Daemon interval in minutes (overrides --interval)")
+        print("  --demo              Run single cycle demonstration")
+        print("  --auto-apply        Auto-apply approved changes")
 
 
 if __name__ == "__main__":
