@@ -54,6 +54,14 @@ try:
 except ImportError:
     NUMPY_AVAILABLE = False
 
+try:
+    from advanced_modules.bayesian_market_state import BayesianMarketState
+    from advanced_modules.microstructure_detector import MicrostructureDetectors, OrderBookSnapshot
+    BAYESIAN_AVAILABLE = True
+except ImportError:
+    BAYESIAN_AVAILABLE = False
+    logger.warning("Bayesian/Microstructure modules not available")
+
 
 class OrderType(Enum):
     MARKET = "market"
@@ -993,6 +1001,195 @@ class MT5LiveEngine:
             "orders_count": len(self.order_history),
             "tick_streaming": self.tick_running
         }
+
+
+class DepthFeedIntegration:
+    """
+    Order book depth feed integration with Bayesian market state.
+    
+    Streams L2 order book data and feeds it into the microstructure
+    detectors and Bayesian belief system for real-time MM behavior analysis.
+    """
+    
+    def __init__(self, engine: MT5LiveEngine, symbols: List[str]):
+        """
+        Initialize depth feed integration.
+        
+        Args:
+            engine: MT5LiveEngine instance
+            symbols: List of symbols to track
+        """
+        self.engine = engine
+        self.symbols = symbols
+        
+        self.market_states: Dict[str, Any] = {}
+        if BAYESIAN_AVAILABLE:
+            for symbol in symbols:
+                self.market_states[symbol] = BayesianMarketState()
+        
+        self.depth_history: Dict[str, deque] = {s: deque(maxlen=100) for s in symbols}
+        self.last_book: Dict[str, Dict] = {}
+        
+        self._running = False
+        self._thread: Optional[threading.Thread] = None
+        
+        self.add_counts: Dict[str, int] = {s: 0 for s in symbols}
+        self.cancel_counts: Dict[str, int] = {s: 0 for s in symbols}
+        self.trade_counts: Dict[str, int] = {s: 0 for s in symbols}
+        
+        logger.info(f"DepthFeedIntegration initialized for {len(symbols)} symbols")
+        
+    def start(self, callback: Optional[Callable] = None):
+        """Start depth feed streaming"""
+        if self._running:
+            return
+            
+        self._running = True
+        self._callback = callback
+        
+        def stream_loop():
+            while self._running:
+                for symbol in self.symbols:
+                    try:
+                        book_data = self._get_order_book(symbol)
+                        if book_data:
+                            belief = self._process_book_update(symbol, book_data)
+                            if self._callback and belief:
+                                self._callback(symbol, belief)
+                    except Exception as e:
+                        logger.error(f"Depth feed error for {symbol}: {e}")
+                time.sleep(0.05)
+                
+        self._thread = threading.Thread(target=stream_loop, daemon=True)
+        self._thread.start()
+        logger.info("Depth feed streaming started")
+        
+    def stop(self):
+        """Stop depth feed streaming"""
+        self._running = False
+        if self._thread:
+            self._thread.join(timeout=2.0)
+        logger.info("Depth feed streaming stopped")
+        
+    def _get_order_book(self, symbol: str) -> Optional[Dict]:
+        """Get order book data from MT5 or simulation"""
+        mt5_symbol = self.engine.SYMBOL_MAPPING.get(symbol, symbol)
+        
+        if self.engine.active_broker == BrokerType.MT5 and MT5_AVAILABLE:
+            book = mt5.market_book_get(mt5_symbol)
+            if book:
+                bids = [(item.price, item.volume) for item in book if item.type == 1]
+                asks = [(item.price, item.volume) for item in book if item.type == 2]
+                
+                bids.sort(key=lambda x: -x[0])
+                asks.sort(key=lambda x: x[0])
+                
+                return {
+                    "symbol": symbol,
+                    "bids": bids[:10],
+                    "asks": asks[:10],
+                    "timestamp": datetime.now()
+                }
+        else:
+            tick = self.engine.get_tick(symbol)
+            if tick:
+                spread = tick.spread
+                mid = tick.mid
+                
+                bids = [(mid - spread/2 - i*0.0001, 1000 + random.randint(-200, 200)) 
+                        for i in range(10)]
+                asks = [(mid + spread/2 + i*0.0001, 1000 + random.randint(-200, 200)) 
+                        for i in range(10)]
+                
+                return {
+                    "symbol": symbol,
+                    "bids": bids,
+                    "asks": asks,
+                    "timestamp": datetime.now()
+                }
+                
+        return None
+        
+    def _process_book_update(self, symbol: str, book_data: Dict) -> Optional[Dict]:
+        """Process order book update and update Bayesian state"""
+        if not BAYESIAN_AVAILABLE or symbol not in self.market_states:
+            return None
+            
+        bids = book_data["bids"]
+        asks = book_data["asks"]
+        
+        bid_depth = sum(vol for _, vol in bids)
+        ask_depth = sum(vol for _, vol in asks)
+        
+        adds = 10
+        cancels = 3
+        trades = 1
+        
+        if symbol in self.last_book:
+            last = self.last_book[symbol]
+            last_bid_depth = sum(vol for _, vol in last.get("bids", []))
+            last_ask_depth = sum(vol for _, vol in last.get("asks", []))
+            
+            depth_change = (bid_depth + ask_depth) - (last_bid_depth + last_ask_depth)
+            if depth_change > 0:
+                adds = int(abs(depth_change) / 100) + 5
+            else:
+                cancels = int(abs(depth_change) / 100) + 5
+                
+        self.last_book[symbol] = book_data
+        
+        tick = self.engine.get_tick(symbol)
+        price_delta = 0.0
+        volume = 100.0
+        if tick:
+            if symbol in self.depth_history and self.depth_history[symbol]:
+                last_mid = self.depth_history[symbol][-1].get("mid", tick.mid)
+                price_delta = tick.mid - last_mid
+            volume = tick.volume
+            
+        self.depth_history[symbol].append({
+            "mid": tick.mid if tick else (bids[0][0] + asks[0][0]) / 2,
+            "bid_depth": bid_depth,
+            "ask_depth": ask_depth,
+            "timestamp": book_data["timestamp"]
+        })
+        
+        event_data = {
+            "energy": 1.0,
+            "persistence": 0.5 + 0.3 * (bid_depth / max(bid_depth + ask_depth, 1)),
+            "bid_depth": bid_depth,
+            "ask_depth": ask_depth,
+            "adds": adds,
+            "cancels": cancels,
+            "trades": trades,
+            "volume": volume,
+            "price_delta": price_delta
+        }
+        
+        state = self.market_states[symbol]
+        belief = state.update_from_event(event_data)
+        
+        return {
+            "symbol": symbol,
+            "p_accept": belief.p_accept,
+            "confidence": belief.confidence,
+            "mm_flags": belief.mm_flags,
+            "expected_ig": state.expected_info_gain(hypothetical_E=1.0, n_samples=50),
+            "recommendation": state.get_exploration_recommendation(),
+            "bid_depth": bid_depth,
+            "ask_depth": ask_depth,
+            "depth_imbalance": (bid_depth - ask_depth) / max(bid_depth + ask_depth, 1)
+        }
+        
+    def get_belief_state(self, symbol: str) -> Optional[Dict]:
+        """Get current belief state for symbol"""
+        if symbol in self.market_states:
+            return self.market_states[symbol].get_state_dict()
+        return None
+        
+    def get_all_beliefs(self) -> Dict[str, Dict]:
+        """Get belief states for all symbols"""
+        return {s: self.get_belief_state(s) for s in self.symbols if s in self.market_states}
 
 
 def demo():

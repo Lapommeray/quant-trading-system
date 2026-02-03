@@ -29,6 +29,15 @@ import logging
 
 logger = logging.getLogger("BayesianMarketState")
 
+try:
+    from advanced_modules.microstructure_detector import (
+        MicrostructureDetectors, MicrostructureFlags, OrderBookSnapshot
+    )
+    MICROSTRUCTURE_AVAILABLE = True
+except ImportError:
+    MICROSTRUCTURE_AVAILABLE = False
+    logger.warning("Microstructure detectors not available")
+
 
 @dataclass
 class CommitmentEvent:
@@ -57,6 +66,7 @@ class BeliefState:
     recent_cr: Optional[float] = None
     expected_ig_bits: float = 0.0
     regime: str = "UNKNOWN"
+    mm_flags: Optional[Dict[str, Any]] = None
 
 
 class BayesianMarketState:
@@ -111,6 +121,12 @@ class BayesianMarketState:
         
         self._regime_detector = None
         
+        self._microstructure_detectors = None
+        if MICROSTRUCTURE_AVAILABLE:
+            self._microstructure_detectors = MicrostructureDetectors()
+            
+        self._last_mm_flags: Optional[Dict[str, Any]] = None
+        
         logger.info(f"BayesianMarketState initialized: α={self.alpha}, β={self.beta}")
         
     def set_regime_detector(self, detector):
@@ -123,6 +139,8 @@ class BayesianMarketState:
         
         Args:
             event_data: Dict with 'energy', 'persistence', optionally 'data_series'
+                       For microstructure: 'bid_depth', 'ask_depth', 'adds', 'cancels',
+                       'trades', 'volume', 'price_delta'
             
         Returns:
             Updated BeliefState
@@ -132,8 +150,24 @@ class BayesianMarketState:
         
         P = max(min(P, E), 0)
         
-        self.alpha += P
-        self.beta += (E - P)
+        mm_penalty = 0.0
+        self._last_mm_flags = None
+        
+        if self._microstructure_detectors:
+            mm_flags = self._microstructure_detectors.update(event_data)
+            self._last_mm_flags = mm_flags.to_dict()
+            mm_penalty = mm_flags.get_bayesian_penalty()
+            
+            if mm_flags.spoof_detected:
+                logger.debug(f"SPOOF detected: penalty={mm_penalty:.3f}")
+            if mm_flags.absorption_detected:
+                logger.debug(f"ABSORPTION detected: penalty={mm_penalty:.3f}")
+        
+        self.alpha += P - mm_penalty
+        self.beta += (E - P) + mm_penalty
+        
+        self.alpha = max(self.alpha, 0.1)
+        self.beta = max(self.beta, 0.1)
         
         self.posterior = beta_dist(self.alpha, self.beta)
         self.p_accept = self.posterior.mean()
@@ -251,7 +285,8 @@ class BayesianMarketState:
             variance=self.variance,
             recent_cr=recent_cr,
             expected_ig_bits=self.expected_ig_bits,
-            regime=self.volatility_regime
+            regime=self.volatility_regime,
+            mm_flags=self._last_mm_flags
         )
         
     def get_state_dict(self) -> Dict[str, Any]:
@@ -265,7 +300,8 @@ class BayesianMarketState:
             "variance": state.variance,
             "recent_cr": state.recent_cr,
             "expected_ig_bits": state.expected_ig_bits,
-            "regime": state.regime
+            "regime": state.regime,
+            "mm_flags": state.mm_flags
         }
         
     def reset(self, alpha: float = 1.0, beta: float = 1.0):
