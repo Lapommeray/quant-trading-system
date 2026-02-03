@@ -541,7 +541,11 @@ class RLEvolver:
                 self._task_queue.append(task)
             elif hasattr(self._task_queue, 'add_task'):
                 self._task_queue.add_task(task)
-            logger.info(f"Proposed RL action: {action.to_task_description()}")
+            try:
+                action_desc = action.to_task_description()
+            except Exception:
+                action_desc = str(action)
+            logger.info(f"Proposed RL action: {action_desc}")
         except Exception as e:
             logger.warning(f"Failed to propose action: {e}")
             
