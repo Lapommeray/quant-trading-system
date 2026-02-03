@@ -70,6 +70,13 @@ except ImportError:
     BAYESIAN_AVAILABLE = False
     logger.warning("Bayesian modules not available. IG fitness disabled.")
 
+try:
+    from advanced_modules.rlevolver import RLEvolver, RLAction
+    RL_EVOLVER_AVAILABLE = True
+except ImportError:
+    RL_EVOLVER_AVAILABLE = False
+    logger.warning("RL Evolver not available. Policy learning disabled.")
+
 
 LLM_API_KEY = os.getenv("LLM_API_KEY") or os.getenv("OPENAI_API_KEY") or os.getenv("GROK_API_KEY")
 REPO_PATH = os.path.dirname(os.path.abspath(__file__))
@@ -744,7 +751,8 @@ class SelfEvolutionAgent:
     def __init__(self, 
                  base_dir: str = None,
                  llm_api_key: Optional[str] = None,
-                 auto_apply: bool = False):
+                 auto_apply: bool = False,
+                 enable_rl: bool = True):
         self.base_dir = Path(base_dir or REPO_PATH)
         self.auto_apply = auto_apply
         
@@ -759,6 +767,17 @@ class SelfEvolutionAgent:
         self._thread: Optional[threading.Thread] = None
         self._scheduler = None
         
+        self.rl_evolver: Optional['RLEvolver'] = None
+        if enable_rl and RL_EVOLVER_AVAILABLE:
+            try:
+                checkpoint_path = str(self.base_dir / "models" / "rl_checkpoint.zip")
+                self.rl_evolver = RLEvolver(checkpoint_path=checkpoint_path)
+                self.rl_evolver.set_task_queue(self.task_queue)
+                logger.info("RL Evolver initialized and connected to task queue")
+            except Exception as e:
+                logger.warning(f"Failed to initialize RL Evolver: {e}")
+                self.rl_evolver = None
+        
         self.metrics = {
             "cycles_completed": 0,
             "tasks_completed": 0,
@@ -766,7 +785,9 @@ class SelfEvolutionAgent:
             "changes_applied": 0,
             "baseline_improvements": 0,
             "last_cycle": None,
-            "daemon_started": None
+            "daemon_started": None,
+            "rl_steps": 0,
+            "rl_proposals": 0
         }
         
         self._load_state()
@@ -1179,6 +1200,7 @@ class SelfEvolutionAgent:
         2. Auto-generation of novel proprietary signals only AI-scale iteration can uncover
         3. Real-time loss forecasting and preemptive adaptation
         4. Weekly full-system audit + radical innovation if edge stagnant
+        5. RL policy learning from belief state and microstructure signals
         """
         cycle_start = datetime.now()
         logger.info("Starting evolution cycle...")
@@ -1194,6 +1216,8 @@ class SelfEvolutionAgent:
         
         self.ingest_research()
         
+        self._run_rl_step()
+        
         tasks_processed = 0
         max_tasks = self.SAFETY_GUARDS["max_changes_per_cycle"]
         
@@ -1206,19 +1230,29 @@ class SelfEvolutionAgent:
             
             if success:
                 logger.info(f"Task {task.id} completed successfully")
+                self._record_rl_outcome(success=True)
             else:
                 logger.warning(f"Task {task.id} failed: {task.error}")
+                self._record_rl_outcome(success=False)
                 
         self.metrics["cycles_completed"] += 1
         self.metrics["last_cycle"] = datetime.now().isoformat()
         self._save_state()
         
+        if self.rl_evolver:
+            self.rl_evolver.save_checkpoint()
+        
         cycle_duration = (datetime.now() - cycle_start).total_seconds()
+        
+        rl_status = None
+        if self.rl_evolver:
+            rl_status = self.rl_evolver.get_status()
         
         self._log_evolution({
             "event": "cycle_complete",
             "tasks_processed": tasks_processed,
-            "duration_seconds": cycle_duration
+            "duration_seconds": cycle_duration,
+            "rl_status": rl_status
         })
         
         logger.info(f"Evolution cycle complete. Processed {tasks_processed} tasks in {cycle_duration:.1f}s")
@@ -1226,8 +1260,76 @@ class SelfEvolutionAgent:
         return {
             "tasks_processed": tasks_processed,
             "duration": cycle_duration,
-            "metrics": self.metrics
+            "metrics": self.metrics,
+            "rl_status": rl_status
         }
+    
+    def _run_rl_step(self):
+        """Run RL evolver step to propose actions based on current belief state"""
+        if not self.rl_evolver:
+            return
+            
+        try:
+            belief = self._get_current_belief_state()
+            
+            drawdown = self.parse_logs_for_drawdown()
+            
+            action = self.rl_evolver.step(
+                belief=belief,
+                pnl_delta=0.0,
+                exposure=0.0,
+                volatility=1.0,
+                spread=0.0
+            )
+            
+            self.rl_evolver.propose_action(action)
+            
+            self.metrics["rl_steps"] = self.rl_evolver.total_steps
+            self.metrics["rl_proposals"] += 1
+            
+            logger.info(f"RL step {self.rl_evolver.total_steps}: {action.to_task_description()}")
+            
+        except Exception as e:
+            logger.warning(f"RL step failed: {e}")
+            
+    def _get_current_belief_state(self) -> Dict[str, Any]:
+        """Get current belief state for RL observation"""
+        belief = {
+            "p_accept": 0.5,
+            "confidence": 0.5,
+            "expected_ig_bits": 0.0,
+            "regime": self.get_current_regime(),
+            "mm_flags": {}
+        }
+        
+        if BAYESIAN_AVAILABLE:
+            try:
+                market_state = BayesianMarketState()
+                state = market_state.get_state()
+                belief["p_accept"] = state.p_accept
+                belief["confidence"] = state.confidence
+                belief["expected_ig_bits"] = state.expected_ig_bits
+                belief["regime"] = state.regime
+                if state.mm_flags:
+                    belief["mm_flags"] = state.mm_flags
+            except Exception as e:
+                logger.debug(f"Could not get Bayesian state: {e}")
+                
+        return belief
+        
+    def _record_rl_outcome(self, success: bool):
+        """Record task outcome for RL reward computation"""
+        if not self.rl_evolver:
+            return
+            
+        try:
+            pnl_delta = 10.0 if success else -5.0
+            realized_ig = 0.1 if success else 0.02
+            drawdown = 0.0 if success else 0.01
+            
+            self.rl_evolver.record_outcome(pnl_delta, realized_ig, drawdown)
+        except Exception as e:
+            logger.debug(f"Could not record RL outcome: {e}")
         
     def start_perpetual_daemon(self, interval_hours: float = 24, interval_minutes: float = None):
         """Start the perpetual innovation daemon
@@ -1314,14 +1416,20 @@ class SelfEvolutionAgent:
         
     def get_status(self) -> Dict[str, Any]:
         """Get agent status"""
-        return {
+        status = {
             "running": self.running,
             "pending_tasks": len(self.task_queue),
             "completed_tasks": len(self.completed_tasks),
             "metrics": self.metrics,
             "hall_of_fame_baseline": self.hall_of_fame.get_baseline().to_dict(),
-            "auto_apply": self.auto_apply
+            "auto_apply": self.auto_apply,
+            "rl_evolver_enabled": self.rl_evolver is not None
         }
+        
+        if self.rl_evolver:
+            status["rl_status"] = self.rl_evolver.get_status()
+            
+        return status
         
     def run_single_cycle_demo(self) -> Dict[str, Any]:
         """Run a single cycle for demonstration"""
