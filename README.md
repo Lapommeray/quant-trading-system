@@ -156,6 +156,86 @@ order = OrderRequest(
 result = engine.place_order(order)
 ```
 
+## MT5 Bridge Integration (RayBridge EA)
+
+The system includes an MT5 Bridge that outputs trading signals for consumption by the RayBridge EA in MetaTrader 5.
+
+### Prerequisites
+
+1. `mt5_bridge.py` must be present in the repository root
+2. MT5 Common Files directory must exist: `C:\Users\<user>\AppData\Roaming\MetaQuotes\Terminal\Common\Files\raybridge`
+3. RayBridge EA must be attached to a chart in MT5
+
+### Running in Live Mode
+
+```bash
+# Run with default settings
+python main.py --asset BTC/USDT --timeline STANDARD --loss ALLOWED
+
+# Run with multiple assets
+python main.py --asset "BTC/USDT,ETH/USDT,XAU/USD" --timeline STANDARD --loss MINIMIZED
+
+# Run in GOD MODE with eternal execution
+python main.py --asset ALL --timeline ETERNITY --loss DISALLOWED
+```
+
+### Configuration Options
+
+Create or edit `config.json` in the repository root to customize MT5 bridge settings:
+
+```json
+{
+  "mt5_bridge_enabled": true,
+  "mt5_signal_interval_seconds": 5,
+  "symbols_for_mt5": [],
+  "mt5_confidence_threshold": 0.0,
+  "mt5_signal_dir": null
+}
+```
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `mt5_bridge_enabled` | Enable/disable MT5 signal output | `true` |
+| `mt5_signal_interval_seconds` | Minimum interval between signal writes per symbol | `5` |
+| `symbols_for_mt5` | List of symbols to output (empty = all) | `[]` |
+| `mt5_confidence_threshold` | Minimum confidence for signal output | `0.0` |
+| `mt5_signal_dir` | Custom signal directory path | Auto-detected |
+
+### Signal Output Format
+
+Signals are written as JSON files to the MT5 Common Files directory:
+
+```json
+{
+  "symbol": "BTCUSD",
+  "signal": "BUY",
+  "confidence": 0.85,
+  "timestamp": "2024-01-15T12:30:45.123456"
+}
+```
+
+### Programmatic Usage
+
+```python
+from mt5_bridge import write_signal_atomic, init_bridge, is_bridge_available
+
+# Initialize bridge with custom config
+init_bridge({
+    "mt5_signal_interval_seconds": 10,
+    "mt5_confidence_threshold": 0.7
+})
+
+# Check if bridge is available
+if is_bridge_available():
+    # Write a signal
+    write_signal_atomic({
+        "symbol": "BTCUSD",
+        "signal": "BUY",
+        "confidence": 0.85,
+        "timestamp": datetime.utcnow().isoformat()
+    })
+```
+
 ## Safety Governance
 
 All live trading requires human confirmation for the first 100 trades:

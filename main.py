@@ -54,6 +54,26 @@ except ImportError as e:
     logger.error("Please run 'python3 scripts/deploy_quantum.sh' first.")
     sys.exit(1)
 
+# MT5 Bridge import (optional - graceful fallback if unavailable)
+try:
+    from mt5_bridge import write_signal_atomic, init_bridge, is_bridge_available
+    MT5_BRIDGE_AVAILABLE = True
+except ImportError:
+    MT5_BRIDGE_AVAILABLE = False
+    logger.warning("MT5 Bridge not available. Signals will not be sent to MT5.")
+    
+    def write_signal_atomic(signal_dict):
+        """Fallback no-op function when MT5 bridge is unavailable"""
+        return False
+    
+    def init_bridge(config=None):
+        """Fallback no-op function when MT5 bridge is unavailable"""
+        return None
+    
+    def is_bridge_available():
+        """Fallback function when MT5 bridge is unavailable"""
+        return False
+
 class QuantumTradingSystem:
     """Main class for the Quantum Trading System"""
     
@@ -72,10 +92,12 @@ class QuantumTradingSystem:
         self.modules = {}
         self.running = False
         self.start_time = time.time()
+        self.mt5_bridge_config = None
         
         logger.info(f"Initializing Quantum Trading System with assets={assets}, timeline={timeline}, loss_mode={loss_mode}")
         
         self._initialize_modules()
+        self._initialize_mt5_bridge()
         
     def _parse_assets(self, assets_str: str) -> List[str]:
         """Parse assets string into a list of assets"""
@@ -178,6 +200,33 @@ class QuantumTradingSystem:
         except Exception as e:
             logger.error(f"Failed to initialize modules: {e}")
             raise
+    
+    def _initialize_mt5_bridge(self):
+        """Initialize MT5 Bridge for signal output"""
+        if not MT5_BRIDGE_AVAILABLE:
+            logger.info("MT5 Bridge module not available, skipping initialization")
+            return
+            
+        # Load MT5 bridge config from runtime config or use defaults
+        mt5_config = {
+            "mt5_bridge_enabled": self.runtime_config.get("mt5_bridge_enabled", True),
+            "mt5_signal_interval_seconds": self.runtime_config.get("mt5_signal_interval_seconds", 5),
+            "symbols_for_mt5": self.runtime_config.get("symbols_for_mt5", []),
+            "mt5_confidence_threshold": self.runtime_config.get("mt5_confidence_threshold", 0.0),
+            "mt5_signal_dir": self.runtime_config.get("mt5_signal_dir", None)
+        }
+        
+        # Remove None values to use defaults
+        mt5_config = {k: v for k, v in mt5_config.items() if v is not None}
+        
+        try:
+            self.mt5_bridge_config = init_bridge(mt5_config)
+            if is_bridge_available():
+                logger.info(f"MT5 Bridge initialized successfully")
+            else:
+                logger.warning("MT5 Bridge initialized but directory not writable")
+        except Exception as e:
+            logger.error(f"Failed to initialize MT5 Bridge: {e}")
             
     def _register_divine_commands(self):
         """Register divine commands and thought patterns for the Throne Room Interface"""
@@ -318,6 +367,12 @@ class QuantumTradingSystem:
                                f"Confidence: {signal_result['signal']['confidence']:.2f}, " +
                                f"Source: {signal_result['signal']['source']}")
                     
+                    # Output signal to MT5 Bridge
+                    self._output_mt5_signal(
+                        asset,
+                        signal_result['signal']['direction'],
+                        signal_result['signal']['confidence']
+                    )
                     return
                 else:
                     logger.info(f"No signal generated for {asset}")
@@ -374,6 +429,13 @@ class QuantumTradingSystem:
                 signal = self.modules["apocalypse_protocol"].prevent_loss(signal)
                 
             logger.info(f"Asset: {asset}, Signal: {signal.get('signal')}, Confidence: {signal.get('confidence'):.2f}")
+            
+            # Output final signal to MT5 Bridge
+            self._output_mt5_signal(
+                asset,
+                signal.get('signal'),
+                signal.get('confidence', 0.0)
+            )
             
         except Exception as e:
             logger.error(f"Error processing asset {asset}: {e}")
@@ -483,6 +545,32 @@ class QuantumTradingSystem:
                 "expected_profit": 0.01 if final_signal != "HOLD" else 0.0,
                 "timestamp": time.time() * 1000
             }
+    
+    def _output_mt5_signal(self, asset: str, signal_direction: str, confidence: float):
+        """Output trading signal to MT5 Bridge for RayBridge EA consumption
+        
+        Args:
+            asset: Trading symbol (e.g., "BTC/USDT")
+            signal_direction: Signal direction ("BUY", "SELL", "HOLD")
+            confidence: Confidence level (0.0 to 1.0)
+        """
+        if not MT5_BRIDGE_AVAILABLE:
+            return
+            
+        try:
+            signal_dict = {
+                "symbol": asset,
+                "signal": signal_direction,
+                "confidence": float(confidence),
+                "timestamp": datetime.datetime.utcnow().isoformat()
+            }
+            
+            success = write_signal_atomic(signal_dict)
+            if success:
+                logger.debug(f"MT5 signal written for {asset}: {signal_direction} (confidence: {confidence:.2f})")
+        except Exception as e:
+            # Silently catch exceptions to avoid crashes - MT5 bridge is non-critical
+            logger.debug(f"Failed to write MT5 signal for {asset}: {e}")
             
     def _print_divine_banner(self):
         """Print the divine certification banner"""
