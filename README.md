@@ -156,17 +156,52 @@ order = OrderRequest(
 result = engine.place_order(order)
 ```
 
-## MT5 Bridge Integration (RayBridge EA)
+## MT5 Live Trading (RayBridge EA)
 
-The system includes an MT5 Bridge that outputs trading signals for consumption by the RayBridge EA in MetaTrader 5.
+The system includes a canonical MT5 live runner that outputs trading signals for consumption by the RayBridge EA in MetaTrader 5.
+
+### How to Run MT5 Live
+
+```bash
+# Run with default settings (XAUUSD, 60s interval)
+python run_mt5_live.py
+
+# Run with specific symbol
+python run_mt5_live.py --symbol EURUSD --interval 60
+
+# Run with multiple symbols
+python run_mt5_live.py --symbols XAUUSD,EURUSD,BTCUSD --interval 300
+
+# Run once for testing
+python run_mt5_live.py --symbol XAUUSD --once
+```
+
+### MT5 Signal Path
+
+```
+MT5 → File → Open Data Folder
+→ Common → Files → raybridge
+→ signal_output.json
+```
+
+On Windows: `C:\Users\<user>\AppData\Roaming\MetaQuotes\Terminal\Common\Files\raybridge\signal_output.json`
+
+### Architecture Notes
+
+- **MT5 EA reads only** - Python does all intelligence
+- **No DLLs** - Pure file-based communication
+- **No sockets** - Atomic JSON file overwrite
+- **Fully auditable** - All signals logged to `mt5_live.log`
+- **One signal per interval** - No repaint, no partial states
+- **Closed-bar discipline** - Only completed bar data used
 
 ### Prerequisites
 
-1. `mt5_bridge.py` must be present in the repository root
+1. `mt5_bridge.py` and `run_mt5_live.py` must be present in the repository root
 2. MT5 Common Files directory must exist: `C:\Users\<user>\AppData\Roaming\MetaQuotes\Terminal\Common\Files\raybridge`
 3. RayBridge EA must be attached to a chart in MT5
 
-### Running in Live Mode
+### Alternative: Running via main.py
 
 ```bash
 # Run with default settings

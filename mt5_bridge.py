@@ -338,3 +338,98 @@ def is_bridge_available() -> bool:
         return True
     except Exception:
         return False
+
+
+def write_signal_output(signal_dict: Dict[str, Any]) -> bool:
+    """Write a trading signal to the canonical signal_output.json file
+    
+    This is the AUTHORITATIVE function for MT5 signal output.
+    It writes to a single file (signal_output.json) that MT5 EA reads.
+    
+    The file is overwritten atomically on each call - no appending.
+    
+    Args:
+        signal_dict: Dictionary containing signal data with required keys:
+            - symbol: Trading symbol (e.g., "XAUUSD")
+            - signal: Signal direction ("BUY", "SELL", "HOLD", or null)
+            - confidence: Confidence level (0.0 to 1.0)
+            - timestamp: ISO-8601 format timestamp
+            
+    Returns:
+        bool: True if write succeeded, False otherwise
+    """
+    config = get_bridge_config()
+    
+    if not config.enabled:
+        logger.debug("MT5 Bridge disabled, skipping signal write")
+        return False
+    
+    # Validate required fields
+    required_fields = ["symbol", "signal", "confidence", "timestamp"]
+    for field in required_fields:
+        if field not in signal_dict:
+            logger.error(f"MT5 signal missing required field: {field}")
+            return False
+    
+    # Canonical output file
+    signal_file = os.path.join(config.signal_dir, "signal_output.json")
+    
+    # Ensure all values are JSON-serializable
+    try:
+        serializable_signal = _ensure_json_serializable(signal_dict)
+    except Exception as e:
+        logger.error(f"Failed to serialize signal: {e}")
+        return False
+    
+    with _write_lock:
+        try:
+            # Ensure directory exists
+            os.makedirs(config.signal_dir, exist_ok=True)
+            
+            # Write to temporary file first
+            fd, temp_path = tempfile.mkstemp(
+                suffix=".json",
+                prefix="signal_output_",
+                dir=config.signal_dir
+            )
+            
+            try:
+                with os.fdopen(fd, 'w', encoding='utf-8') as f:
+                    json.dump(serializable_signal, f, indent=2, ensure_ascii=False)
+                    f.flush()
+                    os.fsync(f.fileno())
+                    
+                # Atomic move to final location (overwrites existing)
+                shutil.move(temp_path, signal_file)
+                
+                logger.info(f"MT5 signal_output.json written: {serializable_signal}")
+                return True
+                
+            except Exception as e:
+                # Clean up temp file on error
+                if os.path.exists(temp_path):
+                    os.remove(temp_path)
+                raise
+                
+        except Exception as e:
+            logger.error(f"Failed to write signal_output.json: {e}")
+            return False
+
+
+def read_signal_output() -> Optional[Dict[str, Any]]:
+    """Read the current signal from signal_output.json
+    
+    Returns:
+        Signal dictionary or None if not found
+    """
+    config = get_bridge_config()
+    signal_file = os.path.join(config.signal_dir, "signal_output.json")
+    
+    try:
+        with open(signal_file, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except FileNotFoundError:
+        return None
+    except Exception as e:
+        logger.error(f"Failed to read signal_output.json: {e}")
+        return None
