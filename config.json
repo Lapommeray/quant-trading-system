@@ -10,7 +10,7 @@
   
   "mt5_bridge_enabled": true,
   "mt5_signal_interval_seconds": 5,
-  "symbols_for_mt5": [],
+  "symbols_for_mt5": ["XAU/USD"],
   "mt5_confidence_threshold": 0.0,
   "mt5_signal_dir": null
 }
