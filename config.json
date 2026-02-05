@@ -1,0 +1,16 @@
+{
+  "mode": "standard",
+  "timestamp": 0,
+  "loss_tolerance": 0.05,
+  "confidence_threshold": 0.8,
+  "reality_enforcement": false,
+  "quantum_entanglement": false,
+  "divine_intervention": false,
+  "eternal_execution": false,
+  
+  "mt5_bridge_enabled": true,
+  "mt5_signal_interval_seconds": 5,
+  "symbols_for_mt5": [],
+  "mt5_confidence_threshold": 0.0,
+  "mt5_signal_dir": null
+}
