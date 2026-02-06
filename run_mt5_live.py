@@ -112,15 +112,19 @@ class MT5LiveRunner:
         if self.signal_generator is not None:
             return self.signal_generator
         
-        # Try to import and initialize the QMP engine
         try:
-            # First try the standalone version that doesn't require QuantConnect
-            from core.qmp_engine_standalone import QMPStandaloneEngine
-            self.signal_generator = QMPStandaloneEngine()
+            import importlib.util
+            spec = importlib.util.spec_from_file_location(
+                "qmp_engine_standalone",
+                os.path.join(os.path.dirname(os.path.abspath(__file__)), "core", "qmp_engine_standalone.py")
+            )
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+            self.signal_generator = mod.QMPStandaloneEngine()
             logger.info("Using QMPStandaloneEngine for signal generation")
             return self.signal_generator
-        except ImportError:
-            pass
+        except Exception as e:
+            logger.warning(f"Could not load QMPStandaloneEngine: {e}")
         
         # Fallback: create a simple signal generator wrapper
         logger.warning("QMP engine not available, using fallback signal generator")
@@ -157,23 +161,41 @@ class MT5LiveRunner:
         return elapsed >= self.interval_seconds
 
     def _fetch_from_data_source(self, symbol: str) -> Optional[Dict[str, Any]]:
-        """Fetch closed-bar data from available data sources."""
+        """Fetch multi-timeframe closed-bar data for consensus engine."""
         try:
             import yfinance as yf
 
             yf_symbol = self._map_to_yfinance_symbol(symbol)
-            if yf_symbol:
-                ticker = yf.Ticker(yf_symbol)
-                hist = ticker.history(period="5d", interval="1h")
+            if not yf_symbol:
+                return None
 
-                if not hist.empty and len(hist) >= 20:
-                    return {
-                        "symbol": symbol,
-                        "ohlcv": hist.tail(60).to_dict('records'),
-                        "close": float(hist['Close'].iloc[-1]),
-                        "volume": float(hist['Volume'].iloc[-1]),
-                        "timestamp": hist.index[-1].isoformat()
-                    }
+            ticker = yf.Ticker(yf_symbol)
+
+            # Primary timeframe: 1h bars (5 days)
+            hist_1h = ticker.history(period="5d", interval="1h")
+            if hist_1h.empty or len(hist_1h) < 20:
+                logger.warning(f"{symbol}: Not enough 1h bars ({len(hist_1h) if not hist_1h.empty else 0})")
+                return None
+
+            result = {
+                "symbol": symbol,
+                "ohlcv": hist_1h.tail(80).to_dict('records'),
+                "close": float(hist_1h['Close'].iloc[-1]),
+                "volume": float(hist_1h['Volume'].iloc[-1]),
+                "timestamp": hist_1h.index[-1].isoformat()
+            }
+
+            # Higher timeframe: daily bars for trend confirmation
+            try:
+                hist_daily = ticker.history(period="3mo", interval="1d")
+                if not hist_daily.empty and len(hist_daily) >= 30:
+                    result["ohlcv_daily"] = hist_daily.tail(60).to_dict('records')
+                    logger.debug(f"{symbol}: Fetched {len(hist_1h)} 1h + {len(hist_daily)} daily bars")
+            except Exception as e:
+                logger.debug(f"{symbol}: Daily data fetch failed (non-fatal): {e}")
+
+            return result
+
         except Exception as e:
             logger.debug(f"yfinance fetch failed for {symbol}: {e}")
 
@@ -260,7 +282,7 @@ class MT5LiveRunner:
             "symbol": symbol.replace("/", ""),
             "signal": normalized,
             "confidence": round(float(confidence), 4),
-            "timestamp": datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
+            "timestamp": datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
         }
     
     def _process_symbol(self, symbol: str) -> bool:
