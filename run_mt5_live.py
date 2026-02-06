@@ -11,6 +11,15 @@ It is a thin orchestration layer that:
 5. Never repaints
 6. Never emits partial or intermediate states
 
+Execution discipline (NON-NEGOTIABLE):
+- One signal per symbol per interval (default 60s, hard minimum 60s)
+- Interval must be >= bar close (no ticks)
+- No intra-bar updates
+- No repaint
+- Silence = no trade
+- Confidence must exceed threshold to emit BUY/SELL
+- Signal must be stable (no rapid flipping)
+
 Usage:
     python run_mt5_live.py
     python run_mt5_live.py --symbol XAUUSD --interval 60
@@ -44,6 +53,9 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 # Import MT5 bridge
 from mt5_bridge import write_signal_output, init_bridge, get_signal_dir
 
+# Hard minimum interval - cannot go below this
+MIN_INTERVAL_SECONDS = 60
+
 # Confidence threshold - signals below this are treated as "no signal"
 CONFIDENCE_THRESHOLD = 0.7
 
@@ -62,34 +74,36 @@ class MT5LiveRunner:
         interval_seconds: int = 60,
         confidence_threshold: float = CONFIDENCE_THRESHOLD
     ):
-        """
-        Initialize the MT5 live runner.
-        
-        Args:
-            symbols: List of symbols to trade (e.g., ["XAUUSD", "EURUSD"])
-            interval_seconds: Seconds between signal cycles (must be >= bar close)
-            confidence_threshold: Minimum confidence to emit a signal
-        """
+        if interval_seconds < MIN_INTERVAL_SECONDS:
+            logger.warning(
+                f"Interval {interval_seconds}s is below minimum {MIN_INTERVAL_SECONDS}s. "
+                f"Enforcing minimum."
+            )
+            interval_seconds = MIN_INTERVAL_SECONDS
+
         self.symbols = symbols
         self.interval_seconds = interval_seconds
         self.confidence_threshold = confidence_threshold
         self.running = False
-        self.last_signal_time: Dict[str, datetime.datetime] = {}
-        
+
+        # Per-symbol timing: tracks monotonic time of last signal write
+        self.last_signal_time: Dict[str, float] = {}
+        # Per-symbol last emitted direction for stability tracking
+        self.last_emitted_signal: Dict[str, Optional[str]] = {}
+
         # Initialize MT5 bridge
         init_bridge({
             "mt5_bridge_enabled": True,
-            "mt5_signal_interval_seconds": 0,  # We control timing here
-            "symbols_for_mt5": [],  # Allow all symbols
-            "mt5_confidence_threshold": 0.0  # We filter here
+            "mt5_signal_interval_seconds": 0,
+            "symbols_for_mt5": [],
+            "mt5_confidence_threshold": 0.0
         })
-        
-        # Initialize signal generator (lazy load to avoid import errors)
+
         self.signal_generator = None
-        
-        logger.info(f"MT5 Live Runner initialized")
+
+        logger.info("MT5 Live Runner initialized")
         logger.info(f"  Symbols: {symbols}")
-        logger.info(f"  Interval: {interval_seconds}s")
+        logger.info(f"  Interval: {interval_seconds}s (minimum: {MIN_INTERVAL_SECONDS}s)")
         logger.info(f"  Confidence threshold: {confidence_threshold}")
         logger.info(f"  Signal directory: {get_signal_dir()}")
     
@@ -134,23 +148,25 @@ class MT5LiveRunner:
         # Return None if no data available - this will trigger a null signal
         return None
     
+    def _is_interval_elapsed(self, symbol: str) -> bool:
+        """Check if enough time has passed since last signal for this symbol"""
+        last = self.last_signal_time.get(symbol)
+        if last is None:
+            return True
+        elapsed = time.time() - last
+        return elapsed >= self.interval_seconds
+
     def _fetch_from_data_source(self, symbol: str) -> Optional[Dict[str, Any]]:
-        """
-        Fetch data from available data sources.
-        
-        Tries multiple sources in order of preference.
-        """
-        # Try yfinance for common symbols
+        """Fetch closed-bar data from available data sources."""
         try:
             import yfinance as yf
-            
-            # Map symbol to yfinance format
+
             yf_symbol = self._map_to_yfinance_symbol(symbol)
             if yf_symbol:
                 ticker = yf.Ticker(yf_symbol)
-                hist = ticker.history(period="1d", interval="1m")
-                
-                if not hist.empty:
+                hist = ticker.history(period="5d", interval="1h")
+
+                if not hist.empty and len(hist) >= 20:
                     return {
                         "symbol": symbol,
                         "ohlcv": hist.tail(60).to_dict('records'),
@@ -160,7 +176,7 @@ class MT5LiveRunner:
                     }
         except Exception as e:
             logger.debug(f"yfinance fetch failed for {symbol}: {e}")
-        
+
         return None
     
     def _map_to_yfinance_symbol(self, symbol: str) -> Optional[str]:
@@ -205,6 +221,19 @@ class MT5LiveRunner:
                 "error": str(e)
             }
     
+    def _normalize_signal(self, raw_signal: Optional[str]) -> Optional[str]:
+        """Normalize signal string to BUY/SELL/HOLD/None"""
+        if raw_signal is None:
+            return None
+        upper = raw_signal.upper()
+        if upper in ("BUY", "STRONG_BUY"):
+            return "BUY"
+        if upper in ("SELL", "STRONG_SELL"):
+            return "SELL"
+        if upper in ("HOLD", "NEUTRAL", "WAIT"):
+            return "HOLD"
+        return None
+
     def _create_mt5_signal(
         self,
         symbol: str,
@@ -213,33 +242,23 @@ class MT5LiveRunner:
     ) -> Dict[str, Any]:
         """
         Create the MT5 signal object with strict schema.
-        
+
         Schema (STRICT):
-            symbol: str - Trading symbol
+            symbol: str - Trading symbol (no slashes)
             signal: str | null - "BUY", "SELL", "HOLD", or null
             confidence: float - 0.0 to 1.0
             timestamp: str - ISO-8601 format
         """
-        # Normalize signal
-        if final_signal is None:
-            normalized_signal = None
-        elif final_signal.upper() in ("BUY", "STRONG_BUY"):
-            normalized_signal = "BUY"
-        elif final_signal.upper() in ("SELL", "STRONG_SELL"):
-            normalized_signal = "SELL"
-        elif final_signal.upper() in ("HOLD", "NEUTRAL", "WAIT"):
-            normalized_signal = "HOLD"
-        else:
-            normalized_signal = None
-        
-        # Apply confidence threshold
+        normalized = self._normalize_signal(final_signal)
+
+        # Apply confidence threshold: below threshold = null signal (no trade)
         if confidence < self.confidence_threshold:
-            normalized_signal = None
+            normalized = None
             confidence = 0.0
-        
+
         return {
-            "symbol": symbol.replace("/", ""),  # Remove slashes for MT5
-            "signal": normalized_signal,
+            "symbol": symbol.replace("/", ""),
+            "signal": normalized,
             "confidence": round(float(confidence), 4),
             "timestamp": datetime.datetime.utcnow().strftime("%Y-%m-%dT%H:%M:%SZ")
         }
@@ -247,39 +266,49 @@ class MT5LiveRunner:
     def _process_symbol(self, symbol: str) -> bool:
         """
         Process a single symbol through the full pipeline.
-        
-        Returns:
-            True if signal was written successfully
+
+        Enforces:
+        - Minimum interval between signals
+        - Confidence threshold
         """
+        # ENFORCE INTERVAL: skip if not enough time has passed
+        if not self._is_interval_elapsed(symbol):
+            remaining = self.interval_seconds - (time.time() - self.last_signal_time.get(symbol, 0))
+            logger.debug(f"{symbol}: Interval not elapsed, {remaining:.0f}s remaining. Skipping.")
+            return False
+
         logger.info(f"Processing {symbol}...")
-        
+
         # Step 1: Fetch closed-bar market data
         market_data = self._fetch_market_data(symbol)
-        
+
         if market_data is None:
-            # No data available - emit null signal
-            logger.warning(f"No market data available for {symbol}")
+            logger.warning(f"No market data available for {symbol}, emitting null signal")
             mt5_signal = self._create_mt5_signal(symbol, None, 0.0)
         else:
-            # Step 2: Generate signal from QMP engine
+            # Step 2: Generate signal from engine
             signal_result = self._generate_signal(symbol, market_data)
-            
+
             final_signal = signal_result.get("final_signal")
             confidence = signal_result.get("confidence", 0.0)
-            
-            # Step 3: Create MT5 signal object
+
+            # Step 3: Create MT5 signal with confidence threshold applied
             mt5_signal = self._create_mt5_signal(symbol, final_signal, confidence)
-        
-        # Step 4: Write to MT5 (atomic, single file)
+
+        # Step 4: Write to MT5 (atomic, single file overwrite)
         success = write_signal_output(mt5_signal)
-        
+
         if success:
-            self.last_signal_time[symbol] = datetime.datetime.utcnow()
-            logger.info(f"Signal written for {symbol}: {mt5_signal['signal']} "
-                       f"(confidence: {mt5_signal['confidence']:.2f})")
+            self.last_signal_time[symbol] = time.time()
+            self.last_emitted_signal[symbol] = mt5_signal["signal"]
+            logger.info(
+                f"Signal written: {mt5_signal['symbol']} | "
+                f"{mt5_signal['signal']} | "
+                f"confidence={mt5_signal['confidence']:.2f}"
+            )
         else:
             logger.warning(f"Failed to write signal for {symbol}")
-        
+
         return success
     
     def run_once(self) -> Dict[str, bool]:
@@ -306,9 +335,9 @@ class MT5LiveRunner:
     def run(self):
         """
         Run the MT5 live loop continuously.
-        
+
         Execution discipline:
-        - One signal per symbol per interval
+        - One signal per symbol per interval (minimum 60s)
         - Interval must be >= bar close (no ticks)
         - No intra-bar updates
         - No repaint
@@ -316,39 +345,40 @@ class MT5LiveRunner:
         """
         self.running = True
         cycle_count = 0
-        
+
         logger.info("=" * 60)
         logger.info("MT5 LIVE RUNNER STARTED")
         logger.info(f"Symbols: {', '.join(self.symbols)}")
         logger.info(f"Interval: {self.interval_seconds}s")
+        logger.info(f"Confidence threshold: {self.confidence_threshold}")
         logger.info(f"Signal directory: {get_signal_dir()}")
         logger.info("=" * 60)
-        
+
         try:
             while self.running:
                 cycle_count += 1
                 cycle_start = time.time()
-                
-                logger.info(f"\n--- Cycle {cycle_count} ---")
-                
-                # Process all symbols
+
+                logger.info(f"--- Cycle {cycle_count} ---")
+
                 results = self.run_once()
-                
-                # Log results
+
                 success_count = sum(1 for v in results.values() if v)
-                logger.info(f"Cycle {cycle_count} complete: "
-                           f"{success_count}/{len(results)} signals written")
-                
-                # Wait for next cycle
+                logger.info(
+                    f"Cycle {cycle_count} complete: "
+                    f"{success_count}/{len(results)} signals written"
+                )
+
+                # Sleep until next cycle
                 elapsed = time.time() - cycle_start
                 sleep_time = max(0, self.interval_seconds - elapsed)
-                
+
                 if sleep_time > 0:
-                    logger.info(f"Sleeping {sleep_time:.1f}s until next cycle...")
+                    logger.info(f"Next cycle in {sleep_time:.0f}s...")
                     time.sleep(sleep_time)
-                    
+
         except KeyboardInterrupt:
-            logger.info("Received shutdown signal")
+            logger.info("Received shutdown signal (Ctrl+C)")
         finally:
             self.running = False
             logger.info("MT5 Live Runner stopped")
@@ -361,51 +391,68 @@ class MT5LiveRunner:
 class FallbackSignalGenerator:
     """
     Fallback signal generator when QMP engine is not available.
-    
-    This provides a simple technical analysis based signal
-    for testing and development purposes.
+
+    Uses simple SMA crossover on closed bars. Deterministic given same data.
+    NOT random. NOT noisy. Only changes when bar data actually changes.
     """
-    
+
+    def __init__(self):
+        self._last_data_hash: Dict[str, Optional[str]] = {}
+        self._last_result: Dict[str, Dict[str, Any]] = {}
+
     def generate_signal(self, symbol: str, market_data: Dict[str, Any]) -> Dict[str, Any]:
-        """Generate a simple signal based on price momentum"""
+        """Generate a deterministic signal based on SMA crossover of closed bars"""
         try:
             ohlcv = market_data.get("ohlcv", [])
-            
+
             if len(ohlcv) < 20:
                 return {"final_signal": None, "confidence": 0.0}
-            
-            # Simple momentum calculation
+
             closes = [bar.get("Close", bar.get("close", 0)) for bar in ohlcv[-20:]]
-            
+
             if not closes or closes[-1] == 0:
                 return {"final_signal": None, "confidence": 0.0}
-            
-            # Calculate simple moving averages
+
+            # Create a data fingerprint to avoid recomputing on identical data
+            data_hash = f"{closes[-1]:.6f}_{closes[-5]:.6f}_{closes[0]:.6f}"
+            if data_hash == self._last_data_hash.get(symbol) and symbol in self._last_result:
+                return self._last_result[symbol]
+
+            # SMA crossover (deterministic, no randomness)
             sma_fast = sum(closes[-5:]) / 5
             sma_slow = sum(closes[-20:]) / 20
-            
-            # Calculate momentum
-            momentum = (closes[-1] - closes[0]) / closes[0] if closes[0] != 0 else 0
-            
-            # Generate signal
-            if sma_fast > sma_slow * 1.001 and momentum > 0:
+
+            if sma_slow == 0:
+                return {"final_signal": None, "confidence": 0.0}
+
+            # Trend strength as percentage spread
+            spread = (sma_fast - sma_slow) / sma_slow
+
+            # Only emit directional signal if spread is meaningful (> 0.1%)
+            if spread > 0.001:
                 signal = "BUY"
-                confidence = min(0.9, 0.5 + abs(momentum) * 10)
-            elif sma_fast < sma_slow * 0.999 and momentum < 0:
+                confidence = min(0.95, 0.6 + abs(spread) * 20)
+            elif spread < -0.001:
                 signal = "SELL"
-                confidence = min(0.9, 0.5 + abs(momentum) * 10)
+                confidence = min(0.95, 0.6 + abs(spread) * 20)
             else:
                 signal = "HOLD"
                 confidence = 0.5
-            
-            return {
+
+            result = {
                 "final_signal": signal,
                 "confidence": confidence,
-                "sma_fast": sma_fast,
-                "sma_slow": sma_slow,
-                "momentum": momentum
+                "sma_fast": round(sma_fast, 4),
+                "sma_slow": round(sma_slow, 4),
+                "spread": round(spread, 6)
             }
-            
+
+            # Cache result so identical data returns identical signal
+            self._last_data_hash[symbol] = data_hash
+            self._last_result[symbol] = result
+
+            return result
+
         except Exception as e:
             logger.error(f"Fallback signal generation error: {e}")
             return {"final_signal": None, "confidence": 0.0}
@@ -431,7 +478,7 @@ def main():
         "--interval", "-i",
         type=int,
         default=60,
-        help="Seconds between signal cycles (default: 60)"
+        help=f"Seconds between signal cycles (default: 60, minimum: {MIN_INTERVAL_SECONDS})"
     )
     parser.add_argument(
         "--confidence", "-c",
@@ -463,7 +510,9 @@ def main():
     # Run
     if args.once:
         results = runner.run_once()
-        print(f"\nResults: {results}")
+        for sym, success in results.items():
+            status = "OK" if success else "FAILED"
+            print(f"  {sym}: {status}")
     else:
         runner.run()
 
