@@ -1,0 +1,11 @@
+
+# Self-learning state files (generated at runtime)
+learning_state.json
+rl_qtable.json
+bayesian_state.json
+genetic_state.json
+mt5_live.log
+mt5_signals/
+__pycache__/
+core/__pycache__/
+tests/__pycache__/
