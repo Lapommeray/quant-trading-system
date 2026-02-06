@@ -115,6 +115,22 @@ class MT5LiveRunner:
         try:
             import importlib.util
             spec = importlib.util.spec_from_file_location(
+                "unified_core",
+                os.path.join(os.path.dirname(os.path.abspath(__file__)), "core", "unified_core.py")
+            )
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+            self.signal_generator = mod.UnifiedIntelligenceCore(
+                data_dir=os.path.dirname(os.path.abspath(__file__))
+            )
+            logger.info("Using UnifiedIntelligenceCore (RL + Bayesian + Genetic + Microstructure)")
+            return self.signal_generator
+        except Exception as e:
+            logger.warning(f"Could not load UnifiedIntelligenceCore: {e}")
+
+        try:
+            import importlib.util
+            spec = importlib.util.spec_from_file_location(
                 "qmp_engine_standalone",
                 os.path.join(os.path.dirname(os.path.abspath(__file__)), "core", "qmp_engine_standalone.py")
             )
