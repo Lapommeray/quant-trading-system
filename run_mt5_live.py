@@ -115,6 +115,22 @@ class MT5LiveRunner:
         try:
             import importlib.util
             spec = importlib.util.spec_from_file_location(
+                "unified_ai_indicator",
+                os.path.join(os.path.dirname(os.path.abspath(__file__)), "core", "unified_ai_indicator.py")
+            )
+            mod = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(mod)
+            self.signal_generator = mod.UnifiedAIIndicator(
+                data_dir=os.path.dirname(os.path.abspath(__file__))
+            )
+            logger.info("Using UnifiedAIIndicator (RL + Bayesian + Genetic + Microstructure + Explainability)")
+            return self.signal_generator
+        except Exception as e:
+            logger.warning(f"Could not load UnifiedAIIndicator: {e}")
+
+        try:
+            import importlib.util
+            spec = importlib.util.spec_from_file_location(
                 "unified_core",
                 os.path.join(os.path.dirname(os.path.abspath(__file__)), "core", "unified_core.py")
             )
