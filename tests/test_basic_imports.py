@@ -37,10 +37,9 @@ def test_basic_structure():
     
     if success_count == len(modules_to_check):
         print("🎉 All module files exist!")
-        assert True
     else:
         print("❌ Some module files are missing")
-        return 1
+        assert False, f"Missing {len(modules_to_check) - success_count} module(s)"
 
 if __name__ == "__main__":
-    sys.exit(test_basic_structure())
+    test_basic_structure()

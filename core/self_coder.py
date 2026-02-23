@@ -40,9 +40,12 @@ class StrategyGenerator:
         volatility = str(market_state.get("volatility", "medium")).lower()
         trend = str(market_state.get("trend", "neutral")).lower()
 
-        lookback = 20 if volatility in {"medium", "normal"} else 35
         if volatility in {"high", "extreme"}:
             lookback = 50
+        elif volatility in {"low", "calm"}:
+            lookback = 35
+        else:
+            lookback = 20
 
         confidence_threshold = 0.58
         if trend in {"strong_bull", "strong_bear"}:

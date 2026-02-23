@@ -10,7 +10,7 @@ import time
 import pandas as pd
 import yfinance as yf
 
-from quant_trading_system.config import settings
+from quant_trading_system.config import settings, ensure_cache_dir
 
 log = logging.getLogger(__name__)
 CACHE_ROOT = settings.data_cache_dir
@@ -68,6 +68,6 @@ def get_price_history(
         data.index = data.index.tz_localize("UTC")
     else:
         data.index = data.index.tz_convert("UTC")
-    CACHE_ROOT.mkdir(parents=True, exist_ok=True)
+    ensure_cache_dir()
     data.to_csv(cache_file)
     return data
