@@ -51,19 +51,23 @@ jobs:
 
       - name: Open or update pull request
         uses: actions/github-script@v7
+        env:
+          INPUT_HEAD: ${{ inputs.head_branch }}
+          INPUT_BASE: ${{ inputs.base_branch }}
+          INPUT_TITLE: ${{ inputs.pr_title }}
+          INPUT_BODY: ${{ inputs.pr_body }}
         with:
           github-token: ${{ secrets.GITHUB_TOKEN }}
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
-            const head = '${{ inputs.head_branch }}';
-            const base = '${{ inputs.base_branch }}';
+            const head = process.env.INPUT_HEAD;
+            const base = process.env.INPUT_BASE;
 
-            // Check for an existing open PR with the same head/base
             const existing = await github.rest.pulls.list({
               owner,
               repo,
-              state: 'open',
+              state: "open",
               head: `${owner}:${head}`,
               base,
             });
@@ -74,15 +78,14 @@ jobs:
               return;
             }
 
-            // Create a new pull request from the existing branch
-            const pr = await github.rest.pulls.create({
+            const newPr = await github.rest.pulls.create({
               owner,
               repo,
               head,
               base,
-              title: '${{ inputs.pr_title }}',
-              body: '${{ inputs.pr_body }}',
+              title: process.env.INPUT_TITLE,
+              body: process.env.INPUT_BODY,
               draft: false,
             });
 
-            core.info(`Created pull request #${pr.data.number} (${pr.data.html_url})`);
+            core.info(`Created pull request #${newPr.data.number} (${newPr.data.html_url})`);

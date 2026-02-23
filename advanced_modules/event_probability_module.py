@@ -155,7 +155,7 @@ class EventProbabilityModule:
             current_time = datetime.utcnow()
         
         if self.last_update_time is not None and current_time - self.last_update_time < self.update_interval:
-            return self.indicators
+            return False
         
         self.last_update_time = current_time
         
@@ -180,7 +180,7 @@ class EventProbabilityModule:
                         self.indicators[indicator] = self.failover_encrypted
                         success = False
         if not success:
-            return self.indicators
+            return success
         
         if 'fed_jet' in monitoring_results and monitoring_results['fed_jet']:
             fed_result = monitoring_results['fed_jet']

@@ -55,6 +55,7 @@ class StrategyGenerator:
 
 
 class GeneratedInstitutionalStrategy(QCAlgorithm):
+
     def Initialize(self):
         self.SetStartDate(2020, 1, 1)
         self.SetCash(100000)
