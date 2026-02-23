@@ -18,8 +18,6 @@ class InstitutionalSignalOrchestrator:
 
     def decide(self, price: float, trend_score: float, vol_score: float, liquidity_score: float) -> TradeDecision:
         raw_edge = 0.55 * trend_score + 0.25 * liquidity_score - 0.20 * vol_score
-        # Normalize so that the edge is centered around 0 when inputs are 0.5
-        # (midpoint of [0,1] range): max raw = 0.80, min raw = -0.20, mid = 0.30
         directional_edge = raw_edge - 0.30
         confidence = max(0.0, min(1.0, 0.5 + directional_edge))
 

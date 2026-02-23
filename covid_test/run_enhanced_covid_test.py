@@ -15,19 +15,15 @@ from datetime import datetime, timedelta
 if "pytest" in sys.modules:
     import pytest
 
-    plt = pytest.importorskip("matplotlib.pyplot")
+    pytest.importorskip("matplotlib")
+    pytest.importorskip("vaderSentiment")
+    import matplotlib.pyplot as plt
 else:
     import matplotlib.pyplot as plt
 import logging
 from typing import Dict, List, Tuple, Union, Optional, Any
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-if "pytest" in sys.modules:
-    import pytest
-
-    pytest.importorskip("matplotlib")
-    pytest.importorskip("vaderSentiment")
 
 from quantum_finance.quantum_black_scholes import QuantumBlackScholes
 from quantum_finance.quantum_stochastic_calculus import QuantumStochasticProcess

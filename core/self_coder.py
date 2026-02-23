@@ -47,6 +47,7 @@ class StrategyGenerator:
         else:
             lookback = 20
 
+
         confidence_threshold = 0.58
         if trend in {"strong_bull", "strong_bear"}:
             confidence_threshold = 0.52
