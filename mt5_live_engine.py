@@ -1086,8 +1086,8 @@ class DepthFeedIntegration:
                 
                 return {
                     "symbol": symbol,
-                    "bids": bids[:10],
-                    "asks": asks[:10],
+                    "bids": bids,
+                    "asks": asks,
                     "timestamp": datetime.now()
                 }
         else:
@@ -1117,6 +1117,16 @@ class DepthFeedIntegration:
             
         bids = book_data["bids"]
         asks = book_data["asks"]
+
+        # Keep full depth context so downstream decision logic can consume
+        # granular levels such as ticker_bid_375 / ticker_ask_375.
+        ticker_depth_features = {}
+        for idx, (price, volume) in enumerate(bids, start=1):
+            ticker_depth_features[f"ticker_bid_{idx}"] = price
+            ticker_depth_features[f"ticker_bid_size_{idx}"] = volume
+        for idx, (price, volume) in enumerate(asks, start=1):
+            ticker_depth_features[f"ticker_ask_{idx}"] = price
+            ticker_depth_features[f"ticker_ask_size_{idx}"] = volume
         
         bid_depth = sum(vol for _, vol in bids)
         ask_depth = sum(vol for _, vol in asks)
@@ -1165,6 +1175,7 @@ class DepthFeedIntegration:
             "volume": volume,
             "price_delta": price_delta
         }
+        event_data.update(ticker_depth_features)
         
         state = self.market_states[symbol]
         belief = state.update_from_event(event_data)
@@ -1178,7 +1189,8 @@ class DepthFeedIntegration:
             "recommendation": state.get_exploration_recommendation(),
             "bid_depth": bid_depth,
             "ask_depth": ask_depth,
-            "depth_imbalance": (bid_depth - ask_depth) / max(bid_depth + ask_depth, 1)
+            "depth_imbalance": (bid_depth - ask_depth) / max(bid_depth + ask_depth, 1),
+            **ticker_depth_features
         }
         
     def get_belief_state(self, symbol: str) -> Optional[Dict]:
