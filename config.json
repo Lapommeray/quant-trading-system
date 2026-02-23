@@ -7,10 +7,15 @@
   "quantum_entanglement": false,
   "divine_intervention": false,
   "eternal_execution": false,
-  
+
   "mt5_bridge_enabled": true,
   "mt5_signal_interval_seconds": 5,
   "symbols_for_mt5": [],
   "mt5_confidence_threshold": 0.0,
-  "mt5_signal_dir": null
+  "mt5_signal_dir": "",
+
+  "mt5_trading_windows": [],
+  "mt5_max_signals_per_minute": 0,
+  "mt5_default_timeframe": "M1",
+  "mt5_separate_timeframe_files": false
 }

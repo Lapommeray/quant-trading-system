@@ -163,13 +163,18 @@ The system includes an MT5 Bridge that outputs trading signals for consumption b
 ### Prerequisites
 
 1. `mt5_bridge.py` must be present in the repository root
-2. MT5 Common Files directory must exist: `C:\Users\<user>\AppData\Roaming\MetaQuotes\Terminal\Common\Files\raybridge`
+2. MT5 Common Files directory must exist: `C:\Users\<user>\AppData\Roaming\MetaQuotes\Terminal\Common\Files\raybridge` (created manually)
 3. RayBridge EA must be attached to a chart in MT5
+4. Install dependencies:
+
+```bash
+pip install -r requirements.txt
+```
 
 ### Running in Live Mode
 
 ```bash
-# Run with default settings
+# Run in live mode
 python main.py --asset BTC/USDT --timeline STANDARD --loss ALLOWED
 
 # Run with multiple assets
@@ -177,6 +182,11 @@ python main.py --asset "BTC/USDT,ETH/USDT,XAU/USD" --timeline STANDARD --loss MI
 
 # Run in GOD MODE with eternal execution
 python main.py --asset ALL --timeline ETERNITY --loss DISALLOWED
+
+# Run the dedicated MT5 live runner (recommended for RayBridge EA)
+python run_mt5_live.py --symbol XAUUSD --interval 60
+python run_mt5_live.py --symbols XAUUSD,EURUSD,BTCUSD --interval 300
+python run_mt5_live.py --once  # Single cycle for testing
 ```
 
 ### Configuration Options
@@ -189,7 +199,11 @@ Create or edit `config.json` in the repository root to customize MT5 bridge sett
   "mt5_signal_interval_seconds": 5,
   "symbols_for_mt5": [],
   "mt5_confidence_threshold": 0.0,
-  "mt5_signal_dir": null
+  "mt5_signal_dir": "",
+  "mt5_trading_windows": [],
+  "mt5_max_signals_per_minute": 0,
+  "mt5_default_timeframe": "M1",
+  "mt5_separate_timeframe_files": false
 }
 ```
 
@@ -199,7 +213,35 @@ Create or edit `config.json` in the repository root to customize MT5 bridge sett
 | `mt5_signal_interval_seconds` | Minimum interval between signal writes per symbol | `5` |
 | `symbols_for_mt5` | List of symbols to output (empty = all) | `[]` |
 | `mt5_confidence_threshold` | Minimum confidence for signal output | `0.0` |
-| `mt5_signal_dir` | Custom signal directory path | Auto-detected |
+| `mt5_signal_dir` | Custom signal directory path (empty = auto-detect) | `""` |
+| `mt5_trading_windows` | Allowed trading windows in UTC (empty = all hours) | `[]` |
+| `mt5_max_signals_per_minute` | Circuit breaker: max signals per minute (0 = unlimited) | `0` |
+| `mt5_default_timeframe` | Default timeframe label included in signal output | `"M1"` |
+| `mt5_separate_timeframe_files` | Write separate signal files per timeframe | `false` |
+
+#### Trading Windows Example
+
+Restrict signal output to London and New York sessions:
+
+```json
+{
+  "mt5_trading_windows": [
+    {"start": "08:00", "end": "16:00"},
+    {"start": "13:00", "end": "21:00"}
+  ]
+}
+```
+
+#### Multi-Timeframe Example
+
+Write separate signal files per timeframe (e.g., `BTCUSD_M5_signal.json`, `BTCUSD_H1_signal.json`):
+
+```json
+{
+  "mt5_separate_timeframe_files": true,
+  "mt5_default_timeframe": "M5"
+}
+```
 
 ### Signal Output Format
 
@@ -210,7 +252,8 @@ Signals are written as JSON files to the MT5 Common Files directory:
   "symbol": "BTCUSD",
   "signal": "BUY",
   "confidence": 0.85,
-  "timestamp": "2024-01-15T12:30:45.123456"
+  "timestamp": "2024-01-15T12:30:45.123456",
+  "timeframe": "M1"
 }
 ```
 
@@ -222,7 +265,9 @@ from mt5_bridge import write_signal_atomic, init_bridge, is_bridge_available
 # Initialize bridge with custom config
 init_bridge({
     "mt5_signal_interval_seconds": 10,
-    "mt5_confidence_threshold": 0.7
+    "mt5_confidence_threshold": 0.7,
+    "mt5_trading_windows": [{"start": "08:00", "end": "21:00"}],
+    "mt5_max_signals_per_minute": 30
 })
 
 # Check if bridge is available
