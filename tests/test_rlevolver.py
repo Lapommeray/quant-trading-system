@@ -9,6 +9,7 @@ import sys
 import os
 import numpy as np
 import pytest
+import importlib.util
 from unittest.mock import MagicMock, patch
 from pathlib import Path
 
@@ -19,6 +20,8 @@ from advanced_modules.rlevolver import (
     RLObservation, RLAction, TradingEnvironment, RLEvolver,
     GYM_AVAILABLE, SB3_AVAILABLE, REWARD_TRACKER_AVAILABLE
 )
+
+OPENAI_GYM_AVAILABLE = importlib.util.find_spec("gym") is not None
 
 
 class TestRLRewardTracker:
@@ -162,8 +165,8 @@ class TestRLObservation:
         assert isinstance(arr, np.ndarray)
         assert arr.shape == (12,)
         assert arr.dtype == np.float32
-        assert arr[0] == 0.7
-        assert arr[1] == 0.8
+        assert arr[0] == pytest.approx(0.7, rel=1e-6)
+        assert arr[1] == pytest.approx(0.8, rel=1e-6)
         
     def test_from_belief_state(self):
         """Test creation from belief state dict"""
@@ -298,6 +301,7 @@ class TestTradingEnvironment:
         assert truncated
 
 
+@pytest.mark.skipif(not OPENAI_GYM_AVAILABLE, reason="OpenAI gym is required for SB3 checks")
 class TestRLEvolver:
     """Tests for RLEvolver"""
     
@@ -388,6 +392,7 @@ class TestRLEvolver:
         assert isinstance(trend, float)
 
 
+@pytest.mark.skipif(not OPENAI_GYM_AVAILABLE, reason="OpenAI gym is required for SB3 checks")
 class TestIntegration:
     """Integration tests for RL Evolver with SelfEvolutionAgent"""
     

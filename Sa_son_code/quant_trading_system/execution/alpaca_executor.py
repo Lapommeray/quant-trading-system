@@ -1,1 +1,3 @@
-<alpaca_executor.py content>
+"""Placeholder stub for alpaca_executor."""
+
+# TODO: implement module logic.

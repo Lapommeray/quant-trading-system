@@ -12,6 +12,7 @@ IMPORTANT: This script uses real live market data only for testing.
 """
 
 import os
+import pytest
 import sys
 import time
 import logging
@@ -20,7 +21,7 @@ import numpy as np
 import pandas as pd
 from typing import Dict, List, Any, Optional, Tuple
 from datetime import datetime, timedelta
-import ccxt
+ccxt = pytest.importorskip("ccxt")
 import traceback
 
 logging.basicConfig(

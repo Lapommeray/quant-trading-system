@@ -15,7 +15,7 @@ Usage:
     python activate_apex_autonomy.py [--paper|--live] [--interval HOURS]
     
 Environment Variables:
-    LLM_API_KEY: API key for LLM (OpenAI/Grok/Claude)
+    LLM_API_KEY: Optional local policy seed (external LLM APIs disabled)
     LIVE_TRADING: Set to "TRUE" for live trading (requires HUMAN_OVERRIDE)
     HUMAN_OVERRIDE: Set to "TRUE" to enable live trading
     UNSUPERVISED_MODE: Set to "TRUE" to remove human confirmation after validation
@@ -52,7 +52,7 @@ def configure_environment(mode: str = "paper", llm_api_key: str = None):
     if llm_api_key:
         os.environ["LLM_API_KEY"] = llm_api_key
     elif not os.getenv("LLM_API_KEY"):
-        logger.warning("LLM_API_KEY not set. Using template-based responses.")
+        logger.info("LLM_API_KEY not set. Using local deterministic synthesis.")
         
     if mode == "paper":
         os.environ["LIVE_TRADING"] = "PAPER"

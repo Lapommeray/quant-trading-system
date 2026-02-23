@@ -1,1 +1,3 @@
-<alpaca_feed.py content>
+"""Placeholder stub for alpaca_feed."""
+
+# TODO: implement module logic.

@@ -10,7 +10,12 @@ Original R implementation uses:
 - quantmod for trading
 """
 
-from AlgorithmImports import *
+try:
+    from AlgorithmImports import *  # type: ignore
+except ImportError:  # pragma: no cover
+    class QCAlgorithm:
+        pass
+
 import json
 import numpy as np
 import pandas as pd
@@ -20,6 +25,17 @@ from encryption.xmss_encryption import XMSSEncryption
 import traceback
 from dataclasses import dataclass
 from enum import Enum, auto
+from typing import Dict, Union
+
+
+class _FallbackAlgorithm:
+    """Minimal stand-in for tests outside QuantConnect runtime."""
+
+    def __init__(self):
+        self.Time = datetime.utcnow()
+
+    def Debug(self, _message: str):
+        return None
 
 class JetDirection(Enum):
     HAWKISH = auto()
@@ -33,7 +49,7 @@ class JetMovement:
     quantum_seal: bytes
 
 class FedJetMonitor:
-    def __init__(self, algorithm, tree_height: int = 10):
+    def __init__(self, algorithm=None, tree_height: int = 10):
         """
         Top-secret Federal Reserve aerial surveillance
         Args:
@@ -117,9 +133,13 @@ class FedJetMonitor:
         except:
             direction = JetDirection.NEUTRAL
             
+        try:
+            confidence = float(raw_data.get("confidence", 0))
+        except Exception:
+            confidence = 0.0
         self.movement_log[signal_id] = JetMovement(
             direction=direction,
-            confidence=min(max(float(raw_data.get("confidence", 0)), 0), 1),
+            confidence=min(max(confidence, 0.0), 1.0),
             quantum_seal=self.BLACK_SEAL
         )
         

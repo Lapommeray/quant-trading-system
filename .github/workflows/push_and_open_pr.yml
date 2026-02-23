@@ -1,0 +1,60 @@
+name: Push Branch And Open PR
+
+on:
+  workflow_dispatch:
+    inputs:
+      head_branch:
+        description: "Branch to push/open PR from"
+        required: true
+        default: "work"
+      base_branch:
+        description: "Base branch for PR"
+        required: true
+        default: "main"
+      pr_title:
+        description: "PR title"
+        required: true
+        default: "Automated PR from CI"
+      pr_body:
+        description: "PR body"
+        required: false
+        default: "Opened automatically by CI workflow."
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  push-and-pr:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout full history
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure git identity
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Ensure branch exists remotely
+        env:
+          HEAD_BRANCH: ${{ inputs.head_branch }}
+        run: |
+          if git show-ref --verify --quiet "refs/heads/${HEAD_BRANCH}"; then
+            git push origin "${HEAD_BRANCH}:${HEAD_BRANCH}"
+          else
+            echo "Branch ${HEAD_BRANCH} does not exist in this repository checkout." >&2
+            exit 1
+          fi
+
+      - name: Open or update pull request
+        uses: peter-evans/create-pull-request@v6
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          base: ${{ inputs.base_branch }}
+          branch: ${{ inputs.head_branch }}
+          title: ${{ inputs.pr_title }}
+          body: ${{ inputs.pr_body }}
+          draft: false
