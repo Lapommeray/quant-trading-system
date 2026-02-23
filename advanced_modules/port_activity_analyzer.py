@@ -97,6 +97,8 @@ class PortActivityAnalyzer:
     def _execute_nautical_protocol(self, port_id: str, raw_metrics: Dict, error: Exception):
         """Emergency risk assessment procedure"""
         try:
+            # 0.7 is a conservative scaling factor: cargo_volatility is expected in [0, 1]
+            # and the factor intentionally caps the emergency raw_score at 0.7 to reflect uncertainty
             raw_score = min(max(float(raw_metrics.get("cargo_volatility", 0)) * 0.7, 0), 1)
         except:
             raw_score = 0.5  # Default risk if calculation fails
