@@ -55,6 +55,6 @@ doctest = "^1.0"
 notebook = "^6.4"
 seaborn = "^0.11"
 
-[build-system]
-requires = ["poetry-core>=1.0.0"]
-build-backend = "poetry.core.masonry.api"
+# build-system already declared at the top of the file
+# requires = ["poetry-core>=1.0.0"]
+# build-backend = "poetry.core.masonry.api"
