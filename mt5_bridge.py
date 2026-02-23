@@ -18,7 +18,7 @@ import logging
 import tempfile
 import shutil
 import threading
-from datetime import datetime
+from datetime import datetime, timedelta
 from typing import Dict, Any, Optional, List
 
 logger = logging.getLogger("MT5Bridge")
@@ -47,8 +47,9 @@ class MT5BridgeConfig:
     def __init__(self, config: Optional[Dict[str, Any]] = None):
         config = config or {}
         
-        # Signal output directory
-        self.signal_dir = config.get("mt5_signal_dir", self._get_default_signal_dir())
+        # Signal output directory (empty string or None falls back to default)
+        configured_dir = config.get("mt5_signal_dir", "")
+        self.signal_dir = configured_dir if configured_dir else self._get_default_signal_dir()
         
         # Output frequency in seconds (minimum interval between writes)
         self.signal_interval_seconds = config.get("mt5_signal_interval_seconds", 5)
@@ -62,8 +63,24 @@ class MT5BridgeConfig:
         # Enable/disable bridge
         self.enabled = config.get("mt5_bridge_enabled", True)
         
+        # Execution safety: trading windows (list of {"start": "HH:MM", "end": "HH:MM"} UTC)
+        # Empty list means trading is allowed at all times
+        self.trading_windows = config.get("mt5_trading_windows", [])
+        
+        # Execution safety: circuit breaker - max signals per minute (0 = unlimited)
+        self.max_signals_per_minute = config.get("mt5_max_signals_per_minute", 0)
+        
+        # Multi-timeframe: default timeframe label
+        self.default_timeframe = config.get("mt5_default_timeframe", "M1")
+        
+        # Multi-timeframe: write separate files per timeframe
+        self.separate_timeframe_files = config.get("mt5_separate_timeframe_files", False)
+        
         # Last write timestamps per symbol
         self._last_write_times: Dict[str, datetime] = {}
+        
+        # Signal counter for circuit breaker (timestamps of recent writes)
+        self._recent_signal_times: List[datetime] = []
         
     def _get_default_signal_dir(self) -> str:
         """Get the default signal directory based on platform"""
@@ -84,6 +101,14 @@ class MT5BridgeConfig:
         if confidence < self.confidence_threshold:
             return False
             
+        # Check trading window
+        if not self._is_within_trading_window():
+            return False
+            
+        # Check circuit breaker (max signals per minute)
+        if not self._check_circuit_breaker():
+            return False
+            
         # Check interval
         now = datetime.utcnow()
         last_write = self._last_write_times.get(symbol)
@@ -94,9 +119,69 @@ class MT5BridgeConfig:
                 
         return True
     
+    def _is_within_trading_window(self) -> bool:
+        """Check if current time is within any configured trading window
+        
+        Returns True if no trading windows are configured (allow all times)
+        or if current UTC time falls within at least one window.
+        """
+        if not self.trading_windows:
+            return True
+            
+        now = datetime.utcnow()
+        current_minutes = now.hour * 60 + now.minute
+        
+        for window in self.trading_windows:
+            start_str = window.get("start", "00:00")
+            end_str = window.get("end", "23:59")
+            
+            start_parts = start_str.split(":")
+            end_parts = end_str.split(":")
+            
+            start_minutes = int(start_parts[0]) * 60 + int(start_parts[1])
+            end_minutes = int(end_parts[0]) * 60 + int(end_parts[1])
+            
+            if start_minutes <= end_minutes:
+                # Normal window (e.g., 08:00 - 16:00)
+                if start_minutes <= current_minutes <= end_minutes:
+                    return True
+            else:
+                # Overnight window (e.g., 22:00 - 06:00)
+                if current_minutes >= start_minutes or current_minutes <= end_minutes:
+                    return True
+                    
+        return False
+    
+    def _check_circuit_breaker(self) -> bool:
+        """Check circuit breaker - limit signals per minute
+        
+        Returns True if under the limit or if limit is disabled (0).
+        """
+        if self.max_signals_per_minute <= 0:
+            return True
+            
+        now = datetime.utcnow()
+        cutoff = now - timedelta(seconds=60)
+        
+        # Prune old entries
+        self._recent_signal_times = [
+            t for t in self._recent_signal_times if t > cutoff
+        ]
+        
+        if len(self._recent_signal_times) >= self.max_signals_per_minute:
+            logger.warning(
+                f"Circuit breaker: {len(self._recent_signal_times)} signals in last minute "
+                f"(limit: {self.max_signals_per_minute})"
+            )
+            return False
+            
+        return True
+    
     def record_write(self, symbol: str):
         """Record that a signal was written for a symbol"""
-        self._last_write_times[symbol] = datetime.utcnow()
+        now = datetime.utcnow()
+        self._last_write_times[symbol] = now
+        self._recent_signal_times.append(now)
 
 
 # Global config instance
@@ -181,7 +266,17 @@ def write_signal_atomic(signal_dict: Dict[str, Any]) -> bool:
     
     # Normalize symbol for filename (remove special chars)
     safe_symbol = symbol.replace("/", "").replace("\\", "").replace(":", "")
-    signal_file = os.path.join(config.signal_dir, f"{safe_symbol}_signal.json")
+    
+    # Multi-timeframe support: include timeframe in filename if configured
+    timeframe = signal_dict.get("timeframe", config.default_timeframe)
+    if config.separate_timeframe_files and timeframe:
+        signal_file = os.path.join(config.signal_dir, f"{safe_symbol}_{timeframe}_signal.json")
+    else:
+        signal_file = os.path.join(config.signal_dir, f"{safe_symbol}_signal.json")
+    
+    # Always include timeframe in the signal data for MT5 EA
+    if "timeframe" not in signal_dict:
+        signal_dict["timeframe"] = timeframe
     
     # Ensure all values are JSON-serializable
     try:

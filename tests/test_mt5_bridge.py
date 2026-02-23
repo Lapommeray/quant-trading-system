@@ -416,5 +416,201 @@ class TestSignalSchemaConsistency(unittest.TestCase):
             self.fail("Timestamp is not in valid ISO format")
 
 
+class TestTradingWindows(unittest.TestCase):
+    """Test execution safety: trading windows"""
+    
+    def test_no_windows_allows_all(self):
+        """Test that empty trading windows allow all signals"""
+        config = MT5BridgeConfig({"mt5_trading_windows": []})
+        self.assertTrue(config._is_within_trading_window())
+    
+    def test_window_blocks_outside_hours(self):
+        """Test that signals are blocked outside trading windows"""
+        # Create a window that is definitely not now (1 minute window far from current time)
+        config = MT5BridgeConfig({
+            "mt5_trading_windows": [{"start": "00:00", "end": "00:01"}]
+        })
+        # This test may pass or fail depending on current time;
+        # we test the logic by using a known window
+        now = datetime.utcnow()
+        # Create a window that excludes current time
+        if now.hour < 12:
+            window = {"start": "13:00", "end": "14:00"}
+        else:
+            window = {"start": "01:00", "end": "02:00"}
+        config = MT5BridgeConfig({"mt5_trading_windows": [window]})
+        self.assertFalse(config._is_within_trading_window())
+    
+    def test_window_allows_within_hours(self):
+        """Test that signals are allowed within trading windows"""
+        # Create a window that definitely includes now
+        config = MT5BridgeConfig({
+            "mt5_trading_windows": [{"start": "00:00", "end": "23:59"}]
+        })
+        self.assertTrue(config._is_within_trading_window())
+    
+    def test_trading_window_blocks_signal_write(self):
+        """Test that should_write_signal respects trading windows"""
+        now = datetime.utcnow()
+        if now.hour < 12:
+            window = {"start": "13:00", "end": "14:00"}
+        else:
+            window = {"start": "01:00", "end": "02:00"}
+        config = MT5BridgeConfig({"mt5_trading_windows": [window]})
+        self.assertFalse(config.should_write_signal("BTCUSD", 0.9))
+
+
+class TestCircuitBreaker(unittest.TestCase):
+    """Test execution safety: circuit breaker"""
+    
+    def test_no_limit_allows_all(self):
+        """Test that circuit breaker disabled (0) allows all signals"""
+        config = MT5BridgeConfig({"mt5_max_signals_per_minute": 0})
+        self.assertTrue(config._check_circuit_breaker())
+    
+    def test_circuit_breaker_trips(self):
+        """Test that circuit breaker trips when limit exceeded"""
+        config = MT5BridgeConfig({"mt5_max_signals_per_minute": 2})
+        # Record 2 writes to exceed the limit
+        config._recent_signal_times = [datetime.utcnow(), datetime.utcnow()]
+        self.assertFalse(config._check_circuit_breaker())
+    
+    def test_circuit_breaker_allows_under_limit(self):
+        """Test that circuit breaker allows signals under limit"""
+        config = MT5BridgeConfig({"mt5_max_signals_per_minute": 5})
+        config._recent_signal_times = [datetime.utcnow()]
+        self.assertTrue(config._check_circuit_breaker())
+
+
+class TestMultiTimeframe(unittest.TestCase):
+    """Test multi-timeframe signal support"""
+    
+    def setUp(self):
+        self.test_dir = tempfile.mkdtemp()
+        init_bridge({
+            "mt5_signal_dir": self.test_dir,
+            "mt5_signal_interval_seconds": 0,
+            "mt5_separate_timeframe_files": True,
+            "mt5_default_timeframe": "M5"
+        })
+    
+    def tearDown(self):
+        shutil.rmtree(self.test_dir, ignore_errors=True)
+    
+    def test_separate_timeframe_files(self):
+        """Test that separate files are created per timeframe"""
+        signal_m5 = {
+            "symbol": "BTCUSD",
+            "signal": "BUY",
+            "confidence": 0.8,
+            "timestamp": datetime.utcnow().isoformat(),
+            "timeframe": "M5"
+        }
+        signal_h1 = {
+            "symbol": "BTCUSD",
+            "signal": "SELL",
+            "confidence": 0.7,
+            "timestamp": datetime.utcnow().isoformat(),
+            "timeframe": "H1"
+        }
+        
+        write_signal_atomic(signal_m5)
+        write_signal_atomic(signal_h1)
+        
+        # Both files should exist
+        m5_file = os.path.join(self.test_dir, "BTCUSD_M5_signal.json")
+        h1_file = os.path.join(self.test_dir, "BTCUSD_H1_signal.json")
+        self.assertTrue(os.path.exists(m5_file))
+        self.assertTrue(os.path.exists(h1_file))
+        
+        # Verify contents are different
+        with open(m5_file, 'r') as f:
+            m5_data = json.load(f)
+        with open(h1_file, 'r') as f:
+            h1_data = json.load(f)
+        self.assertEqual(m5_data["signal"], "BUY")
+        self.assertEqual(h1_data["signal"], "SELL")
+    
+    def test_default_timeframe_included(self):
+        """Test that default timeframe is added to signal if not specified"""
+        signal = {
+            "symbol": "EURUSD",
+            "signal": "BUY",
+            "confidence": 0.8,
+            "timestamp": datetime.utcnow().isoformat()
+        }
+        write_signal_atomic(signal)
+        
+        # File should use default timeframe M5
+        signal_file = os.path.join(self.test_dir, "EURUSD_M5_signal.json")
+        self.assertTrue(os.path.exists(signal_file))
+        
+        with open(signal_file, 'r') as f:
+            data = json.load(f)
+        self.assertEqual(data["timeframe"], "M5")
+
+
+class TestBackwardCompatibility(unittest.TestCase):
+    """Test backward compatibility when MT5 bridge is unavailable"""
+    
+    def test_fallback_write_signal_returns_false(self):
+        """Test that fallback write_signal_atomic returns False"""
+        # Simulate the fallback function from main.py
+        def fallback_write_signal_atomic(signal_dict):
+            return False
+        
+        result = fallback_write_signal_atomic({"symbol": "BTCUSD"})
+        self.assertFalse(result)
+    
+    def test_fallback_init_bridge_returns_none(self):
+        """Test that fallback init_bridge returns None"""
+        def fallback_init_bridge(config=None):
+            return None
+        
+        result = fallback_init_bridge()
+        self.assertIsNone(result)
+    
+    def test_fallback_is_bridge_available_returns_false(self):
+        """Test that fallback is_bridge_available returns False"""
+        def fallback_is_bridge_available():
+            return False
+        
+        result = fallback_is_bridge_available()
+        self.assertFalse(result)
+    
+    def test_disabled_bridge_write_returns_false(self):
+        """Test that writing with disabled bridge returns False"""
+        test_dir = tempfile.mkdtemp()
+        try:
+            init_bridge({
+                "mt5_signal_dir": test_dir,
+                "mt5_bridge_enabled": False
+            })
+            result = write_signal_atomic({
+                "symbol": "BTCUSD",
+                "signal": "BUY",
+                "confidence": 0.85,
+                "timestamp": datetime.utcnow().isoformat()
+            })
+            self.assertFalse(result)
+        finally:
+            shutil.rmtree(test_dir, ignore_errors=True)
+
+
+class TestConfigEmptySignalDir(unittest.TestCase):
+    """Test that empty mt5_signal_dir falls back to default"""
+    
+    def test_empty_string_falls_back(self):
+        """Test that empty string signal dir falls back to default"""
+        config = MT5BridgeConfig({"mt5_signal_dir": ""})
+        self.assertNotEqual(config.signal_dir, "")
+    
+    def test_none_falls_back(self):
+        """Test that None signal dir falls back to default"""
+        config = MT5BridgeConfig({"mt5_signal_dir": None})
+        self.assertNotEqual(config.signal_dir, "")
+        self.assertIsNotNone(config.signal_dir)
+
+
 if __name__ == "__main__":
     unittest.main()

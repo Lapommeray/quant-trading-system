@@ -578,10 +578,10 @@ class QuantumTradingSystem:
             
             success = write_signal_atomic(signal_dict)
             if success:
-                logger.debug(f"MT5 signal written for {asset}: {signal_direction} (confidence: {confidence:.2f})")
+                logger.info(f"MT5 signal output: {signal_dict}")
         except Exception as e:
             # Silently catch exceptions to avoid crashes - MT5 bridge is non-critical
-            logger.debug(f"Failed to write MT5 signal for {asset}: {e}")
+            logger.warning(f"Failed to write MT5 signal for {asset}: {e}")
             
     def _print_divine_banner(self):
         """Print the divine certification banner"""
