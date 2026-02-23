@@ -1,1 +1,3 @@
-<broker_feed.py content>
+"""Placeholder stub for broker_feed."""
+
+# TODO: implement module logic.

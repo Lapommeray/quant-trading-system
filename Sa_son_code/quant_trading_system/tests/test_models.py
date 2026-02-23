@@ -1,1 +1,3 @@
-<test_models.py content>
+"""Placeholder stub for test_models."""
+
+# TODO: implement module logic.

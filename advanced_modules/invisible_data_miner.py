@@ -15,6 +15,16 @@ import math
 from encryption.xmss_encryption import XMSSEncryption
 import traceback
 
+
+class _FallbackAlgorithm:
+    """Minimal stand-in for tests outside QuantConnect runtime."""
+
+    def __init__(self):
+        self.Time = datetime.utcnow()
+
+    def Debug(self, _message: str):
+        return None
+
 class InvisibleDataMiner:
     """
     Extracts hidden patterns from legitimate market data sources.
@@ -24,7 +34,7 @@ class InvisibleDataMiner:
     compliant methods.
     """
     
-    def __init__(self, algorithm, tree_height: int = 10):
+    def __init__(self, algorithm=None, tree_height: int = 10):
         """
         Initialize the Invisible Data Miner module.
         
@@ -32,7 +42,7 @@ class InvisibleDataMiner:
         - algorithm: The QuantConnect algorithm instance
         - tree_height: Security parameter (2^height signatures possible)
         """
-        self.algorithm = algorithm
+        self.algorithm = algorithm or _FallbackAlgorithm()
         self.logger = logging.getLogger("InvisibleDataMiner")
         self.logger.setLevel(logging.INFO)
         
@@ -60,7 +70,7 @@ class InvisibleDataMiner:
         self.encryption_engine = XMSSEncryption(tree_height=tree_height)
         self._init_failover()
         
-        algorithm.Debug("Invisible Data Miner module initialized")
+        self.algorithm.Debug("Invisible Data Miner module initialized")
     
     def _init_failover(self):
         """Emergency fallback configuration"""
@@ -69,7 +79,7 @@ class InvisibleDataMiner:
         self.failover_engaged = False
         self.failover_count = 0
     
-    def mine(self, symbol, history_data) -> bool:
+    def mine(self, symbol, history_data=None) -> bool:
         """
         Mine invisible patterns from market data.
         
@@ -81,6 +91,8 @@ class InvisibleDataMiner:
         - Dictionary containing mining results
         """
         symbol_str = str(symbol)
+        if history_data is None and isinstance(symbol, dict):
+            return self._mine_from_scores(symbol)
         
         if "1m" not in history_data or history_data["1m"].empty:
             return {"patterns_found": False, "confidence": 0.0, "direction": "NEUTRAL"}
@@ -133,6 +145,26 @@ class InvisibleDataMiner:
             self.logger.critical("ACTIVATING DARK FAILOVER PROTOCOL")
             self.failover_engaged = True 
     
+    
+    def _mine_from_scores(self, scores):
+        success = True
+        for tag, score in scores.items():
+            for attempt in range(self.max_retries):
+                try:
+                    if not isinstance(score, (float, int)):
+                        raise TypeError(f"Invalid score type: {type(score)}")
+                    if not 0 <= score <= 1:
+                        raise ValueError(f"Score {score} out of bounds [0,1]")
+                    blob = f"{tag}:{float(score):.4f}".encode("utf-8")
+                    self.encrypted_blobs[tag] = self.encryption_engine.encrypt(blob)
+                    break
+                except Exception as exc:
+                    if attempt == self.max_retries - 1:
+                        self._handle_failure(tag, score, exc)
+                        self.failover_count += 1
+                        success = False
+        return success
+
     def _extract_patterns(self, df, timeframe, symbol_str):
         """
         Extract hidden patterns from a single timeframe.

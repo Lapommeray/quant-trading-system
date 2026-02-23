@@ -78,7 +78,7 @@ except ImportError:
     logger.warning("RL Evolver not available. Policy learning disabled.")
 
 
-LLM_API_KEY = os.getenv("LLM_API_KEY") or os.getenv("OPENAI_API_KEY") or os.getenv("GROK_API_KEY")
+LLM_API_KEY = None  # External LLM APIs intentionally disabled for deterministic local operation
 REPO_PATH = os.path.dirname(os.path.abspath(__file__))
 LOG_FILE = os.path.join(REPO_PATH, "evolution_log.json")
 TASK_QUEUE_FILE = os.path.join(REPO_PATH, "task_queue.json")
@@ -268,87 +268,45 @@ class MultiAgentDebateSystem:
     - Critic: Reviews and critiques the code
     - Tester: Validates through automated testing
     
-    LLM Provider Configuration:
-    - Set LLM_PROVIDER env var to "grok" or "openai" (default: "openai")
-    - Set LLM_MODEL env var to override model for OpenAI (default: "gpt-4o-mini")
-    - Set LLM_MODEL_GROK env var to override model for Grok (default: "grok-beta")
-    - Set LLM_API_KEY env var with your API key
+    Local Reasoning Configuration:
+    - Uses deterministic template+heuristic synthesis
+    - No external OpenAI/Grok API dependency
     """
     
     MAX_RETRIES = 3
     INITIAL_BACKOFF = 1.0
     
     def __init__(self, llm_api_key: Optional[str] = None):
-        self.api_key = llm_api_key or LLM_API_KEY
-        self.available = self.api_key is not None
+        self.api_key = None
+        self.available = True
         self.llm_call_count = 0
         self.llm_success_count = 0
         self.llm_failure_count = 0
-        
-        provider = os.getenv("LLM_PROVIDER", "openai").lower()
-        if provider == "grok":
-            self.base_url = "https://api.x.ai/v1"
-            self.model = os.getenv("LLM_MODEL_GROK", "grok-beta")
-        else:
-            self.base_url = "https://api.openai.com/v1"
-            self.model = os.getenv("LLM_MODEL", "gpt-4o-mini")
-        
-        logger.info(f"LLM provider: {provider}, model: {self.model}, base_url: {self.base_url}")
+        self.model = "local-heuristic-synthesizer"
+        logger.info("Debate system running in local deterministic mode (no external LLM API)")
         
     def _call_llm_with_retry(self, prompt: str, system_prompt: str = "") -> str:
-        """Call LLM API with exponential backoff retry"""
-        last_error = None
-        backoff = self.INITIAL_BACKOFF
-        
-        for attempt in range(self.MAX_RETRIES):
-            try:
-                result = self._call_llm_internal(prompt, system_prompt)
-                self.llm_success_count += 1
-                return result
-            except Exception as e:
-                last_error = e
-                self.llm_failure_count += 1
-                logger.warning(f"LLM call attempt {attempt + 1}/{self.MAX_RETRIES} failed: {e}")
-                
-                if attempt < self.MAX_RETRIES - 1:
-                    logger.info(f"Retrying in {backoff:.1f}s...")
-                    time.sleep(backoff)
-                    backoff *= 2
-                    
-        logger.error(f"All LLM retry attempts failed. Last error: {last_error}")
-        return self._template_response(prompt)
+        """Local deterministic synthesis (retry wrapper retained for API compatibility)."""
+        try:
+            result = self._call_llm_internal(prompt, system_prompt)
+            self.llm_success_count += 1
+            return result
+        except Exception as e:
+            self.llm_failure_count += 1
+            logger.warning(f"Local synthesis failed: {e}")
+            return self._template_response(prompt)
         
     def _call_llm(self, prompt: str, system_prompt: str = "") -> str:
-        """Call LLM API with retry logic"""
+        """Call local synthesis with debate-compatible interface."""
         self.llm_call_count += 1
-        
-        if not self.available:
-            return self._template_response(prompt)
-            
         return self._call_llm_with_retry(prompt, system_prompt)
         
     def _call_llm_internal(self, prompt: str, system_prompt: str = "") -> str:
-        """Internal LLM call using configurable provider (OpenAI compatible)"""
-        import openai
-        
-        client = openai.OpenAI(
-            api_key=self.api_key,
-            base_url=self.base_url
-        )
-        
-        messages = []
-        if system_prompt:
-            messages.append({"role": "system", "content": system_prompt})
-        messages.append({"role": "user", "content": prompt})
-        
-        response = client.chat.completions.create(
-            model=self.model,
-            messages=messages,
-            max_tokens=2000,
-            temperature=0.3
-        )
-        
-        return response.choices[0].message.content
+        """Internal local reasoner: deterministic templates with prompt-aware routing."""
+        prompt_l = prompt.lower()
+        if "entry" in prompt_l and "exit" in prompt_l:
+            return self._entry_exit_template()
+        return self._template_response(prompt)
             
     def _template_response(self, prompt: str) -> str:
         """Template-based fallback when LLM unavailable"""
@@ -363,6 +321,27 @@ class MultiAgentDebateSystem:
         else:
             return f"# Template response for: {prompt[:100]}\npass"
             
+    def _entry_exit_template(self) -> str:
+        return """
+class InstitutionalEntryExitPolicy:
+    def __init__(self, confidence_threshold=0.62, stop_loss=0.015, take_profit=0.03):
+        self.confidence_threshold = confidence_threshold
+        self.stop_loss = stop_loss
+        self.take_profit = take_profit
+
+    def decide(self, signal_strength: float, volatility: float, trend_score: float):
+        confidence = max(0.0, min(1.0, 0.5 * signal_strength + 0.3 * trend_score - 0.2 * volatility + 0.4))
+        if confidence < self.confidence_threshold:
+            return {"action": "HOLD", "confidence": confidence}
+        side = "BUY" if signal_strength >= 0 else "SELL"
+        return {
+            "action": side,
+            "confidence": confidence,
+            "stop_loss_pct": self.stop_loss,
+            "take_profit_pct": self.take_profit,
+        }
+"""
+
     def researcher_agent(self, context: str) -> str:
         """Research agent proposes new high-signal ideas"""
         system_prompt = """You are a quantitative researcher at a top hedge fund. 

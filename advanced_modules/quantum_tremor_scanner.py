@@ -3,10 +3,16 @@ import pandas as pd
 from scipy.stats import entropy
 from typing import Dict, List, Tuple
 from datetime import datetime, timedelta
-import ccxt  # Real market data connector
+
+try:
+    import ccxt  # Real market data connector
+except Exception:
+    ccxt = None
 
 class QuantumTremorScanner:
     def __init__(self):
+        if ccxt is None:
+            raise RuntimeError("ccxt is required to use QuantumTremorScanner")
         self.exchange = ccxt.binance({
             'apiKey': 'YOUR_API_KEY',
             'secret': 'YOUR_API_SECRET',

@@ -34,6 +34,8 @@ scripts_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "scripts"
 if scripts_dir not in sys.path:
     sys.path.append(scripts_dir)
 
+IMPORT_ERROR: Optional[ImportError] = None
+
 try:
     from quantum.temporal_lstm import QuantumTemporalLSTM
     from ai.aggressor_ai import AggressorAI
@@ -50,9 +52,12 @@ try:
     
     from verification.integrated_cosmic_verification import IntegratedCosmicVerification
 except ImportError as e:
+    IMPORT_ERROR = e
     logger.error(f"Failed to import required modules: {e}")
-    logger.error("Please run 'python3 scripts/deploy_quantum.sh' first.")
-    sys.exit(1)
+    logger.warning(
+        "Continuing in degraded mode so tests/tooling can import this module. "
+        "Runtime execution still requires full dependencies."
+    )
 
 # MT5 Bridge import (optional - graceful fallback if unavailable)
 try:
@@ -85,6 +90,12 @@ class QuantumTradingSystem:
             timeline: Timeline mode ("STANDARD", "EXTENDED", "ETERNITY")
             loss_mode: Loss mode ("ALLOWED", "MINIMIZED", "DISALLOWED")
         """
+        if IMPORT_ERROR is not None:
+            raise RuntimeError(
+                "QuantumTradingSystem dependencies are not fully available. "
+                "Install runtime requirements before launching the system."
+            ) from IMPORT_ERROR
+
         self.assets = self._parse_assets(assets)
         self.timeline = timeline
         self.loss_mode = loss_mode

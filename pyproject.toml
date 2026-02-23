@@ -1,3 +1,35 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "quant-trading-system"
+version = "0.1.0"
+description = "A YFinance-only quantitative trading framework"
+requires-python = ">=3.10"
+dependencies = [
+  "pandas>=2.0",
+  "numpy>=1.24",
+  "yfinance>=0.2.40",
+]
+
+[project.optional-dependencies]
+viz = [
+  "matplotlib>=3.8",
+  "seaborn>=0.13",
+]
+sentiment = [
+  "vaderSentiment>=3.3.2",
+  "feedparser>=6.0.11",
+  "ccxt>=4.4.0",
+]
+
+[project.scripts]
+quant-trading = "quant_trading_system.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["quant_trading_system*"]
 [tool.poetry]
 name = "quant-trading-system"
 version = "0.1.0"

@@ -1,26 +1,37 @@
+"""Predictive overlay package.
+
+Keep imports lazy to avoid import-time failures when optional components
+(e.g., qiskit-backed forecasters) are unavailable in minimal test environments.
 """
-Predictive Overlay Module for QMP Overrider
-
-This module integrates advanced forecasting features into the QMP Overrider system:
-
-Features:
-1. Neural Forecasting Overlay using LSTM/Transformer
-2. Synthetic Candle Projection (Ghost Candles)
-3. Timeline Warp Plot for alternate path simulation
-4. Future Zone Sensory Line based on gate and alignment consensus
-5. Self-Correction Arcs with predictive error feedback loop
-"""
-
-from .neural_forecaster import NeuralForecaster
-from .ghost_candle_projector import GhostCandleProjector
-from .timeline_warp_plot import TimelineWarpPlot
-from .future_zone_sensory import FutureZoneSensory
-from .predictive_overlay_integration import PredictiveOverlaySystem
 
 __all__ = [
-    'NeuralForecaster',
-    'GhostCandleProjector',
-    'TimelineWarpPlot',
-    'FutureZoneSensory',
-    'PredictiveOverlaySystem'
+    "NeuralForecaster",
+    "GhostCandleProjector",
+    "TimelineWarpPlot",
+    "FutureZoneSensory",
+    "PredictiveOverlaySystem",
 ]
+
+
+def __getattr__(name):
+    if name == "NeuralForecaster":
+        from .neural_forecaster import NeuralForecaster
+
+        return NeuralForecaster
+    if name == "GhostCandleProjector":
+        from .ghost_candle_projector import GhostCandleProjector
+
+        return GhostCandleProjector
+    if name == "TimelineWarpPlot":
+        from .timeline_warp_plot import TimelineWarpPlot
+
+        return TimelineWarpPlot
+    if name == "FutureZoneSensory":
+        from .future_zone_sensory import FutureZoneSensory
+
+        return FutureZoneSensory
+    if name == "PredictiveOverlaySystem":
+        from .predictive_overlay_integration import PredictiveOverlaySystem
+
+        return PredictiveOverlaySystem
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")

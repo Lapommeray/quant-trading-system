@@ -21,15 +21,17 @@ logging.basicConfig(
 )
 logger = logging.getLogger('new_modules_test')
 
+MISSING_OPTIONAL_DEPENDENCIES = []
+
 try:
     import numpy as np
     import pandas as pd
     import ccxt
 except ImportError as e:
-    logger.error(f"Required library not found: {e}")
-    print(f"Required library not found: {e}")
-    print("Please install required libraries: pip install numpy pandas ccxt")
-    sys.exit(1)
+    np = None
+    pd = None
+    ccxt = None
+    MISSING_OPTIONAL_DEPENDENCIES.append(str(e))
 
 NEW_MODULES = [
     'time_resonant_neural_lattice',
@@ -282,7 +284,22 @@ class ModuleTester:
         
         return self.test_results
 
+
+def test_new_modules_dependency_gate():
+    """Dependency gate for pytest collection on minimal environments."""
+    import pytest
+
+    pytest.importorskip("numpy")
+    pytest.importorskip("pandas")
+    pytest.importorskip("ccxt")
+    assert True
+
 if __name__ == "__main__":
+    if MISSING_OPTIONAL_DEPENDENCIES:
+        print("Required library not found:", "; ".join(MISSING_OPTIONAL_DEPENDENCIES))
+        print("Please install required libraries: pip install numpy pandas ccxt")
+        sys.exit(1)
+
     print("Starting advanced trading modules test")
     print("Testing with real live market data")
     print("Confidence threshold: 0.95+")

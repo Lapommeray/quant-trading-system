@@ -1,1 +1,3 @@
-<retrain_pipeline.py content>
+"""Placeholder stub for retrain_pipeline."""
+
+# TODO: implement module logic.
