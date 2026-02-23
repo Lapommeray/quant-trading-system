@@ -1,10 +1,32 @@
 import numpy as np
-from scipy.fft import fft, fftfreq, ifft
-from scipy.signal import find_peaks, hilbert
 from dataclasses import dataclass, field
 from typing import Dict, List, Tuple, Optional, Any
 import pandas as pd
 from datetime import datetime
+
+try:
+    from scipy.fft import fft, fftfreq, ifft
+    from scipy.signal import find_peaks, hilbert
+    SCIPY_AVAILABLE = True
+except ImportError:
+    SCIPY_AVAILABLE = False
+
+    def fft(x):
+        return np.fft.fft(x)
+
+    def fftfreq(n, d=1.0):
+        return np.fft.fftfreq(n, d=d)
+
+    def ifft(x):
+        return np.fft.ifft(x)
+
+    def find_peaks(x, **kwargs):
+        x = np.asarray(x)
+        peaks = [i for i in range(1, len(x) - 1) if x[i - 1] < x[i] > x[i + 1]]
+        return np.array(peaks), {}
+
+    def hilbert(x):
+        return np.asarray(x, dtype=float)
 
 @dataclass
 class TimeFractalConfig:

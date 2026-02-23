@@ -1,10 +1,31 @@
 import numpy as np
 import pandas as pd
-from scipy.signal import hilbert, welch
-from scipy.fft import fft, fftfreq
 from typing import Dict, List, Optional, Union, Any, Tuple
 from datetime import datetime
 from dataclasses import dataclass
+
+try:
+    from scipy.signal import hilbert, welch
+    from scipy.fft import fft, fftfreq
+    SCIPY_AVAILABLE = True
+except ImportError:
+    SCIPY_AVAILABLE = False
+
+    def hilbert(x):
+        """Minimal fallback: return real part only."""
+        return np.asarray(x, dtype=float)
+
+    def welch(x, fs=1.0, nperseg=None):
+        n = len(x)
+        freqs = np.fft.rfftfreq(n, d=1.0 / fs)
+        psd = (np.abs(np.fft.rfft(x)) ** 2) / n
+        return freqs, psd
+
+    def fft(x):
+        return np.fft.fft(x)
+
+    def fftfreq(n, d=1.0):
+        return np.fft.fftfreq(n, d=d)
 
 @dataclass
 class SpectralComponents:

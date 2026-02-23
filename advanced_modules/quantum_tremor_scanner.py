@@ -1,8 +1,27 @@
 import numpy as np
 import pandas as pd
-from scipy.stats import entropy
 from typing import Dict, List, Tuple
 from datetime import datetime, timedelta
+
+try:
+    from scipy.stats import entropy
+    SCIPY_AVAILABLE = True
+except ImportError:
+    SCIPY_AVAILABLE = False
+
+    def entropy(pk, qk=None, base=None):
+        pk = np.asarray(pk, dtype=float)
+        pk = pk / pk.sum()
+        if qk is not None:
+            qk = np.asarray(qk, dtype=float)
+            qk = qk / qk.sum()
+            vec = np.where(pk > 0, pk * np.log(pk / np.where(qk > 0, qk, 1.0)), 0.0)
+        else:
+            vec = -np.where(pk > 0, pk * np.log(pk), 0.0)
+        s = vec.sum()
+        if base is not None:
+            s /= np.log(base)
+        return s
 
 try:
     import ccxt  # Real market data connector
