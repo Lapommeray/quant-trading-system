@@ -30,3 +30,31 @@ quant-trading = "quant_trading_system.cli:main"
 [tool.setuptools.packages.find]
 where = ["."]
 include = ["quant_trading_system*"]
+[tool.poetry]
+name = "quant-trading-system"
+version = "0.1.0"
+description = "A comprehensive quant trading system."
+authors = ["Lapommeray <your_email@example.com>"]
+
+[tool.poetry.dependencies]
+# Core dependencies
+numpy = "^1.21"
+pandas = "^1.3"
+matplotlib = "^3.4"
+scikit-learn = "^0.24"
+
+[tool.poetry.dev-dependencies]
+# Development dependencies
+pytest = "^6.2"
+black = "^21.9"
+mypy = "^0.910"
+doctest = "^1.0"
+
+[tool.poetry.extras]
+# Optional dependencies
+notebook = "^6.4"
+seaborn = "^0.11"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
