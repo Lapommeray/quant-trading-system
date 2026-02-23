@@ -42,10 +42,11 @@ class StrategyGenerator:
 
         if volatility in {"high", "extreme"}:
             lookback = 50
-        elif volatility in {"medium", "normal"}:
-            lookback = 20
-        else:
+        elif volatility in {"low", "calm"}:
             lookback = 35
+        else:
+            lookback = 20
+
 
         confidence_threshold = 0.58
         if trend in {"strong_bull", "strong_bear"}:
@@ -55,6 +56,7 @@ class StrategyGenerator:
 
 
 class GeneratedInstitutionalStrategy(QCAlgorithm):
+
     def Initialize(self):
         self.SetStartDate(2020, 1, 1)
         self.SetCash(100000)

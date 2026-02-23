@@ -6,8 +6,6 @@ Despite the legacy module name, this adapter now uses yfinance as the data sourc
 from __future__ import annotations
 
 from typing import List, Dict, Any
-
-
 class YFinanceAdapter:
     """Fetch OHLCV data through yfinance."""
 

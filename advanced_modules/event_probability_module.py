@@ -151,6 +151,8 @@ class EventProbabilityModule:
         Returns:
         - Dictionary of updated indicator values
         """
+        if current_time is None:
+            current_time = datetime.utcnow()
         
         if self.last_update_time is not None:
             if current_time is None:

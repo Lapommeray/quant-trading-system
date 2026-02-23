@@ -25,6 +25,7 @@ class Settings:
 settings = Settings()
 
 
-def _ensure_cache_dir() -> None:
-    """Create the data cache directory if it does not already exist."""
+def ensure_cache_dir() -> Path:
+    """Create the cache directory if it does not exist and return its path."""
     settings.data_cache_dir.mkdir(parents=True, exist_ok=True)
+    return settings.data_cache_dir

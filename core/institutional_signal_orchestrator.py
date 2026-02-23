@@ -17,9 +17,9 @@ class InstitutionalSignalOrchestrator:
         self.confidence_threshold = confidence_threshold
 
     def decide(self, price: float, trend_score: float, vol_score: float, liquidity_score: float) -> TradeDecision:
-        directional_edge = 0.55 * trend_score + 0.25 * liquidity_score - 0.20 * vol_score
-        # directional_edge ranges from -0.20 to 0.80; subtract the midpoint (0.30) to centre around 0
-        confidence = max(0.0, min(1.0, 0.5 + directional_edge - 0.30))
+        raw_edge = 0.55 * trend_score + 0.25 * liquidity_score - 0.20 * vol_score
+        directional_edge = raw_edge - 0.30
+        confidence = max(0.0, min(1.0, 0.5 + directional_edge))
 
         if confidence < self.confidence_threshold:
             return TradeDecision("HOLD", confidence, price, price, price, "Confidence below threshold")
