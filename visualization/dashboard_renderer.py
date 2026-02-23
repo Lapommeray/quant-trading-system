@@ -1,3 +1,4 @@
+import time
 import dash
 from dash import dcc, html
 import dash_bootstrap_components as dbc
@@ -14,7 +15,7 @@ class RealTimeDashboard:
         self.setup_layout()
         self.setup_callbacks()
         self.update_thread = Thread(target=self._data_update_loop, daemon=True)
-        
+
     def setup_layout(self):
         """Configures dashboard layout"""
         self.app.layout = dbc.Container([
@@ -53,7 +54,7 @@ class RealTimeDashboard:
         """Creates candlestick chart with void signals"""
         df = pd.DataFrame(data)
         df['time'] = pd.to_datetime(df['time'], unit='ms')
-        
+
         fig = go.Figure(data=[
             go.Candlestick(
                 x=df['time'],
@@ -71,7 +72,7 @@ class RealTimeDashboard:
                 name='VOID Signal'
             )
         ])
-        
+
         fig.update_layout(
             title=title,
             xaxis_rangeslider_visible=False,
@@ -87,9 +88,9 @@ class RealTimeDashboard:
             
         df = pd.DataFrame(self.signals[-50:])  # Last 50 signals
         df['time'] = pd.to_datetime(df['time'], unit='ms')
-        
+
         fig = go.Figure()
-        
+
         # Add signal components
         fig.add_trace(go.Scatter(
             x=df['time'], y=df['quantum'],
@@ -106,7 +107,7 @@ class RealTimeDashboard:
             mode='lines', name='Composite',
             line=dict(color='#FFFFFF', width=3)
         ))
-        
+
         fig.update_layout(
             title='Signal Strength Analysis',
             template='plotly_dark',
@@ -128,6 +129,7 @@ class RealTimeDashboard:
         self.app.run_server(debug=False, host='0.0.0.0', port=8050)
 
 # Example Data Feed (Connect to your actual API)
+
 class BinanceDataFeed:
     def get_ohlcv(self):
         # Implement real API connection
