@@ -10,5 +10,5 @@ class AntiManipulationSystem:
         if asset not in self.reality_anchors:
             raise KeyError(f"Unknown asset: {asset}")
         expected = self.reality_anchors[asset]
-        tolerance = expected * 0.9  # 90% absolute band
+        tolerance = expected * 0.9  # allow deviation up to 90% of the expected value in either direction
         return abs(current_price - expected) <= tolerance

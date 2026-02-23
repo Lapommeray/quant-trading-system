@@ -28,19 +28,19 @@ def test_basic_structure():
     success_count = 0
     for module_path in modules_to_check:
         if os.path.exists(module_path):
-            print(f"✓ Found {module_path}")
+            print(f"\u2713 Found {module_path}")
             success_count += 1
         else:
-            print(f"✗ Missing {module_path}")
+            print(f"\u2717 Missing {module_path}")
     
     print(f"\nStructure test results: {success_count}/{len(modules_to_check)} modules found")
     
     if success_count == len(modules_to_check):
-        print("🎉 All module files exist!")
+        print("All module files exist!")
         assert True
     else:
-        print("❌ Some module files are missing")
-        return 1
+        print("Some module files are missing")
+        assert False, f"Missing {len(modules_to_check) - success_count} module(s)"
 
 if __name__ == "__main__":
-    sys.exit(test_basic_structure())
+    test_basic_structure()
