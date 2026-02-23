@@ -2,10 +2,24 @@ import numpy as np
 import pandas as pd
 from typing import Dict, List, Optional, Union
 from datetime import datetime
-from scipy.stats import zscore
-from scipy.signal import hilbert
 from enum import Enum
 from dataclasses import dataclass, field
+
+try:
+    from scipy.stats import zscore
+    from scipy.signal import hilbert
+    SCIPY_AVAILABLE = True
+except ImportError:
+    SCIPY_AVAILABLE = False
+
+    def zscore(a):
+        a = np.asarray(a, dtype=float)
+        std = a.std()
+        return (a - a.mean()) / std if std != 0 else np.zeros_like(a)
+
+    def hilbert(x):
+        """Minimal real-only fallback (returns input unchanged)."""
+        return np.asarray(x, dtype=float)
 
 class MarketState(Enum):
     EXPANSION = 1

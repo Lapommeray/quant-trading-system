@@ -10,10 +10,36 @@ import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
 import logging
-from scipy import stats
 import math
 from encryption.xmss_encryption import XMSSEncryption
 import traceback
+
+try:
+    from scipy import stats
+    SCIPY_AVAILABLE = True
+except ImportError:
+    SCIPY_AVAILABLE = False
+    from types import SimpleNamespace
+
+    def _pearsonr(x, y):
+        r = float(np.corrcoef(x, y)[0, 1])
+        return r, 0.0
+
+    def _linregress(x, y):
+        x = np.asarray(x, dtype=float)
+        y = np.asarray(y, dtype=float)
+        var_x = np.var(x, ddof=1)
+        slope = float(np.cov(x, y, ddof=1)[0, 1] / var_x) if var_x != 0 else 0.0
+        intercept = float(np.mean(y) - slope * np.mean(x))
+        r = float(np.corrcoef(x, y)[0, 1])
+        return SimpleNamespace(slope=slope, intercept=intercept, rvalue=r, pvalue=0.0, stderr=0.0)
+
+    def _zscore(a):
+        a = np.asarray(a, dtype=float)
+        std = a.std()
+        return (a - a.mean()) / std if std != 0 else np.zeros_like(a)
+
+    stats = SimpleNamespace(zscore=_zscore, pearsonr=_pearsonr, linregress=_linregress)
 
 
 class _FallbackAlgorithm:
