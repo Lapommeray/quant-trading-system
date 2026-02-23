@@ -1,0 +1,602 @@
+{
+  "summary": {
+    "DNA_HEART": {
+      "python_files": 0,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "Deco_10": {
+      "python_files": 76,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "Deco_11": {
+      "python_files": 175,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "Deco_14__": {
+      "python_files": 143,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "Deco_15._": {
+      "python_files": 143,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "Deco_16._": {
+      "python_files": 43,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "Deco_17._": {
+      "python_files": 43,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "Deco_18._": {
+      "python_files": 155,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "Deco_19": {
+      "python_files": 271,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "Deco_20": {
+      "python_files": 271,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "Deco_21": {
+      "python_files": 7,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "Deco_25": {
+      "python_files": 0,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "Deco_30": {
+      "python_files": 316,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "Deco_31": {
+      "python_files": 318,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "Deco_37": {
+      "python_files": 316,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "Deco_39": {
+      "python_files": 1250,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "Deco_A_": {
+      "python_files": 155,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "DeepSignal": {
+      "python_files": 1,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "HumanDeviation": {
+      "python_files": 1,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "Latency": {
+      "python_files": 1,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "QMP_GOD_MODE_v2_5_FINAL": {
+      "python_files": 360,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "QMP_Overrider_Complete": {
+      "python_files": 20,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "QMP_v2.1_FINAL_COMBINED": {
+      "python_files": 116,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "QMP_v2.1_FINAL_SMART_RISK_FULL": {
+      "python_files": 271,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "QMP_v2_CLEAN": {
+      "python_files": 116,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "Sa_son_code": {
+      "python_files": 20,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "Shadow": {
+      "python_files": 1,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "advanced_modules": {
+      "python_files": 115,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "agent_lab": {
+      "python_files": 2,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "ai": {
+      "python_files": 6,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "alpha_intelligence_modules": {
+      "python_files": 5,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "arbitrage": {
+      "python_files": 2,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "aurora_gateway": {
+      "python_files": 2,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "backtest": {
+      "python_files": 3,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "conscious_intelligence": {
+      "python_files": 3,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "consciousness_layer": {
+      "python_files": 2,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "core": {
+      "python_files": 40,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "covid_test": {
+      "python_files": 3,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "dark_liquidity": {
+      "python_files": 3,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "dashboard": {
+      "python_files": 1,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "data": {
+      "python_files": 4,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "defense": {
+      "python_files": 3,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "dimensional_transcendence": {
+      "python_files": 6,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "docs": {
+      "python_files": 0,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "encryption": {
+      "python_files": 2,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "evolution": {
+      "python_files": 1,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "execution": {
+      "python_files": 3,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "god_mode": {
+      "python_files": 2,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "guardian": {
+      "python_files": 1,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "legal_fed_intelligence": {
+      "python_files": 1,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "live_data": {
+      "python_files": 7,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "live_strategies_escalation": {
+      "python_files": 1,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "market_intelligence": {
+      "python_files": 4,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "market_maker_slayer": {
+      "python_files": 5,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "modules": {
+      "python_files": 10,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "monitoring_tools": {
+      "python_files": 8,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "omega": {
+      "python_files": 1,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "omniscience": {
+      "python_files": 1,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "omniscient_core": {
+      "python_files": 5,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "order_flow_dominance_system": {
+      "python_files": 1,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "phase_omega": {
+      "python_files": 6,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "phoenix": {
+      "python_files": 10,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "phoenix_protocol": {
+      "python_files": 2,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "position_sizing_risk_system": {
+      "python_files": 5,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "predictive_overlay": {
+      "python_files": 5,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "qc_integration": {
+      "python_files": 8,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "quant": {
+      "python_files": 6,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "quantconnect_strategies": {
+      "python_files": 4,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "quantum": {
+      "python_files": 2,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "quantum_alignment": {
+      "python_files": 6,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "quantum_audit": {
+      "python_files": 1,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "quantum_core": {
+      "python_files": 11,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "quantum_execution_framework": {
+      "python_files": 1,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "quantum_finance": {
+      "python_files": 9,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "quantum_protocols": {
+      "python_files": 16,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "quantum_wealth_matrix": {
+      "python_files": 8,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "real_data_integration": {
+      "python_files": 2,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "reality": {
+      "python_files": 2,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "recovery": {
+      "python_files": 1,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "risk": {
+      "python_files": 4,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "risk_mitigation_layers": {
+      "python_files": 5,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "ritual_lock": {
+      "python_files": 2,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "scripts": {
+      "python_files": 4,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "secure": {
+      "python_files": 3,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "signals": {
+      "python_files": 3,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "system_deployment_governance": {
+      "python_files": 1,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "tactical_execution_modules": {
+      "python_files": 6,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "testing": {
+      "python_files": 1,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "tests": {
+      "python_files": 15,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "transcendent": {
+      "python_files": 9,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "transcendental": {
+      "python_files": 9,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "truth_checker": {
+      "python_files": 2,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "ultra_modules": {
+      "python_files": 23,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "unconventional_data_commander": {
+      "python_files": 1,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "verification": {
+      "python_files": 14,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    },
+    "visualization": {
+      "python_files": 1,
+      "compile_pass": true,
+      "error_count": 0,
+      "sample_errors": []
+    }
+  },
+  "pytest": {
+    "tests": {
+      "passed": false,
+      "returncode": 3,
+      "tail": "INTERNALERROR>   File \"/root/.pyenv/versions/3.10.19/lib/python3.10/site-packages/_pytest/assertion/rewrite.py\", line 197, in exec_module\nINTERNALERROR>     exec(co, module.__dict__)\nINTERNALERROR>   File \"/workspace/quant-trading-system/tests/test_new_modules.py\", line 32, in <module>\nINTERNALERROR>     sys.exit(1)\nINTERNALERROR> SystemExit: 1\n\n6 errors in 2.48s\nmainloop: caught unexpected SystemExit!"
+    },
+    "testing": {
+      "passed": false,
+      "returncode": 5,
+      "tail": "\nno tests ran in 0.06s"
+    },
+    "covid_test": {
+      "passed": false,
+      "returncode": 2,
+      "tail": "    return _bootstrap._gcd_import(name[level:], package, level)\ncovid_test/run_enhanced_covid_test.py:15: in <module>\n    import matplotlib.pyplot as plt\nE   ModuleNotFoundError: No module named 'matplotlib'\n=========================== short test summary info ============================\nERROR covid_test/run_enhanced_covid_test.py\n!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!\n1 error in 1.02s"
+    },
+    "Sa_son_code/quant_trading_system/tests": {
+      "passed": false,
+      "returncode": 2,
+      "tail": "    return _bootstrap._gcd_import(name[level:], package, level)\nSa_son_code/quant_trading_system/tests/test_data_feeds.py:1: in <module>\n    from Sa_son_code.quant_trading_system.data_feeds.alpha_vantage_adapter import YFinanceAdapter\nE   ModuleNotFoundError: No module named 'Sa_son_code'\n=========================== short test summary info ============================\nERROR Sa_son_code/quant_trading_system/tests/test_data_feeds.py\n!!!!!!!!!!!!!!!!!!!! Interrupted: 1 error during collection !!!!!!!!!!!!!!!!!!!!\n1 error in 0.30s"
+    }
+  }
+}

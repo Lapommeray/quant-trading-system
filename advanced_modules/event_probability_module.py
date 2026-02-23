@@ -12,7 +12,12 @@ Features:
 4. Automatic Oversoul decision triggering
 """
 
-from AlgorithmImports import *
+try:
+    from AlgorithmImports import *  # type: ignore
+except ImportError:  # pragma: no cover
+    class QCAlgorithm:
+        pass
+
 import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
@@ -21,13 +26,23 @@ import json
 from encryption.xmss_encryption import XMSSEncryption
 from typing import Dict, Union
 
+
+class _FallbackAlgorithm:
+    """Minimal stand-in for tests outside QuantConnect runtime."""
+
+    def __init__(self):
+        self.Time = datetime.utcnow()
+
+    def Debug(self, _message: str):
+        return None
+
 class EventProbabilityModule:
     """
     Predicts high-impact market events by aggregating multiple indicators
     and calculating unified probability scores.
     """
     
-    def __init__(self, algorithm, xmss_tree_height: int = 10):
+    def __init__(self, algorithm=None, xmss_tree_height: int = 10):
         """
         Initialize the Event Probability Module.
         
@@ -35,7 +50,7 @@ class EventProbabilityModule:
         - algorithm: The QuantConnect algorithm instance
         - xmss_tree_height: Security parameter (2^height signatures possible)
         """
-        self.algorithm = algorithm
+        self.algorithm = algorithm or _FallbackAlgorithm()
         self.logger = logging.getLogger("EventProbabilityModule")
         self.logger.setLevel(logging.INFO)
         
@@ -125,7 +140,7 @@ class EventProbabilityModule:
         self.failover_encrypted = b'EMERGENCY_FAILOVER'
         self.max_retries = 3
     
-    def update_indicators(self, current_time, monitoring_results):
+    def update_indicators(self, monitoring_results, current_time=None):
         """
         Update event indicators based on monitoring results.
         
@@ -138,7 +153,7 @@ class EventProbabilityModule:
         """
         
         if self.last_update_time is not None and current_time - self.last_update_time < self.update_interval:
-            return self.indicators
+            return False
         
         self.last_update_time = current_time
         
@@ -163,7 +178,7 @@ class EventProbabilityModule:
                         self.indicators[indicator] = self.failover_encrypted
                         success = False
         if not success:
-            return self.indicators
+            return success
         
         if 'fed_jet' in monitoring_results and monitoring_results['fed_jet']:
             fed_result = monitoring_results['fed_jet']

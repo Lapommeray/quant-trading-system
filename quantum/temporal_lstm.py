@@ -13,7 +13,20 @@ from typing import Dict, List, Any, Optional, Union, Tuple
 
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from scripts.verify_live_data import QuantumLSTM as BaseQuantumLSTM
+try:
+    from scripts.verify_live_data import QuantumLSTM as BaseQuantumLSTM
+except Exception as import_error:
+    class BaseQuantumLSTM:
+        """Fallback base class when live-data dependencies are unavailable."""
+
+        def __init__(self, use_quantum_gates=True):
+            self.use_quantum_gates = use_quantum_gates
+            self._import_error = import_error
+
+    logging.getLogger("QuantumTemporalLSTM").warning(
+        "Falling back to lightweight BaseQuantumLSTM due to import issue: %s",
+        import_error,
+    )
 
 logging.basicConfig(
     level=logging.INFO,
@@ -168,5 +181,5 @@ class QuantumTemporalLSTM(BaseQuantumLSTM):
 
 if __name__ == "__main__":
     lstm = QuantumTemporalLSTM()
-    result = lstm.predict({"symbol": "BTC/USD", "ohlcv": [[time.time() * 1000, 50000, 51000, 49000, 50500, 100] for _ in range(20)]})
+    result = lstm.predict_unknown_asset({"symbol": "BTC/USD", "ohlcv": [[time.time() * 1000, 50000, 51000, 49000, 50500, 100] for _ in range(20)]})
     print(f"Prediction result: {result}")

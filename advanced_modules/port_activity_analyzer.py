@@ -10,7 +10,10 @@ Original implementation uses:
 - numpy for signal processing
 """
 
-from AlgorithmImports import *
+try:
+    from AlgorithmImports import *  # type: ignore
+except Exception:
+    pass
 import numpy as np
 import pandas as pd
 from datetime import datetime, timedelta
@@ -18,6 +21,7 @@ import logging
 from encryption.xmss_encryption import XMSSEncryption
 import traceback
 from dataclasses import dataclass
+from typing import Dict
 
 @dataclass
 class PortRiskAssessment:
@@ -26,7 +30,7 @@ class PortRiskAssessment:
     used_failover: bool
 
 class PortActivityAnalyzer:
-    def __init__(self, algorithm, tree_height: int = 10):
+    def __init__(self, algorithm=None, tree_height: int = 10):
         """
         Quantum-secure maritime risk analysis
         Args:
@@ -93,7 +97,7 @@ class PortActivityAnalyzer:
     def _execute_nautical_protocol(self, port_id: str, raw_metrics: Dict, error: Exception):
         """Emergency risk assessment procedure"""
         try:
-            raw_score = min(max(float(raw_metrics.get("cargo_volatility", 0)) * 0.7, 1)
+            raw_score = min(max(float(raw_metrics.get("cargo_volatility", 0)) * 0.7, 0), 1)
         except:
             raw_score = 0.5  # Default risk if calculation fails
             
@@ -104,18 +108,24 @@ class PortActivityAnalyzer:
         )
         self.failover_count += 1
         
-        self.logger.error(
-            "PORT RISK ANALYSIS FAILURE\n"
-            f"Port: {port_id}\n"
-            f"Metrics: {raw_metrics}\n"
-            f"Error: {str(error)}\n"
-            f"Traceback:\n{traceback.format_exc()}",
-            extra={
-                "port_id": port_id,
-                "original_metrics": raw_metrics
-            }
-        )
+        try:
+            self.logger.error(
+                "PORT RISK ANALYSIS FAILURE\n"
+                f"Port: {port_id}\n"
+                f"Metrics: {raw_metrics}\n"
+                f"Error: {str(error)}\n"
+                f"Traceback:\n{traceback.format_exc()}",
+                extra={
+                    "port_id": port_id,
+                    "original_metrics": raw_metrics
+                }
+            )
+        except Exception:
+            pass
         
         if not self.protocol_engaged and self.failover_count >= 2:
-            self.logger.critical("NAUTICAL PROTOCOL ENGAGED - MULTIPLE FAILURES")
+            try:
+                self.logger.critical("NAUTICAL PROTOCOL ENGAGED - MULTIPLE FAILURES")
+            except Exception:
+                pass
             self.protocol_engaged = True

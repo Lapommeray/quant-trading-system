@@ -1,1 +1,3 @@
-<liquidity_predictor.py content>
+"""Placeholder stub for liquidity_predictor."""
+
+# TODO: implement module logic.
