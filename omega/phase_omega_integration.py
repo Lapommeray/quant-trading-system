@@ -8,7 +8,7 @@ from typing import Sequence
 class PhaseOmegaIntegrator:
     """Weighted signal combiner for Phase Omega."""
 
-    quantum_weight: float = 0.55
+    quantum_weight: float = 0.54
     temporal_weight: float = 0.25
     defense_weight: float = 0.15
     biological_weight: float = 0.05

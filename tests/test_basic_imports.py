@@ -40,7 +40,8 @@ def test_basic_structure():
         assert True
     else:
         print("❌ Some module files are missing")
-        return 1
+        import pytest
+        pytest.fail(f"{len(modules_to_check) - success_count} module file(s) missing")
 
 if __name__ == "__main__":
     sys.exit(test_basic_structure())

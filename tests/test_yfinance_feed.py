@@ -21,6 +21,7 @@ def test_get_price_history_uses_cache(tmp_path, monkeypatch):
     monkeypatch.setattr(yfinance_feed, "CACHE_ROOT", tmp_path)
     cached = _sample_df()
     path = yfinance_feed._cache_path("AAPL", "2023-01-01", "2023-01-04")
+    path.parent.mkdir(parents=True, exist_ok=True)
     cached.to_csv(path)
 
     result = yfinance_feed.get_price_history("AAPL", "2023-01-01", "2023-01-04", max_age_days=999)

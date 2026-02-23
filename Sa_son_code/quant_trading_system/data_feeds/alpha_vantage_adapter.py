@@ -5,18 +5,7 @@ Despite the legacy module name, this adapter now uses yfinance as the data sourc
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import List, Dict, Any
-
-
-@dataclass
-class Candle:
-    timestamp: str
-    open: float
-    high: float
-    low: float
-    close: float
-    volume: float
 
 
 class YFinanceAdapter:
