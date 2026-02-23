@@ -7,7 +7,9 @@ Provides a clean interface for both live and historical data access.
 Supports:
 - yfinance (live + historical)
 - CSV files (backtesting)
-- Multi-timeframe data (1h, 4h, daily)
+- Multi-timeframe data (1m, 5m, 15m, 1h, 4h, daily)
+- Intraday tick aggregation with session context
+- Rolling z-score normalization for regime sensitivity
 
 No external AI. No sockets. File-based + HTTP only.
 """
@@ -15,6 +17,9 @@ No external AI. No sockets. File-based + HTTP only.
 import os
 import time
 import logging
+import math
+from collections import deque
+from datetime import datetime, timedelta
 from typing import Dict, Any, Optional, List, Tuple
 
 import numpy as np
@@ -254,3 +259,267 @@ class DataPipeline:
     def _set_cache(self, key: str, data: Dict[str, Any]):
         self._cache[key] = data
         self._cache_timestamps[key] = time.time()
+
+    def fetch_intraday(
+        self,
+        symbol: str,
+        interval: str = "5m",
+        lookback_bars: int = 240,
+    ) -> Optional[Dict[str, Any]]:
+        cache_key = f"{symbol}_intraday_{interval}"
+        cached = self._get_cached(cache_key)
+        if cached is not None:
+            return cached
+
+        try:
+            import yfinance as yf
+        except ImportError:
+            return None
+
+        clean = symbol.replace("/", "")
+        yf_sym = SYMBOL_MAP.get(clean)
+        if not yf_sym:
+            return None
+
+        period_map = {
+            "1m": "1d", "2m": "5d", "5m": "5d",
+            "15m": "5d", "30m": "5d", "1h": "5d",
+        }
+        period = period_map.get(interval, "5d")
+
+        try:
+            ticker = yf.Ticker(yf_sym)
+            hist = ticker.history(period=period, interval=interval)
+            if hist.empty or len(hist) < 20:
+                return None
+
+            hist_daily = ticker.history(period="3mo", interval="1d")
+
+            result = {
+                "symbol": symbol,
+                "source": "yfinance",
+                "interval": interval,
+                "ohlcv": hist.tail(lookback_bars).to_dict("records"),
+                "close": float(hist["Close"].iloc[-1]),
+                "volume": float(hist["Volume"].iloc[-1]),
+                "timestamp": hist.index[-1].isoformat(),
+                "bars": len(hist),
+            }
+
+            if not hist_daily.empty and len(hist_daily) >= 30:
+                result["ohlcv_daily"] = hist_daily.tail(60).to_dict("records")
+
+            self._set_cache(cache_key, result)
+            return result
+        except Exception as e:
+            logger.debug(f"Intraday fetch failed for {symbol}: {e}")
+            return None
+
+
+class IntradayDataPipeline:
+    """
+    Real-time tick aggregation pipeline for intraday trading.
+
+    Aggregates raw ticks into completed bars (1m / 5m),
+    computes rolling z-score normalization, and tracks session boundaries.
+    """
+
+    def __init__(
+        self,
+        symbols: List[str],
+        bar_interval: int = 60,
+        lookback: int = 240,
+        session_reset_hour: int = 9,
+        zscore_window: int = 120,
+    ):
+        self.symbols = symbols
+        self.bar_interval = bar_interval
+        self.lookback = lookback
+        self.session_reset_hour = session_reset_hour
+        self.zscore_window = zscore_window
+
+        self.tick_buffers: Dict[str, list] = {s: [] for s in symbols}
+        self.bar_data: Dict[str, deque] = {
+            s: deque(maxlen=lookback) for s in symbols
+        }
+        self.last_bar_time: Dict[str, float] = {s: 0.0 for s in symbols}
+        self.last_session_reset: Dict[str, datetime] = {
+            s: datetime.now() for s in symbols
+        }
+        self.session_stats: Dict[str, Dict[str, float]] = {
+            s: {"high": 0, "low": float("inf"), "volume": 0, "trades": 0}
+            for s in symbols
+        }
+
+        logger.info(f"IntradayDataPipeline initialized for {symbols}, bar={bar_interval}s")
+
+    def process_tick(self, tick: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        symbol = tick.get("symbol", self.symbols[0] if self.symbols else "UNKNOWN")
+        if symbol not in self.tick_buffers:
+            self.tick_buffers[symbol] = []
+            self.bar_data[symbol] = deque(maxlen=self.lookback)
+            self.last_bar_time[symbol] = 0.0
+
+        self.tick_buffers[symbol].append(tick)
+
+        price = tick.get("price", 0)
+        stats = self.session_stats.get(symbol, {"high": 0, "low": float("inf"), "volume": 0, "trades": 0})
+        if price > stats["high"]:
+            stats["high"] = price
+        if price < stats["low"]:
+            stats["low"] = price
+        stats["volume"] += tick.get("volume", 0)
+        stats["trades"] += 1
+        self.session_stats[symbol] = stats
+
+        now = time.time()
+        elapsed = now - self.last_bar_time.get(symbol, 0)
+
+        if elapsed >= self.bar_interval and len(self.tick_buffers[symbol]) >= 2:
+            bar = self._aggregate_bar(symbol)
+            self.bar_data[symbol].append(bar)
+            self.tick_buffers[symbol] = []
+            self.last_bar_time[symbol] = now
+
+            dt = datetime.now()
+            if (
+                dt.hour == self.session_reset_hour
+                and dt - self.last_session_reset.get(symbol, datetime.min) > timedelta(hours=23)
+            ):
+                self._reset_session(symbol)
+
+            return bar
+
+        return None
+
+    def _aggregate_bar(self, symbol: str) -> Dict[str, Any]:
+        ticks = self.tick_buffers[symbol]
+        prices = [t.get("price", 0) for t in ticks]
+        volumes = [t.get("volume", 0) for t in ticks]
+
+        if not prices:
+            return {"Open": 0, "High": 0, "Low": 0, "Close": 0, "Volume": 0}
+
+        bar = {
+            "Open": prices[0],
+            "High": max(prices),
+            "Low": min(prices),
+            "Close": prices[-1],
+            "Volume": sum(volumes),
+            "timestamp": datetime.now().isoformat(),
+            "tick_count": len(ticks),
+        }
+
+        bar["features"] = self._compute_bar_features(prices, volumes, symbol)
+        return bar
+
+    def _compute_bar_features(
+        self, prices: List[float], volumes: List[float], symbol: str
+    ) -> Dict[str, float]:
+        p = np.array(prices, dtype=np.float64)
+        v = np.array(volumes, dtype=np.float64)
+
+        features: Dict[str, float] = {}
+
+        if len(p) >= 2 and p[0] != 0:
+            features["bar_momentum"] = float((p[-1] - p[0]) / p[0])
+        else:
+            features["bar_momentum"] = 0.0
+
+        if len(p) >= 3:
+            coeffs = np.polyfit(range(len(p)), p, 1)
+            features["vol_slope"] = float(coeffs[0])
+        else:
+            features["vol_slope"] = 0.0
+
+        mean_v = np.mean(v) if len(v) > 0 else 0
+        features["volume_delta"] = float(v[-1] - mean_v) if len(v) > 0 else 0.0
+
+        mean_p = np.mean(p)
+        features["bar_volatility"] = float(np.std(p) / mean_p) if mean_p != 0 else 0.0
+
+        buy_vol = sum(v[i] for i in range(1, len(p)) if p[i] > p[i - 1])
+        sell_vol = sum(v[i] for i in range(1, len(p)) if p[i] < p[i - 1])
+        total_vol = buy_vol + sell_vol
+        features["depth_imbalance"] = float((buy_vol - sell_vol) / total_vol) if total_vol > 0 else 0.0
+
+        bars = list(self.bar_data.get(symbol, []))
+        if len(bars) >= 5:
+            recent_closes = [b.get("Close", 0) for b in bars[-5:]]
+            recent_vols = [b.get("Volume", 0) for b in bars[-5:]]
+            avg_vol = np.mean(recent_vols) if recent_vols else 0
+            features["relative_volume"] = float(sum(volumes) / avg_vol) if avg_vol > 0 else 1.0
+            rc = np.array(recent_closes)
+            if len(rc) >= 2:
+                features["short_momentum"] = float((rc[-1] - rc[0]) / rc[0]) if rc[0] != 0 else 0.0
+            else:
+                features["short_momentum"] = 0.0
+        else:
+            features["relative_volume"] = 1.0
+            features["short_momentum"] = 0.0
+
+        return features
+
+    def get_rolling_zscore(
+        self, symbol: str, field: str = "Close"
+    ) -> Optional[float]:
+        bars = list(self.bar_data.get(symbol, []))
+        if len(bars) < 10:
+            return None
+
+        window = min(self.zscore_window, len(bars))
+        values = [b.get(field, 0) for b in bars[-window:]]
+        arr = np.array(values, dtype=np.float64)
+        mean = np.mean(arr)
+        std = np.std(arr)
+        if std == 0:
+            return 0.0
+        return float((arr[-1] - mean) / std)
+
+    def get_session_context(self, symbol: str) -> Dict[str, float]:
+        stats = self.session_stats.get(symbol, {})
+        bars = list(self.bar_data.get(symbol, []))
+
+        context: Dict[str, float] = {
+            "session_high": stats.get("high", 0),
+            "session_low": stats.get("low", 0),
+            "session_volume": stats.get("volume", 0),
+            "session_trades": stats.get("trades", 0),
+            "bars_in_session": len(bars),
+        }
+
+        if stats.get("high", 0) > 0 and stats.get("low", float("inf")) < float("inf"):
+            context["session_range"] = stats["high"] - stats["low"]
+        else:
+            context["session_range"] = 0
+
+        if len(bars) >= 10:
+            closes = [b.get("Close", 0) for b in bars[-10:]]
+            context["session_volatility"] = float(np.std(closes) / np.mean(closes)) if np.mean(closes) != 0 else 0
+        else:
+            context["session_volatility"] = 0
+
+        return context
+
+    def get_latest_features(self, symbol: str) -> Optional[Dict[str, float]]:
+        bars = list(self.bar_data.get(symbol, []))
+        if not bars:
+            return None
+        return bars[-1].get("features", {})
+
+    def get_bar_dataframe(self, symbol: str) -> Optional[pd.DataFrame]:
+        bars = list(self.bar_data.get(symbol, []))
+        if len(bars) < 5:
+            return None
+        df = pd.DataFrame(bars)
+        for col in ["Open", "High", "Low", "Close", "Volume"]:
+            if col in df.columns:
+                df[col] = pd.to_numeric(df[col], errors="coerce")
+        return df
+
+    def _reset_session(self, symbol: str):
+        self.session_stats[symbol] = {
+            "high": 0, "low": float("inf"), "volume": 0, "trades": 0
+        }
+        self.last_session_reset[symbol] = datetime.now()
+        logger.info(f"Session reset for {symbol}")

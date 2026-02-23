@@ -65,6 +65,12 @@ class FeatureEngineer:
 
         features["adx"] = self._adx(high, low, close, 14)
 
+        features["liquidity_gap"] = self._liquidity_gap(high, low, close)
+        features["trend_exhaustion"] = self._trend_exhaustion(close)
+        features["volatility_regime"] = self._volatility_regime(close)
+        features["mean_reversion_score"] = self._mean_reversion_score(close)
+        features["bar_range_ratio"] = self._bar_range_ratio(high, low, close)
+
         return features
 
     def load_features_stream(
@@ -135,6 +141,9 @@ class FeatureEngineer:
             "bollinger_width": 0.0, "depth_imbalance": 0.0,
             "obv_trend": 0.0, "absorption": 0.0,
             "fractal_density": 0.0, "entropy_shift": 0.0, "adx": 20.0,
+            "liquidity_gap": 0.0, "trend_exhaustion": 0.0,
+            "volatility_regime": 0.5, "mean_reversion_score": 0.0,
+            "bar_range_ratio": 1.0,
         }
 
     def _sma_spread(self, close: np.ndarray, fast: int, slow: int) -> float:
@@ -325,3 +334,97 @@ class FeatureEngineer:
 
         dx = 100 * abs(plus_di - minus_di) / di_sum
         return float(dx)
+
+    def _liquidity_gap(self, high: np.ndarray, low: np.ndarray, close: np.ndarray) -> float:
+        if len(high) < 10:
+            return 0.0
+        gaps = 0
+        for i in range(1, len(high)):
+            if low[i] > high[i - 1]:
+                gaps += 1
+            elif high[i] < low[i - 1]:
+                gaps += 1
+        return float(gaps / (len(high) - 1))
+
+    def _trend_exhaustion(self, close: np.ndarray) -> float:
+        if len(close) < 20:
+            return 0.0
+        returns = np.diff(close[-20:]) / close[-20:-1]
+        returns = returns[~np.isnan(returns)]
+        if len(returns) < 10:
+            return 0.0
+        recent = returns[-5:]
+        earlier = returns[:-5]
+        recent_abs = np.mean(np.abs(recent))
+        earlier_abs = np.mean(np.abs(earlier))
+        if earlier_abs == 0:
+            return 0.0
+        ratio = recent_abs / earlier_abs
+        if ratio < 0.5:
+            return float(1.0 - ratio)
+        return 0.0
+
+    def _volatility_regime(self, close: np.ndarray) -> float:
+        if len(close) < 30:
+            return 0.5
+        returns = np.diff(close) / close[:-1]
+        returns = returns[~np.isnan(returns)]
+        if len(returns) < 20:
+            return 0.5
+        short_vol = np.std(returns[-10:])
+        long_vol = np.std(returns[-30:])
+        if long_vol == 0:
+            return 0.5
+        return float(min(2.0, short_vol / long_vol))
+
+    def _mean_reversion_score(self, close: np.ndarray) -> float:
+        if len(close) < 20:
+            return 0.0
+        sma = np.mean(close[-20:])
+        std = np.std(close[-20:])
+        if std == 0:
+            return 0.0
+        zscore = (close[-1] - sma) / std
+        if abs(zscore) > 2.0:
+            return float(-np.sign(zscore) * min(1.0, (abs(zscore) - 2.0) / 2.0))
+        return 0.0
+
+    def _bar_range_ratio(self, high: np.ndarray, low: np.ndarray, close: np.ndarray) -> float:
+        if len(high) < 5:
+            return 1.0
+        ranges = high[-5:] - low[-5:]
+        avg_range = np.mean(ranges)
+        if avg_range == 0:
+            return 1.0
+        current_range = high[-1] - low[-1]
+        return float(current_range / avg_range)
+
+
+def compute_features(bar: Dict[str, Any]) -> Dict[str, float]:
+    """
+    Convenience function: extract features from a single bar dict.
+    Used by the intraday pipeline when feeding tick-aggregated bars.
+    """
+    features: Dict[str, float] = {}
+    features["momentum"] = bar.get("features", {}).get("bar_momentum", 0.0)
+    features["vol_slope"] = bar.get("features", {}).get("vol_slope", 0.0)
+    features["volume_delta"] = bar.get("features", {}).get("volume_delta", 0.0)
+    features["volatility"] = bar.get("features", {}).get("bar_volatility", 0.01)
+    features["depth_imbalance"] = bar.get("features", {}).get("depth_imbalance", 0.0)
+    features["relative_volume"] = bar.get("features", {}).get("relative_volume", 1.0)
+    features["short_momentum"] = bar.get("features", {}).get("short_momentum", 0.0)
+
+    o = bar.get("Open", 0)
+    h = bar.get("High", 0)
+    l = bar.get("Low", 0)
+    c = bar.get("Close", 0)
+    if o != 0:
+        features["bar_direction"] = float((c - o) / o)
+    else:
+        features["bar_direction"] = 0.0
+    if h != l:
+        features["wick_ratio"] = float((h - max(o, c)) + (min(o, c) - l)) / (h - l)
+    else:
+        features["wick_ratio"] = 0.0
+
+    return features

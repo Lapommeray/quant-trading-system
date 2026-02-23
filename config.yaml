@@ -1,0 +1,87 @@
+# Unified Trading System Configuration
+# All tunable parameters in one place for traceability and reproducibility.
+
+system:
+  version: "2.0"
+  mode: "intraday"  # intraday | swing | daily
+
+symbols:
+  - XAUUSD
+
+execution:
+  min_interval_seconds: 60
+  confidence_threshold: 0.7
+  bar_interval: "1h"  # 1m, 5m, 15m, 30m, 1h, 1d
+
+indicators:
+  sma_fast: 10
+  sma_slow: 30
+  rsi_period: 14
+  rsi_overbought: 70
+  rsi_oversold: 30
+  macd_fast: 12
+  macd_slow: 26
+  macd_signal: 9
+  bollinger_period: 20
+  bollinger_std: 2.0
+  adx_period: 14
+  adx_threshold: 25
+  stochastic_k: 14
+  stochastic_d: 3
+  stochastic_overbought: 80
+  stochastic_oversold: 20
+  min_consensus: 4  # out of 8 indicators
+
+fusion:
+  weight_indicators: 0.45
+  weight_rl: 0.20
+  weight_microstructure: 0.20
+  weight_regime: 0.15
+  direction_margin: 0.05  # margin needed for directional signal
+
+rl_agent:
+  alpha: 0.1
+  gamma: 0.95
+  epsilon_start: 0.3
+  epsilon_min: 0.01
+  epsilon_decay: 0.999
+
+bayesian:
+  prior_bull: 0.33
+  prior_bear: 0.33
+  prior_range: 0.34
+  smoothing: 0.7
+
+genetic:
+  population_size: 8
+  elite_count: 2
+  mutation_rate: 0.15
+  evolution_interval: 50  # cycles between evolution attempts
+
+risk:
+  max_risk_per_trade_pct: 1.0
+  max_drawdown_pct: 5.0
+  volatility_throttle: 0.02
+  max_consecutive_losses: 3
+  session_loss_limit_pct: 2.0
+  cooldown_seconds: 300
+
+self_learning:
+  weight_decay: 0.995
+  min_evaluations: 5
+  persist_interval: 10  # cycles between state saves
+
+intraday:
+  lookback_bars: 240
+  zscore_window: 120
+  session_reset_hour: 9
+
+backtest:
+  train_days: 5
+  test_days: 1
+  window: 50
+
+logging:
+  level: "INFO"
+  file: "mt5_live.log"
+  intraday_log_dir: "logs/intraday"
