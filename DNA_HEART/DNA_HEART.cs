@@ -10,20 +10,20 @@ namespace QMP.Modules
     {
         private readonly RollingWindow<decimal> sentimentWindow;
         private readonly RollingWindow<decimal> priceWindow;
-        private decimal emotionalSignal;
+        private int emotionalSignal;
 
         public DNAHeart()
         {
-            sentimentWindow = new RollingWindow<decimal>(10);
-            priceWindow = new RollingWindow<decimal>(10);
+            sentimentWindow = new RollingWindow<decimal>(2);
+            priceWindow = new RollingWindow<decimal>(2);
             emotionalSignal = 0;
         }
 
         public void Update(Slice data, decimal socialSentiment)
         {
-            if (!data.Bars.ContainsKey("SPY")) return;
+            if (!data.Bars.TryGetValue("SPY", out var bar)) return;
 
-            var price = data.Bars["SPY"].Close;
+            var price = bar.Close;
 
             priceWindow.Add(price);
             sentimentWindow.Add(socialSentiment);
@@ -47,7 +47,7 @@ namespace QMP.Modules
 
         public int GetSignal()
         {
-            return emotionalSignal > 0 ? 1 : emotionalSignal < 0 ? -1 : 0;
+            return emotionalSignal;
         }
     }
 }
