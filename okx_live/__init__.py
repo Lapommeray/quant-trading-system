@@ -12,6 +12,8 @@ This package is for real trading only.
 
 from .engine import OKXLiveEngine, OKXOrderRequest, OKXOrderResult, OrderSide, OrderType
 from .safety import OKXSafetyGuard
+from .config import OKXLiveConfig, get_okx_config
+from .trader import OKXLiveTrader
 
 __all__ = [
     "OKXLiveEngine",
@@ -20,4 +22,7 @@ __all__ = [
     "OrderSide",
     "OrderType",
     "OKXSafetyGuard",
+    "OKXLiveConfig",
+    "get_okx_config",
+    "OKXLiveTrader",
 ]

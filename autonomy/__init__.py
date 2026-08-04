@@ -8,11 +8,13 @@ Modules:
 - organism: central self-wiring organism with auto-discovery and self-improvement
 - consensus: weighted voting consensus engine
 - execution: event-driven execution routing to okx_live
+- events: canonical event definitions
 """
 
 from .organism import Organism, OrganismConfig, ModuleAutoDiscovery
 from .consensus import ConsensusEngine, ConsensusResult
 from .execution import AutonomousExecutor, ExecutorConfig
+from .events import AutonomyEvent, EventTypes
 
 __all__ = [
     "Organism",
@@ -22,4 +24,6 @@ __all__ = [
     "ConsensusResult",
     "AutonomousExecutor",
     "ExecutorConfig",
+    "AutonomyEvent",
+    "EventTypes",
 ]
