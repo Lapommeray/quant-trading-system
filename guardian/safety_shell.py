@@ -8,14 +8,16 @@ from AlgorithmImports import *
 import logging
 import json
 import os
+import shutil
 from datetime import datetime
+from pathlib import Path
 
 class QuantumFirewall:
     """
     Risk firewall enforcing leverage, drawdown, and size limits.
     """
     
-    def __init__(self, algorithm):
+    def __init__(self, algorithm, quarantine_dir=None):
         """
         Initialize the Quantum Firewall.
         
@@ -34,7 +36,11 @@ class QuantumFirewall:
         
         self.validation_history = []
         
-        self.quarantine_dir = "/quarantine"
+        default_quarantine_dir = Path(__file__).resolve().parents[1] / "quarantine"
+        configured_quarantine_dir = quarantine_dir or os.environ.get("QTS_QUARANTINE_DIR")
+        self.quarantine_dir = str(
+            Path(configured_quarantine_dir or default_quarantine_dir).expanduser().resolve()
+        )
         os.makedirs(self.quarantine_dir, exist_ok=True)
         
         self.quarantine_log_path = os.path.join(self.quarantine_dir, "log.txt")

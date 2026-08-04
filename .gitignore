@@ -9,3 +9,12 @@ build/
 .eggs/
 .env
 *.pyc
+
+# Local development and runtime artifacts
+.venv/
+*.log
+strategies/generated/
+strategies/evolved/
+strategies/quarantine/
+data/cache/
+secure/*.vault

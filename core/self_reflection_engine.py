@@ -11,6 +11,7 @@ import pandas as pd
 import json
 import os
 from datetime import datetime
+from pathlib import Path
 from collections import deque
 
 class MetaLearner:
@@ -18,7 +19,7 @@ class MetaLearner:
     Meta-learning loop for trade outcome analysis and continuous improvement.
     """
     
-    def __init__(self, algorithm):
+    def __init__(self, algorithm, model_path=None):
         """
         Initialize the Meta Learner.
         
@@ -43,7 +44,9 @@ class MetaLearner:
         
         self.strategy_weights = {}
         
-        self.model_path = "/models/meta_strategy.json"
+        default_model_path = Path(__file__).resolve().parents[1] / "models" / "meta_strategy.json"
+        configured_model_path = model_path or os.environ.get("QTS_META_MODEL_PATH")
+        self.model_path = str(Path(configured_model_path or default_model_path).expanduser().resolve())
         os.makedirs(os.path.dirname(self.model_path), exist_ok=True)
         
         self._load_model()

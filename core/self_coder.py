@@ -4,26 +4,43 @@ External OpenAI/Grok API dependencies are intentionally removed.
 """
 
 import datetime
-import json
 import logging
 import os
-from typing import Dict, Any
+from pathlib import Path
+from typing import Any, Dict, Optional, Union
 
 
 class StrategyGenerator:
-    """Generate executable strategy code from current market state."""
+    """Generate executable strategy code from current market state.
 
-    def __init__(self, algorithm, api_key=None):
+    Generated strategies are written below the project directory by default.
+    The old implementation used ``/strategies/generated`` which only works
+    when the process has permission to create directories at the filesystem
+    root (and consequently failed for normal users and CI runners).  Callers
+    can override the location with ``strategies_dir`` or the
+    ``QTS_STRATEGIES_DIR`` environment variable.
+    """
+
+    def __init__(
+        self,
+        algorithm: Any = None,
+        api_key: Optional[str] = None,
+        strategies_dir: Optional[Union[str, os.PathLike[str]]] = None,
+    ):
         self.algorithm = algorithm
+        self.api_key = api_key
         self.logger = logging.getLogger("StrategyGenerator")
         self.logger.setLevel(logging.INFO)
 
         self.engine = "local-institutional-synth-v1"
-        self.strategies_dir = "/strategies/generated"
+        default_dir = Path(__file__).resolve().parent.parent / "strategies" / "generated"
+        configured_dir = strategies_dir or os.environ.get("QTS_STRATEGIES_DIR")
+        self.strategies_dir = str(Path(configured_dir or default_dir).expanduser().resolve())
         os.makedirs(self.strategies_dir, exist_ok=True)
         self.generated_strategies = []
 
     def generate_new_logic(self, market_state: Dict[str, Any]):
+        market_state = market_state or {}
         self.logger.info("Generating new strategy for market state: %s", market_state)
         strategy_code = self._synthesize_strategy_code(market_state)
         strategy_path = self._save_strategy(strategy_code)
@@ -99,11 +116,25 @@ class GeneratedInstitutionalStrategy(QCAlgorithm):
 '''
 
     def _save_strategy(self, strategy_code: str) -> str:
-        filename = f"generated_strategy_{datetime.datetime.now().strftime('%Y%m%d_%H%M%S')}.py"
-        path = os.path.join(self.strategies_dir, filename)
-        with open(path, "w") as f:
-            f.write(strategy_code)
-        return path
+        """Persist generated code without overwriting a prior strategy.
+
+        Microsecond precision is normally enough to make consecutive calls
+        unique.  The existence check also protects callers that provide a
+        custom clock or invoke this method from multiple processes.
+        """
+        timestamp = datetime.datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+        counter = 0
+        while True:
+            suffix = "" if counter == 0 else f"_{counter}"
+            path = Path(self.strategies_dir) / f"generated_strategy_{timestamp}{suffix}.py"
+            try:
+                # Exclusive creation makes the name safe when multiple
+                # generators run concurrently.
+                with path.open("x", encoding="utf-8") as strategy_file:
+                    strategy_file.write(strategy_code)
+                return str(path)
+            except FileExistsError:
+                counter += 1
 
     # Backward-compatible method name used by older callers.
     def _call_openai_api(self, prompt):

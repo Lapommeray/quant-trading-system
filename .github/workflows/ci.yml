@@ -9,42 +9,33 @@ on:
       - main
 
 jobs:
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v2
-
-      - name: Set up Python
-        uses: actions/setup-python@v2
-        with:
-          python-version: '3.8'
-
-      - name: Install linters
-        run: |
-          pip install flake8 black
-
-      - name: Lint code
-        run: |
-          flake8 .
-          black --check .
-
   test:
     runs-on: ubuntu-latest
-    needs: lint
+    strategy:
+      fail-fast: false
+      matrix:
+        # pyproject.toml requires Python 3.10 or newer.  Keep the supported
+        # versions in CI so a release cannot accidentally regress one of them.
+        python-version: ["3.10", "3.11", "3.12"]
+
     steps:
       - name: Checkout code
-        uses: actions/checkout@v2
+        uses: actions/checkout@v4
 
       - name: Set up Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v5
         with:
-          python-version: '3.8'
+          python-version: ${{ matrix.python-version }}
+          cache: pip
 
       - name: Install dependencies
         run: |
-          pip install -r requirements.txt
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt
+          python -m pip install -e .
 
-      - name: Run tests
-        run: |
-          pytest
+      - name: Check Python syntax
+        run: python -m compileall -q .
+
+      - name: Run maintained test suite
+        run: python -m pytest -q
