@@ -58,7 +58,9 @@ class ConsensusEngine:
             w = weights.get(mod_name, 0.0) * confidences.get(mod_name, 0.0)
             votes[dir_up] += w
 
-        total_conf = sum(confidences.values()) / len(confidences) if confidences else 0.0
+        total_conf = (
+            sum(confidences.values()) / len(confidences) if confidences else 0.0
+        )
         weighted_conf = sum(votes.values())
 
         final = max(votes, key=lambda k: votes[k]) if weighted_conf > 0 else "NEUTRAL"

@@ -7,13 +7,15 @@ autonomy/consensus.py, autonomy/execution.py and okx_live/.
 No QuantConnect dependency. Fail-closed: unknown events are dropped.
 
 Event types (canonical):
+- MARKET_REGIME
 - SIGNAL_GENERATED
 - CONSENSUS_REACHED
 - ORDER_REQUEST
-- ORDER_FILLED
+- ORDER_FILLED / TRADE_OUTCOME
+- LEARNING_FEEDBACK
 - RISK_ALERT
 - MODULE_HEALTH
-- SELF_IMPROVEMENT
+- SELF_IMPROVEMENT and CODE_* lifecycle events
 - KILL_SWITCH
 - ORGANISM_WIRED
 """
@@ -48,11 +50,27 @@ class AutonomyEvent:
 class EventTypes:
     SIGNAL_GENERATED = "SIGNAL_GENERATED"
     CONSENSUS_REACHED = "CONSENSUS_REACHED"
+    MARKET_DATA = "MARKET_DATA"
+    MARKET_REGIME = "MARKET_REGIME"
+    LEARNING_FEEDBACK = "LEARNING_FEEDBACK"
+    TRADE_OUTCOME = "TRADE_OUTCOME"
+    SURVIVAL_MODE = "SURVIVAL_MODE"
+    CLEAR_SURVIVAL_MODE = "CLEAR_SURVIVAL_MODE"
+    SHADOW_PROMOTED = "SHADOW_PROMOTED"
     ORDER_REQUEST = "ORDER_REQUEST"
     ORDER_FILLED = "ORDER_FILLED"
     RISK_ALERT = "RISK_ALERT"
     MODULE_HEALTH = "MODULE_HEALTH"
+    MODULE_REGISTERED = "MODULE_REGISTERED"
+    MODULE_REPAIRED = "MODULE_REPAIRED"
+    MODULE_REPAIR_FAILED = "MODULE_REPAIR_FAILED"
     SELF_IMPROVEMENT = "SELF_IMPROVEMENT"
+    CODE_PROPOSED = "CODE_PROPOSED"
+    CODE_VALIDATED = "CODE_VALIDATED"
+    CODE_APPROVED = "CODE_APPROVED"
+    CODE_PENDING_APPROVAL = "CODE_PENDING_APPROVAL"
+    CODE_APPLIED = "CODE_APPLIED"
+    CODE_PENALTY_BOX = "CODE_PENALTY_BOX"
     KILL_SWITCH = "KILL_SWITCH"
     ORGANISM_WIRED = "ORGANISM_WIRED"
     ORGANISM_STARTED = "ORGANISM_STARTED"
@@ -61,7 +79,14 @@ class EventTypes:
     OKX_CONNECTED = "OKX_CONNECTED"
 
 
-def make_signal_event(symbol: str, final_signal: Optional[str], confidence: float, weighted_confidence: float, votes: Dict[str, float], source: str = "AutonomyOrganism") -> AutonomyEvent:
+def make_signal_event(
+    symbol: str,
+    final_signal: Optional[str],
+    confidence: float,
+    weighted_confidence: float,
+    votes: Dict[str, float],
+    source: str = "AutonomyOrganism",
+) -> AutonomyEvent:
     return AutonomyEvent(
         event_type=EventTypes.SIGNAL_GENERATED,
         source=source,
@@ -76,7 +101,13 @@ def make_signal_event(symbol: str, final_signal: Optional[str], confidence: floa
     )
 
 
-def make_order_request_event(symbol: str, side: str, quantity: float, order_type: str = "market", real_trading: bool = True) -> AutonomyEvent:
+def make_order_request_event(
+    symbol: str,
+    side: str,
+    quantity: float,
+    order_type: str = "market",
+    real_trading: bool = True,
+) -> AutonomyEvent:
     return AutonomyEvent(
         event_type=EventTypes.ORDER_REQUEST,
         source="AutonomyExecutor",

@@ -27,7 +27,10 @@ import difflib
 import traceback
 import threading
 import subprocess
-import requests
+try:
+    import requests
+except ImportError:  # research ingestion is optional in offline/minimal installs
+    requests = None  # type: ignore
 import xml.etree.ElementTree as ET
 from datetime import datetime, timedelta
 from typing import Dict, List, Any, Optional, Callable, Tuple
@@ -76,6 +79,14 @@ try:
 except ImportError:
     RL_EVOLVER_AVAILABLE = False
     logger.warning("RL Evolver not available. Policy learning disabled.")
+
+# The legacy daemon is retained for compatibility, but its apply boundary now
+# uses the same non-executing validator as the canonical organism.  Generated
+# code is quarantined as an artifact rather than written into active modules.
+try:
+    from autonomy.self_coding import SafeCodeValidator
+except Exception:
+    SafeCodeValidator = None  # type: ignore
 
 
 LLM_API_KEY = None  # External LLM APIs intentionally disabled for deterministic local operation
@@ -748,6 +759,7 @@ class SelfEvolutionAgent:
                  enable_rl: bool = True):
         self.base_dir = Path(base_dir or REPO_PATH)
         self.auto_apply = auto_apply
+        self.safe_code_validator = SafeCodeValidator() if SafeCodeValidator else None
         
         self.version_control = VersionControl(str(self.base_dir))
         self.debate_system = MultiAgentDebateSystem(llm_api_key)
@@ -1160,29 +1172,44 @@ class SelfEvolutionAgent:
         return suggestions[:5]
             
     def _apply_change(self, task: EvolutionTask, code: str):
-        """Apply code change to the system"""
-        if "order flow" in task.description.lower():
-            file_path = "advanced_modules/evolved_order_flow.py"
-        elif "regime" in task.description.lower():
-            file_path = "advanced_modules/evolved_regime.py"
-        elif "arbitrage" in task.description.lower():
-            file_path = "advanced_modules/evolved_arbitrage.py"
-        else:
-            file_path = f"advanced_modules/evolved_{task.id}.py"
-            
-        full_path = self.base_dir / file_path
-        full_path.parent.mkdir(parents=True, exist_ok=True)
-        
-        if full_path.exists():
-            with open(full_path, 'r') as f:
-                original = f.read()
-            self.version_control.create_version(file_path, original, f"Before task {task.id}")
-        
-        with open(full_path, 'w') as f:
-            f.write(code)
-            
+        """Store a validated proposal without mutating active source.
+
+        This daemon predates the canonical organism.  Its old implementation
+        wrote directly into ``advanced_modules`` after a text review, which
+        could turn an accidental approval into a live code change.  The
+        compatibility daemon now places the candidate in the ignored
+        quarantine directory.  Promotion belongs to the bounded
+        ``autonomy.self_coding`` workflow and requires its approval boundary.
+        """
+        artifact_name = re.sub(r"[^a-zA-Z0-9_.-]", "_", f"legacy_{task.id}") + ".py"
+        artifact_path = self.base_dir / "strategies" / "quarantine" / artifact_name
+        if self.safe_code_validator is not None:
+            report = self.safe_code_validator.validate(code, filename=str(artifact_path))
+            if not report.passed:
+                task.status = TaskStatus.REJECTED
+                task.error = "Quarantined candidate failed safety validation: " + "; ".join(report.errors)
+                logger.warning("Rejected unsafe legacy candidate %s: %s", task.id, report.errors)
+                return False
+
+        artifact_path.parent.mkdir(parents=True, exist_ok=True)
+        temporary = artifact_path.with_suffix(".tmp")
+        with temporary.open("w", encoding="utf-8") as stream:
+            stream.write(code)
+            stream.flush()
+            try:
+                os.fsync(stream.fileno())
+            except OSError:
+                pass
+        temporary.replace(artifact_path)
+
+        task.proposed_changes.append({
+            "artifact_path": str(artifact_path),
+            "live_source_modified": False,
+            "approval_required": True,
+        })
         self.metrics["changes_applied"] += 1
-        logger.info(f"Applied change to {file_path}")
+        logger.info("Stored validated legacy proposal in quarantine: %s", artifact_path)
+        return True
         
     def evolution_cycle(self):
         """
@@ -1452,7 +1479,7 @@ def main():
     parser.add_argument("--interval", type=float, default=24, help="Daemon interval in hours")
     parser.add_argument("--interval-minutes", type=float, default=None, help="Daemon interval in minutes (overrides --interval)")
     parser.add_argument("--demo", action="store_true", help="Run single cycle demo")
-    parser.add_argument("--auto-apply", action="store_true", help="Auto-apply approved changes")
+    parser.add_argument("--auto-apply", action="store_true", help="Store approved candidates in quarantine (never mutate live source)")
     
     args = parser.parse_args()
     
@@ -1488,7 +1515,7 @@ def main():
         print("  --interval HOURS    Daemon interval in hours (default: 24)")
         print("  --interval-minutes  Daemon interval in minutes (overrides --interval)")
         print("  --demo              Run single cycle demonstration")
-        print("  --auto-apply        Auto-apply approved changes")
+        print("  --auto-apply        Store validated candidates in quarantine")
 
 
 if __name__ == "__main__":

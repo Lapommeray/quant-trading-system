@@ -34,7 +34,9 @@ from okx_live.trader import OKXLiveTrader
 from autonomy.organism import get_event_bus
 
 log = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 
 
 def get_real_market_data(symbol: str) -> dict:
@@ -51,7 +53,9 @@ def get_real_market_data(symbol: str) -> dict:
 
         df = get_price_history(yf_symbol, start="2024-01-01", end="2024-12-31")
         if df.empty:
-            raise RuntimeError(f"yfinance empty for {symbol} ({yf_symbol}) - fail-closed, no synthetic")
+            raise RuntimeError(
+                f"yfinance empty for {symbol} ({yf_symbol}) - fail-closed, no synthetic"
+            )
 
         if isinstance(df.columns, pd.MultiIndex):
             df.columns = df.columns.get_level_values(0)
@@ -69,21 +73,117 @@ def get_real_market_data(symbol: str) -> dict:
 
         history = {
             "1m": df.tail(1000),
-            "5m": df.resample("5min").agg({"Open": "first", "High": "max", "Low": "min", "Close": "last", "Volume": "sum"}).dropna() if len(df) > 5 else df,
-            "10m": df.resample("10min").agg({"Open": "first", "High": "max", "Low": "min", "Close": "last", "Volume": "sum"}).dropna() if len(df) > 10 else df,
-            "15m": df.resample("15min").agg({"Open": "first", "High": "max", "Low": "min", "Close": "last", "Volume": "sum"}).dropna() if len(df) > 15 else df,
-            "20m": df.resample("20min").agg({"Open": "first", "High": "max", "Low": "min", "Close": "last", "Volume": "sum"}).dropna() if len(df) > 20 else df,
-            "25m": df.resample("25min").agg({"Open": "first", "High": "max", "Low": "min", "Close": "last", "Volume": "sum"}).dropna() if len(df) > 25 else df,
+            "5m": (
+                df.resample("5min")
+                .agg(
+                    {
+                        "Open": "first",
+                        "High": "max",
+                        "Low": "min",
+                        "Close": "last",
+                        "Volume": "sum",
+                    }
+                )
+                .dropna()
+                if len(df) > 5
+                else df
+            ),
+            "10m": (
+                df.resample("10min")
+                .agg(
+                    {
+                        "Open": "first",
+                        "High": "max",
+                        "Low": "min",
+                        "Close": "last",
+                        "Volume": "sum",
+                    }
+                )
+                .dropna()
+                if len(df) > 10
+                else df
+            ),
+            "15m": (
+                df.resample("15min")
+                .agg(
+                    {
+                        "Open": "first",
+                        "High": "max",
+                        "Low": "min",
+                        "Close": "last",
+                        "Volume": "sum",
+                    }
+                )
+                .dropna()
+                if len(df) > 15
+                else df
+            ),
+            "20m": (
+                df.resample("20min")
+                .agg(
+                    {
+                        "Open": "first",
+                        "High": "max",
+                        "Low": "min",
+                        "Close": "last",
+                        "Volume": "sum",
+                    }
+                )
+                .dropna()
+                if len(df) > 20
+                else df
+            ),
+            "25m": (
+                df.resample("25min")
+                .agg(
+                    {
+                        "Open": "first",
+                        "High": "max",
+                        "Low": "min",
+                        "Close": "last",
+                        "Volume": "sum",
+                    }
+                )
+                .dropna()
+                if len(df) > 25
+                else df
+            ),
+            "1h": (
+                df.resample("1h")
+                .agg(
+                    {
+                        "Open": "first",
+                        "High": "max",
+                        "Low": "min",
+                        "Close": "last",
+                        "Volume": "sum",
+                    }
+                )
+                .dropna()
+                if len(df) > 1
+                else df
+            ),
         }
         return history
     except Exception as exc:
-        raise RuntimeError(f"Real market data failed for {symbol} - fail-closed: {exc}") from exc
+        raise RuntimeError(
+            f"Real market data failed for {symbol} - fail-closed: {exc}"
+        ) from exc
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Quant Trading System - Real Trading (Fail-Closed)")
-    parser.add_argument("--symbols", type=str, required=True, help="Comma separated, e.g. BTC/USDT,ETH/USDT - required, fail-closed if missing")
-    parser.add_argument("--interval", type=int, default=60, help="Seconds between cycles")
+    parser = argparse.ArgumentParser(
+        description="Quant Trading System - Real Trading (Fail-Closed)"
+    )
+    parser.add_argument(
+        "--symbols",
+        type=str,
+        required=True,
+        help="Comma separated, e.g. BTC/USDT,ETH/USDT - required, fail-closed if missing",
+    )
+    parser.add_argument(
+        "--interval", type=int, default=60, help="Seconds between cycles"
+    )
     parser.add_argument("--once", action="store_true", help="Single cycle")
     args = parser.parse_args()
 
@@ -109,13 +209,17 @@ def main():
         log.error(f"OKX trader connect failed (fail-closed): {exc}")
         sys.exit(1)
 
-    organism = Organism(event_bus=event_bus)
+    organism = Organism(config=OrganismConfig.from_env(), event_bus=event_bus)
     wired = organism.discover_and_wire()
     log.info("Organism wired: %s", wired)
 
     from autonomy.execution import AutonomousExecutor, ExecutorConfig
 
-    executor = AutonomousExecutor(okx_engine=trader, event_bus=event_bus, config=ExecutorConfig(min_confidence=0.65, allowed_symbols=symbols))
+    executor = AutonomousExecutor(
+        okx_engine=trader,
+        event_bus=event_bus,
+        config=ExecutorConfig(min_confidence=0.65, allowed_symbols=symbols),
+    )
 
     organism.start()
     executor.start()
@@ -132,7 +236,13 @@ def main():
                 try:
                     history = get_real_market_data(sym)
                     consensus = organism.generate_consensus_signal(sym, history)
-                    log.info("Consensus %s => %s conf=%.3f weighted=%.3f", sym, consensus.get("final_signal"), consensus.get("confidence", 0), consensus.get("weighted_confidence", 0))
+                    log.info(
+                        "Consensus %s => %s conf=%.3f weighted=%.3f",
+                        sym,
+                        consensus.get("final_signal"),
+                        consensus.get("confidence", 0),
+                        consensus.get("weighted_confidence", 0),
+                    )
                 except Exception as exc:
                     log.error(f"Processing {sym} failed (fail-closed): {exc}")
                     raise

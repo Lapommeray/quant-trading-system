@@ -19,7 +19,9 @@ log = logging.getLogger(__name__)
 _MODULE_REGISTRY: Dict[str, Type["BaseTradingModule"]] = {}
 
 
-def register_module(cls: Type["BaseTradingModule"] | None = None, *, name: str | None = None):
+def register_module(
+    cls: Type["BaseTradingModule"] | None = None, *, name: str | None = None
+):
     """Decorator to register a module class in the global registry.
 
     Usage:
@@ -29,6 +31,7 @@ def register_module(cls: Type["BaseTradingModule"] | None = None, *, name: str |
         @register_module(name="custom_name")
         class MyOtherModule(BaseTradingModule): ...
     """
+
     def decorator(inner_cls: Type["BaseTradingModule"]):
         reg_name = name or getattr(inner_cls, "module_name", None) or inner_cls.__name__
         _MODULE_REGISTRY[reg_name] = inner_cls
@@ -69,6 +72,16 @@ class ModuleResult:
     latency_ms: float = 0.0
     timestamp: float = field(default_factory=time.time)
 
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "module_name": self.module_name,
+            "signal": self.signal,
+            "confidence": self.confidence,
+            "features": self.features,
+            "latency_ms": self.latency_ms,
+            "timestamp": self.timestamp,
+        }
+
 
 class BaseTradingModule(abc.ABC):
     """Abstract base for all organism modules.
@@ -82,7 +95,9 @@ class BaseTradingModule(abc.ABC):
     version: str = "1.0.0"
     dependencies: List[str] = []  # other module names this depends on
 
-    def __init__(self, config: Optional[Dict[str, Any]] = None, event_bus: Any | None = None):
+    def __init__(
+        self, config: Optional[Dict[str, Any]] = None, event_bus: Any | None = None
+    ):
         self.config = config or {}
         self.event_bus = event_bus
         self.health = ModuleHealth(module_name=self.module_name)
@@ -98,7 +113,9 @@ class BaseTradingModule(abc.ABC):
         """Optional: override to produce analysis."""
         raise NotImplementedError("analyze() not implemented")
 
-    def generate_signal(self, symbol: str, history_data: Dict[str, Any]) -> ModuleResult:
+    def generate_signal(
+        self, symbol: str, history_data: Dict[str, Any]
+    ) -> ModuleResult:
         """Optional: higher-level signal generation wrapper."""
         # Default forwards to analyze if available
         data = {"symbol": symbol, "history": history_data}
@@ -111,9 +128,70 @@ class BaseTradingModule(abc.ABC):
         """Called by event bus for subscribed events. Override if needed."""
         pass
 
+    def learn_from_outcome(self, outcome: Dict[str, Any]) -> Dict[str, Any]:
+        """Consume a realized outcome without changing safety-critical code.
+
+        Modules may override this hook to update a model or an allow-listed
+        adaptive parameter.  The default implementation is intentionally a
+        no-op so legacy modules can participate in the organism safely.
+        """
+        return {"module": self.module_name, "learned": False}
+
+    def diagnose(self, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Return a small diagnostic record used by the self-coder."""
+        context = context or {}
+        return {
+            "module": self.module_name,
+            "status": self.health.status,
+            "error_count": self.health.error_count,
+            "last_error": self.health.last_error,
+            "regime": context.get("regime", "unknown"),
+        }
+
+    def apply_adaptive_parameters(self, parameters: Dict[str, Any]) -> Dict[str, Any]:
+        """Apply only non-execution tuning under the ``adaptive`` namespace.
+
+        This prevents generated code from changing order size, leverage,
+        credentials, kill-switches, or risk limits.  Subclasses can add their
+        own validation but should keep this allow-list narrow.
+        """
+        allowed = {
+            "confidence_floor",
+            "weight_multiplier",
+            "lookback",
+            "cooldown_seconds",
+            "volatility_multiplier",
+            "regime_affinity_multiplier",
+        }
+        adaptive = self.config.setdefault("adaptive", {})
+        applied = {}
+        for key, value in (parameters or {}).items():
+            if key not in allowed:
+                continue
+            if isinstance(value, (int, float)) and value == value:
+                adaptive[key] = value
+                applied[key] = value
+        return applied
+
+    def repair(self, reason: str = "") -> bool:
+        """Reinitialize a failed module; source mutation is never attempted."""
+        return bool(self.initialize())
+
     def self_improve(self, performance_history: List[Dict[str, Any]]) -> Dict[str, Any]:
         """Self-improvement hook. Return dict with improvements made."""
         return {"module": self.module_name, "improved": False}
+
+    def self_code(
+        self,
+        coder: Any,
+        context: Optional[Dict[str, Any]] = None,
+        *,
+        apply: bool = True,
+    ):
+        """Delegate bounded code generation to the shared coding engine."""
+        if coder is None or not hasattr(coder, "run_for_module"):
+            raise TypeError("coder must provide run_for_module(module, ...)")
+        return coder.run_for_module(self, context=context or {}, apply=apply)
 
     def heartbeat(self):
         self.health.last_heartbeat = time.time()
@@ -125,7 +203,9 @@ class BaseTradingModule(abc.ABC):
         if self.health.avg_latency_ms == 0:
             self.health.avg_latency_ms = latency_ms
         else:
-            self.health.avg_latency_ms = 0.9 * self.health.avg_latency_ms + 0.1 * latency_ms
+            self.health.avg_latency_ms = (
+                0.9 * self.health.avg_latency_ms + 0.1 * latency_ms
+            )
         self.heartbeat()
 
     def record_failure(self, error: str):
@@ -148,6 +228,13 @@ class BaseTradingModule(abc.ABC):
                 "error_count": self.health.error_count,
                 "success_count": self.health.success_count,
                 "avg_latency_ms": self.health.avg_latency_ms,
+                "last_error": self.health.last_error,
+                "last_heartbeat": self.health.last_heartbeat,
             },
-            "dependencies": self.dependencies,
+            "dependencies": list(self.dependencies),
+            "adaptive_parameters": (
+                dict(self.config.get("adaptive", {}))
+                if isinstance(self.config, dict)
+                else {}
+            ),
         }

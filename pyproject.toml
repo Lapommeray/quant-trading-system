@@ -45,7 +45,13 @@ quant-trading = "quant_trading_system.cli:main"
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["quant_trading_system*"]
+include = [
+  "quant_trading_system*",
+  "autonomy*",
+  "core*",
+  "okx_live*",
+  "advanced_modules*",
+]
 
 [tool.pytest.ini_options]
 addopts = "--import-mode=importlib"

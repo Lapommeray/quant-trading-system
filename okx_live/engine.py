@@ -33,6 +33,7 @@ log = logging.getLogger(__name__)
 # ccxt is REQUIRED for real trading - fail closed if missing
 try:
     import ccxt  # type: ignore
+
     CCXT_AVAILABLE = True
 except ImportError:
     CCXT_AVAILABLE = False
@@ -41,6 +42,7 @@ from .safety import OKXSafetyGuard, SAFETY_AVAILABLE
 
 try:
     from core.event_bus import EventBus, get_event_bus  # type: ignore
+
     EVENTBUS_AVAILABLE = True
 except ImportError:
     EVENTBUS_AVAILABLE = False
@@ -73,7 +75,9 @@ class OKXOrderRequest:
     order_type: OrderType = OrderType.MARKET
     limit_price: Optional[float] = None
     leverage: float = 1.0
-    client_order_id: str = field(default_factory=lambda: f"okx_live_{int(time.time()*1000)}")
+    client_order_id: str = field(
+        default_factory=lambda: f"okx_live_{int(time.time()*1000)}"
+    )
     reduce_only: bool = False
     tag: str = "okx_live_real"
 
@@ -105,7 +109,9 @@ class OKXOrderResult:
             "side": self.side.value if isinstance(self.side, Enum) else str(self.side),
             "filled_quantity": self.filled_quantity,
             "avg_fill_price": self.avg_fill_price,
-            "status": self.status.value if isinstance(self.status, Enum) else str(self.status),
+            "status": (
+                self.status.value if isinstance(self.status, Enum) else str(self.status)
+            ),
             "message": self.message,
             "timestamp": self.timestamp,
             "fees": self.fees,
@@ -132,7 +138,11 @@ class OKXLiveEngine:
             )
 
         # Real trading must NOT be paper by default; but allow paper for test via env
-        allow_paper = os.getenv("OKX_ALLOW_PAPER_FOR_TEST", "false").lower() in ("true", "1", "yes")
+        allow_paper = os.getenv("OKX_ALLOW_PAPER_FOR_TEST", "false").lower() in (
+            "true",
+            "1",
+            "yes",
+        )
         if paper_mode and not allow_paper:
             raise RuntimeError(
                 "OKXLiveEngine is for real trading only - paper_mode not allowed unless OKX_ALLOW_PAPER_FOR_TEST=true. "
@@ -144,9 +154,20 @@ class OKXLiveEngine:
         self.api_secret = os.getenv("OKX_API_SECRET") or os.getenv("OKX_SECRET")
         self.passphrase = os.getenv("OKX_PASSPHRASE")
 
-        self.max_leverage = max_leverage
-        self.max_position_pct = max_position_pct
-        self.max_daily_loss_pct = max_daily_loss_pct
+        # Autonomous containment may tighten deployment settings but cannot
+        # be loosened by an environment/config mutation.
+        self.max_leverage = min(float(max_leverage), 1.0)
+        self.max_position_pct = min(float(max_position_pct), 0.02)
+        self.max_daily_loss_pct = min(float(max_daily_loss_pct), 0.05)
+        self.survival_mode = False
+        self.autonomous_guardrails = None
+        try:
+            # Lazy import avoids a package cycle during autonomy import.
+            from autonomy.guardrails import AutonomousGuardrails
+
+            self.autonomous_guardrails = AutonomousGuardrails()
+        except Exception as exc:
+            log.warning("Autonomous guardrails unavailable: %s", exc)
 
         if EVENTBUS_AVAILABLE and event_bus is None:
             try:
@@ -155,6 +176,11 @@ class OKXLiveEngine:
                 self.event_bus = None
         else:
             self.event_bus = event_bus
+        if self.event_bus is not None and hasattr(self.event_bus, "subscribe"):
+            self.event_bus.subscribe("SURVIVAL_MODE", self._on_survival_mode)
+            self.event_bus.subscribe(
+                "CLEAR_SURVIVAL_MODE", self._on_clear_survival_mode
+            )
 
         self.safety_guard = OKXSafetyGuard(
             max_leverage=self.max_leverage,
@@ -167,14 +193,19 @@ class OKXLiveEngine:
         ok, msg = self.safety_guard.validate_credentials()
         if not ok:
             if not allow_paper:
-                raise RuntimeError(f"Credential validation failed: {msg} - failing closed for real trading")
+                raise RuntimeError(
+                    f"Credential validation failed: {msg} - failing closed for real trading"
+                )
 
         self.ccxt_client = None
         self.connected = False
         self._balance_cache: Optional[Dict[str, Any]] = None
         self.is_simulation = False  # Explicitly NOT simulation
 
-        log.info("OKXLiveEngine initialized - REAL TRADING, fail-closed, paper=%s", self.paper_mode)
+        log.info(
+            "OKXLiveEngine initialized - REAL TRADING, fail-closed, paper=%s",
+            self.paper_mode,
+        )
 
     def connect(self) -> bool:
         # Validate credentials again
@@ -203,13 +234,17 @@ class OKXLiveEngine:
             log.info("OKXLiveEngine connected - balance fetched")
 
             if self.event_bus:
-                self.event_bus.publish("OKX_CONNECTED", {"real_trading": True}, source="OKXLiveEngine")
+                self.event_bus.publish(
+                    "OKX_CONNECTED", {"real_trading": True}, source="OKXLiveEngine"
+                )
 
             return True
         except Exception as exc:
             log.exception("OKXLiveEngine connect failed: %s", exc)
             # Fail closed, do not fallback to simulation
-            raise RuntimeError(f"OKXLiveEngine connect failed (fail-closed): {exc}") from exc
+            raise RuntimeError(
+                f"OKXLiveEngine connect failed (fail-closed): {exc}"
+            ) from exc
 
     def is_connected(self) -> bool:
         return self.connected and self.ccxt_client is not None
@@ -235,14 +270,31 @@ class OKXLiveEngine:
             ticker = self.ccxt_client.fetch_ticker(norm)
             price = float(ticker.get("last") or ticker.get("close") or 0)
             if not price:
-                raise RuntimeError(f"Ticker for {symbol} returned no price - fail-closed")
+                raise RuntimeError(
+                    f"Ticker for {symbol} returned no price - fail-closed"
+                )
             return price
         except Exception as exc:
-            raise RuntimeError(f"get_ticker {symbol} failed (fail-closed, no synthetic fallback): {exc}") from exc
+            raise RuntimeError(
+                f"get_ticker {symbol} failed (fail-closed, no synthetic fallback): {exc}"
+            ) from exc
 
     def place_order(self, order: OKXOrderRequest) -> OKXOrderResult:
         if not self.is_connected():
             raise RuntimeError("Not connected - cannot place order (fail-closed)")
+
+        if self.survival_mode:
+            return OKXOrderResult(
+                success=False,
+                order_id="",
+                client_order_id=order.client_order_id,
+                symbol=order.symbol,
+                side=order.side,
+                filled_quantity=0,
+                avg_fill_price=0,
+                status=OrderStatus.REJECTED,
+                message="Survival mode active - new order blocked",
+            )
 
         if self.safety_guard.is_kill_switch_active():
             return OKXOrderResult(
@@ -267,9 +319,43 @@ class OKXLiveEngine:
         try:
             total = bal.get("total", {})
             if isinstance(total, dict):
-                equity = float(total.get("USDT") or total.get("USD") or list(total.values())[0] if total else 100000.0)
+                equity = float(
+                    total.get("USDT") or total.get("USD") or list(total.values())[0]
+                    if total
+                    else 100000.0
+                )
         except Exception:
             pass
+
+        if self.autonomous_guardrails is not None:
+            self.autonomous_guardrails.set_equity(equity)
+            autonomous_ok, autonomous_reason = (
+                self.autonomous_guardrails.validate_trade(
+                    {
+                        "position_size_pct": (order.quantity * price)
+                        / max(equity, 1e-12),
+                        "leverage": order.leverage,
+                    }
+                )
+            )
+            if not autonomous_ok:
+                if self.event_bus:
+                    self.event_bus.publish(
+                        "RISK_ALERT",
+                        {"reason": autonomous_reason, "order": order.client_order_id},
+                        source="AutonomousGuardrails",
+                    )
+                return OKXOrderResult(
+                    success=False,
+                    order_id="",
+                    client_order_id=order.client_order_id,
+                    symbol=order.symbol,
+                    side=order.side,
+                    filled_quantity=0,
+                    avg_fill_price=0,
+                    status=OrderStatus.REJECTED,
+                    message=f"Autonomous guardrail: {autonomous_reason}",
+                )
 
         ok, msg = self.safety_guard.check_order(
             symbol=order.symbol,
@@ -309,18 +395,30 @@ class OKXLiveEngine:
             ccxt_symbol = order.symbol.replace("-", "/")
             amount = order.quantity
             if order.order_type == OrderType.MARKET:
-                ccxt_order = self.ccxt_client.create_market_order(ccxt_symbol, order.side.value, amount)
+                ccxt_order = self.ccxt_client.create_market_order(
+                    ccxt_symbol, order.side.value, amount
+                )
             else:
                 if not order.limit_price:
                     raise RuntimeError("LIMIT order requires limit_price - fail-closed")
                 ccxt_order = self.ccxt_client.create_order(
-                    ccxt_symbol, order.order_type.value, order.side.value, amount, order.limit_price
+                    ccxt_symbol,
+                    order.order_type.value,
+                    order.side.value,
+                    amount,
+                    order.limit_price,
                 )
 
-            filled = float(ccxt_order.get("filled", 0) or ccxt_order.get("amount", amount))
-            avg_price = float(ccxt_order.get("average", 0) or ccxt_order.get("price", 0) or price)
+            filled = float(
+                ccxt_order.get("filled", 0) or ccxt_order.get("amount", amount)
+            )
+            avg_price = float(
+                ccxt_order.get("average", 0) or ccxt_order.get("price", 0) or price
+            )
             order_id = str(ccxt_order.get("id", ""))
 
+            if self.autonomous_guardrails is not None:
+                self.autonomous_guardrails.record_trade_result(0.0)
             result = OKXOrderResult(
                 success=True,
                 order_id=order_id,
@@ -334,14 +432,18 @@ class OKXLiveEngine:
             )
 
             if self.event_bus:
-                self.event_bus.publish("ORDER_FILLED", result.to_dict(), source="OKXLiveEngine")
+                self.event_bus.publish(
+                    "ORDER_FILLED", result.to_dict(), source="OKXLiveEngine"
+                )
 
             return result
         except Exception as exc:
             log.exception("Real OKX order failed: %s", exc)
             if self.event_bus:
                 self.event_bus.publish(
-                    "RISK_ALERT", {"error": str(exc), "order": order.client_order_id}, source="OKXLiveEngine"
+                    "RISK_ALERT",
+                    {"error": str(exc), "order": order.client_order_id},
+                    source="OKXLiveEngine",
                 )
             # Fail closed - return rejected, not simulation fill
             return OKXOrderResult(
@@ -356,7 +458,9 @@ class OKXLiveEngine:
                 message=f"REAL order exception (fail-closed): {exc}",
             )
 
-    def place_order_from_signal(self, signal: Dict[str, Any], max_quantity: Optional[float] = None) -> Optional[OKXOrderResult]:
+    def place_order_from_signal(
+        self, signal: Dict[str, Any], max_quantity: Optional[float] = None
+    ) -> Optional[OKXOrderResult]:
         """Requires real signal with symbol and final_signal BUY/SELL."""
         symbol = signal.get("symbol") or signal.get("asset")
         if not symbol:
@@ -397,22 +501,54 @@ class OKXLiveEngine:
             side=side,
             quantity=qty,
             order_type=OType.MARKET,
-            leverage=min(1.0 + confidence, self.max_leverage),
+            # Autonomous guardrails permit no leverage; any adaptive
+            # confidence must not be translated into leverage.
+            leverage=1.0,
         )
 
         return self.place_order(order)
 
+    def _on_survival_mode(self, event: Any):
+        payload = event.payload if hasattr(event, "payload") else {}
+        reason = (
+            payload.get("reason", "panic sentinel")
+            if isinstance(payload, dict)
+            else "panic sentinel"
+        )
+        self.set_survival_mode(True, str(reason))
+
+    def _on_clear_survival_mode(self, event: Any):
+        self.set_survival_mode(False, "sentinel stabilized")
+
+    def set_survival_mode(self, active: bool, reason: str = "") -> None:
+        self.survival_mode = bool(active)
+        if self.autonomous_guardrails is not None:
+            self.autonomous_guardrails.set_survival_mode(bool(active), reason)
+        log.warning("OKX live engine survival_mode=%s reason=%s", active, reason)
+
     def get_status(self) -> Dict[str, Any]:
-        return {
+        status = {
             "real_trading": True,
             "simulation": False,
             "connected": self.connected,
             "ccxt_available": CCXT_AVAILABLE,
             "paper_mode": self.paper_mode,
+            "survival_mode": self.survival_mode,
         }
+        if self.autonomous_guardrails is not None:
+            status["autonomous_guardrails"] = self.autonomous_guardrails.get_status()
+        return status
 
     def activate_kill_switch(self, reason: str):
-        if SAFETY_AVAILABLE and hasattr(self.safety_guard, "safety") and self.safety_guard.safety:
+        if (
+            SAFETY_AVAILABLE
+            and hasattr(self.safety_guard, "safety")
+            and self.safety_guard.safety
+        ):
             self.safety_guard.safety.activate_kill_switch(reason, user="OKXLiveEngine")
         if self.event_bus:
-            self.event_bus.publish("KILL_SWITCH", {"reason": reason, "real_trading": True}, source="OKXLiveEngine")
+            self.event_bus.publish(
+                "KILL_SWITCH",
+                {"reason": reason, "real_trading": True},
+                source="OKXLiveEngine",
+            )
