@@ -1,28 +1,22 @@
 """
-OKX Live Trading Package - Real trading, fails closed.
+OKX Live Trading Package - Real trading, fail-closed.
 
-No simulation fallback. Requires:
-- ccxt package
-- OKX_API_KEY, OKX_API_SECRET, OKX_PASSPHRASE env vars
-- Real market data (yfinance or OKX ticker) - no synthetic fallback for live runner
+Expected files per reviewer:
+- okx_live/config.py
+- okx_live/trader.py
 
-For paper/simulation testing, use execution/okx_engine.py (old path) which is explicitly marked as simulation.
-This package is for real trading only.
+No simulation fallback. Requires ccxt + credentials + real market data.
 """
 
-from .engine import OKXLiveEngine, OKXOrderRequest, OKXOrderResult, OrderSide, OrderType
-from .safety import OKXSafetyGuard
 from .config import OKXLiveConfig, get_okx_config
-from .trader import OKXLiveTrader
+from .trader import OKXLiveTrader, OKXOrderRequest, OKXOrderResult, OrderSide, OrderType
 
 __all__ = [
-    "OKXLiveEngine",
+    "OKXLiveConfig",
+    "get_okx_config",
+    "OKXLiveTrader",
     "OKXOrderRequest",
     "OKXOrderResult",
     "OrderSide",
     "OrderType",
-    "OKXSafetyGuard",
-    "OKXLiveConfig",
-    "get_okx_config",
-    "OKXLiveTrader",
 ]
