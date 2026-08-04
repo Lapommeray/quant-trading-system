@@ -684,7 +684,7 @@ class EternalGuardrails:
         return True, "OK"
         
     @classmethod
-    def enforce_eternal_guardrails():
+    def enforce_eternal_guardrails(cls):
         """
         Enforce eternal guardrails - called at system startup.
         
@@ -784,7 +784,7 @@ class SafetyGovernanceSystem:
             
         metrics = self.performance_monitor.get_metrics()
         
-        is_live = self.authorization_level >= AuthorizationLevel.LIMITED_LIVE
+        is_live = self.authorization_level.value >= AuthorizationLevel.LIMITED_LIVE.value
         has_override = self.confirmation_system.human_override_active
         
         passed, reason = EternalGuardrails.check_trade(
@@ -868,7 +868,7 @@ class SafetyGovernanceSystem:
         old_level = self.authorization_level
         self.authorization_level = level
         
-        self.confirmation_system.set_mode(level <= AuthorizationLevel.PAPER_TRADING)
+        self.confirmation_system.set_mode(level.value <= AuthorizationLevel.PAPER_TRADING.value)
         
         self.audit_logger.log(
             event_type="authorization",

@@ -17,4 +17,9 @@ strategies/generated/
 strategies/evolved/
 strategies/quarantine/
 data/cache/
+data/organism_logs/
+audit_logs/
 secure/*.vault
+# Deco historical archives are preserved but can be large - uncomment to ignore in dev
+# Deco_*/
+# QMP_*/
