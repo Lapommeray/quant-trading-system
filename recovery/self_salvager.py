@@ -10,6 +10,7 @@ import os
 import json
 import shutil
 from datetime import datetime
+from pathlib import Path
 import numpy as np
 
 class StrategySurgeon:
@@ -17,7 +18,7 @@ class StrategySurgeon:
     Detects and replaces weak strategies via flaw healing.
     """
     
-    def __init__(self, algorithm, strategy_generator=None):
+    def __init__(self, algorithm, strategy_generator=None, quarantine_dir=None):
         """
         Initialize the Strategy Surgeon.
         
@@ -39,7 +40,11 @@ class StrategySurgeon:
         
         self.surgery_history = []
         
-        self.quarantine_dir = "/strategies/quarantine"
+        default_quarantine_dir = Path(__file__).resolve().parents[1] / "strategies" / "quarantine"
+        configured_quarantine_dir = quarantine_dir or os.environ.get("QTS_QUARANTINE_DIR")
+        self.quarantine_dir = str(
+            Path(configured_quarantine_dir or default_quarantine_dir).expanduser().resolve()
+        )
         os.makedirs(self.quarantine_dir, exist_ok=True)
         
         self.logger.info("Strategy Surgeon initialized")

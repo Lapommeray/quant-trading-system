@@ -11,6 +11,7 @@ import json
 import os
 import random
 from datetime import datetime
+from pathlib import Path
 import copy
 
 class StrategyEvolver:
@@ -18,7 +19,7 @@ class StrategyEvolver:
     Genetic algorithm for nightly strategy evolution.
     """
     
-    def __init__(self, algorithm, backtester=None):
+    def __init__(self, algorithm, backtester=None, strategies_dir=None):
         """
         Initialize the Strategy Evolver.
         
@@ -43,7 +44,9 @@ class StrategyEvolver:
         
         self.evolution_history = []
         
-        self.strategies_dir = "/strategies/evolved"
+        default_dir = Path(__file__).resolve().parents[1] / "strategies" / "evolved"
+        configured_dir = strategies_dir or os.environ.get("QTS_EVOLVED_STRATEGIES_DIR")
+        self.strategies_dir = str(Path(configured_dir or default_dir).expanduser().resolve())
         os.makedirs(self.strategies_dir, exist_ok=True)
         
         self.logger.info("Strategy Evolver initialized")
