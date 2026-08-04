@@ -28,7 +28,9 @@ from okx_live.engine import OKXLiveEngine
 from core.event_bus import get_event_bus
 
 log = logging.getLogger(__name__)
-logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
+logging.basicConfig(
+    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+)
 
 
 def get_real_history(symbol: str) -> dict:
@@ -48,9 +50,13 @@ def get_real_history(symbol: str) -> dict:
 
         df = get_price_history(yf_symbol, start="2024-01-01", end="2024-12-31")
         if df.empty:
-            raise RuntimeError(f"yfinance returned empty data for {yf_symbol} - fail-closed, no synthetic fallback")
+            raise RuntimeError(
+                f"yfinance returned empty data for {yf_symbol} - fail-closed, no synthetic fallback"
+            )
 
-        if hasattr(df.columns, "get_level_values") and isinstance(df.columns, type(df.columns)):
+        if hasattr(df.columns, "get_level_values") and isinstance(
+            df.columns, type(df.columns)
+        ):
             try:
                 import pandas as pd
 
@@ -69,33 +75,112 @@ def get_real_history(symbol: str) -> dict:
 
         required = ["Open", "High", "Low", "Close", "Volume"]
         if not all(c in df.columns for c in required):
-            raise RuntimeError(f"yfinance data missing required columns {required} - fail-closed")
+            raise RuntimeError(
+                f"yfinance data missing required columns {required} - fail-closed"
+            )
 
         import pandas as pd
 
         history = {
             "1m": df.tail(1000),
-            "5m": df.resample("5min").agg({"Open": "first", "High": "max", "Low": "min", "Close": "last", "Volume": "sum"}).dropna()
-            if len(df) > 5
-            else df,
-            "10m": df.resample("10min").agg({"Open": "first", "High": "max", "Low": "min", "Close": "last", "Volume": "sum"}).dropna()
-            if len(df) > 10
-            else df,
-            "15m": df.resample("15min").agg({"Open": "first", "High": "max", "Low": "min", "Close": "last", "Volume": "sum"}).dropna()
-            if len(df) > 15
-            else df,
-            "20m": df.resample("20min").agg({"Open": "first", "High": "max", "Low": "min", "Close": "last", "Volume": "sum"}).dropna()
-            if len(df) > 20
-            else df,
-            "25m": df.resample("25min").agg({"Open": "first", "High": "max", "Low": "min", "Close": "last", "Volume": "sum"}).dropna()
-            if len(df) > 25
-            else df,
+            "5m": (
+                df.resample("5min")
+                .agg(
+                    {
+                        "Open": "first",
+                        "High": "max",
+                        "Low": "min",
+                        "Close": "last",
+                        "Volume": "sum",
+                    }
+                )
+                .dropna()
+                if len(df) > 5
+                else df
+            ),
+            "10m": (
+                df.resample("10min")
+                .agg(
+                    {
+                        "Open": "first",
+                        "High": "max",
+                        "Low": "min",
+                        "Close": "last",
+                        "Volume": "sum",
+                    }
+                )
+                .dropna()
+                if len(df) > 10
+                else df
+            ),
+            "15m": (
+                df.resample("15min")
+                .agg(
+                    {
+                        "Open": "first",
+                        "High": "max",
+                        "Low": "min",
+                        "Close": "last",
+                        "Volume": "sum",
+                    }
+                )
+                .dropna()
+                if len(df) > 15
+                else df
+            ),
+            "20m": (
+                df.resample("20min")
+                .agg(
+                    {
+                        "Open": "first",
+                        "High": "max",
+                        "Low": "min",
+                        "Close": "last",
+                        "Volume": "sum",
+                    }
+                )
+                .dropna()
+                if len(df) > 20
+                else df
+            ),
+            "25m": (
+                df.resample("25min")
+                .agg(
+                    {
+                        "Open": "first",
+                        "High": "max",
+                        "Low": "min",
+                        "Close": "last",
+                        "Volume": "sum",
+                    }
+                )
+                .dropna()
+                if len(df) > 25
+                else df
+            ),
+            "1h": (
+                df.resample("1h")
+                .agg(
+                    {
+                        "Open": "first",
+                        "High": "max",
+                        "Low": "min",
+                        "Close": "last",
+                        "Volume": "sum",
+                    }
+                )
+                .dropna()
+                if len(df) > 1
+                else df
+            ),
         }
 
         return history
 
     except Exception as exc:
-        raise RuntimeError(f"Failed to get real market data for {symbol} - fail-closed, no synthetic fallback: {exc}") from exc
+        raise RuntimeError(
+            f"Failed to get real market data for {symbol} - fail-closed, no synthetic fallback: {exc}"
+        ) from exc
 
 
 class OKXLiveRunner:
@@ -109,9 +194,13 @@ class OKXLiveRunner:
         # Real engine, fails closed if credentials/ccxt missing
         self.okx_engine = OKXLiveEngine(event_bus=self.event_bus)
         self.executor = AutonomousExecutor(
-            okx_engine=self.okx_engine, event_bus=self.event_bus, config=ExecutorConfig(min_confidence=0.65)
+            okx_engine=self.okx_engine,
+            event_bus=self.event_bus,
+            config=ExecutorConfig(min_confidence=0.65),
         )
-        self.organism = Organism(event_bus=self.event_bus)
+        self.organism = Organism(
+            config=OrganismConfig.from_env(), event_bus=self.event_bus
+        )
         self.running = False
 
         signal.signal(signal.SIGINT, self._signal_handler)
@@ -143,7 +232,9 @@ class OKXLiveRunner:
                 for sym in self.symbols:
                     try:
                         history = get_real_history(sym)
-                        consensus = self.organism.generate_consensus_signal(sym, history)
+                        consensus = self.organism.generate_consensus_signal(
+                            sym, history
+                        )
                         log.info(
                             "Consensus %s => %s conf=%.3f weighted=%.3f",
                             sym,
@@ -152,7 +243,11 @@ class OKXLiveRunner:
                             consensus.get("weighted_confidence", 0),
                         )
                     except Exception as exc:
-                        log.error("Failed processing %s: %s - fail-closed will abort if critical", sym, exc)
+                        log.error(
+                            "Failed processing %s: %s - fail-closed will abort if critical",
+                            sym,
+                            exc,
+                        )
                         raise
 
                 if self.once:
@@ -165,9 +260,18 @@ class OKXLiveRunner:
 
 
 def parse_args():
-    parser = argparse.ArgumentParser(description="OKX Live Real Trading Runner (fail-closed)")
-    parser.add_argument("--symbols", type=str, required=True, help="Comma separated, e.g. BTC/USDT,ETH/USDT")
-    parser.add_argument("--interval", type=int, default=60, help="Seconds between cycles")
+    parser = argparse.ArgumentParser(
+        description="OKX Live Real Trading Runner (fail-closed)"
+    )
+    parser.add_argument(
+        "--symbols",
+        type=str,
+        required=True,
+        help="Comma separated, e.g. BTC/USDT,ETH/USDT",
+    )
+    parser.add_argument(
+        "--interval", type=int, default=60, help="Seconds between cycles"
+    )
     parser.add_argument("--once", action="store_true", help="Single cycle")
     return parser.parse_args()
 

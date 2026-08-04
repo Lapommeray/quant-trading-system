@@ -31,27 +31,19 @@ The sacred-quant modules system integrates advanced quantum finance concepts to 
 - **Quantum Portfolio Optimization** (Mugel et al., 2022): Applies quantum algorithms for portfolio optimization with exponential speedup.
 - **Quantum Risk Measures**: Implements coherent risk measures using quantum entropy for stress testing under quantum-correlated crashes.
 
-### Performance Enhancements
+### Performance and validation
 
-These quantum finance concepts are integrated with the core sacred-quant modules to achieve:
+These components are research and risk-analysis tools. They do not guarantee
+outperformance, a positive return, zero drawdown, or avoidance of every news
+event. Live trading remains subject to slippage, outages, liquidity, regime
+changes, fees, and exchange risk.
 
-- **200% Outperformance**: Consistently outperforms federal institution indicators by at least 200%.
-- **100% Win Rate**: Achieves perfect win rate across all market conditions.
-- **0% Maximum Drawdown**: Eliminates drawdowns through quantum risk management.
-- **Infinite Profit Factor**: Achieves theoretical maximum profit factor with no losing trades.
-- **Comprehensive News Event Avoidance**: Prevents trading during all high-impact news events (economic, corporate, geopolitical, and market-specific) and only allows trading 30 minutes after any news release to ensure zero losses.
-
-### Statistical Validation
-
-All performance metrics are statistically validated using rigorous hypothesis testing and bootstrap confidence intervals:
-
-- **Bootstrap Resampling**: 10,000 bootstrap samples for each metric to estimate the sampling distribution.
-- **Confidence Intervals**: 95% confidence intervals calculated using the percentile method.
-- **Hypothesis Testing**: Statistical significance assessed at the 99% confidence level.
-- **Multiple Testing Correction**: Bonferroni correction applied to adjust for multiple comparisons.
-- **Robustness Checks**: Results validated across different market conditions and time periods.
-
-The integration is thoroughly tested against extreme market conditions like the COVID crash to ensure robust performance.
+Performance claims must be produced by a reproducible, out-of-sample
+backtest/walk-forward report that includes fees, slippage, rejected orders,
+missing data, confidence intervals, and maximum drawdown. The autonomous
+runtime records realized outcomes and mistakes so later adaptation is based on
+measured results rather than an assumed win rate. It fails closed when live
+market data, credentials, or safety checks are unavailable.
 
 ## Installation
 
@@ -113,7 +105,8 @@ python self_evolution_agent.py --demo
 # Start perpetual daemon (runs every 24 hours)
 python self_evolution_agent.py --daemon
 
-# Start with auto-apply for approved changes
+# Start with automatic validation/quarantine of approved artifacts
+# (the legacy daemon never mutates active source)
 python self_evolution_agent.py --daemon --auto-apply
 ```
 
@@ -125,6 +118,38 @@ The perpetual innovation daemon implements:
 - Genetic feature evolution using symbolic regression
 - Hall of fame baseline comparison
 - Eternal safety guardrails
+
+## Bounded Autonomous Self-Improvement
+
+The active `autonomy/` runtime now connects module discovery, market-regime
+context, consensus, execution outcomes, learning memory, recovery, and
+self-coding through one canonical event bus. Every registered module gets the
+same lifecycle and can learn from realized outcomes and prior mistakes.
+
+Low-risk improvements are generated as validated artifacts under
+`strategies/evolved/` and may be auto-approved without changing live source.
+Approved candidates are evaluated in shadow instances first; the active module
+remains the only module allowed to produce executable order signals.
+Execution, risk, credential, kill-switch, event-bus, and organism code is
+protected and remains pending for human review. Generated code is never
+imported directly into the live trading process.
+
+```python
+from autonomy import Organism, OrganismConfig
+
+organism = Organism(OrganismConfig(
+    self_coding_enabled=True,
+    auto_approve_low_risk=True,
+    auto_apply_low_risk=True,
+))
+organism.discover_and_wire()
+organism.start()
+```
+
+See [`docs/SELF_IMPROVEMENT.md`](docs/SELF_IMPROVEMENT.md) and
+[`docs/AUTONOMOUS_SAFETY.md`](docs/AUTONOMOUS_SAFETY.md) for shadow validation,
+generated tests, panic survival mode, priority lanes, gold-set stress testing,
+AST policy, financial guardrails, and the review boundary.
 
 ## One-Click Colab / Live Setup
 

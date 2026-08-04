@@ -33,9 +33,13 @@ class StrategyGenerator:
         self.logger.setLevel(logging.INFO)
 
         self.engine = "local-institutional-synth-v1"
-        default_dir = Path(__file__).resolve().parent.parent / "strategies" / "generated"
+        default_dir = (
+            Path(__file__).resolve().parent.parent / "strategies" / "generated"
+        )
         configured_dir = strategies_dir or os.environ.get("QTS_STRATEGIES_DIR")
-        self.strategies_dir = str(Path(configured_dir or default_dir).expanduser().resolve())
+        self.strategies_dir = str(
+            Path(configured_dir or default_dir).expanduser().resolve()
+        )
         os.makedirs(self.strategies_dir, exist_ok=True)
         self.generated_strategies = []
 
@@ -64,12 +68,11 @@ class StrategyGenerator:
         else:
             lookback = 20
 
-
         confidence_threshold = 0.58
         if trend in {"strong_bull", "strong_bear"}:
             confidence_threshold = 0.52
 
-        return f'''from AlgorithmImports import *
+        return f"""from AlgorithmImports import *
 
 
 class GeneratedInstitutionalStrategy(QCAlgorithm):
@@ -113,7 +116,7 @@ class GeneratedInstitutionalStrategy(QCAlgorithm):
         stop_distance = max(price * 0.015, price * vol)
         units = int(max(1, risk_budget / max(stop_distance, 1e-6)))
         return units
-'''
+"""
 
     def _save_strategy(self, strategy_code: str) -> str:
         """Persist generated code without overwriting a prior strategy.
@@ -126,7 +129,9 @@ class GeneratedInstitutionalStrategy(QCAlgorithm):
         counter = 0
         while True:
             suffix = "" if counter == 0 else f"_{counter}"
-            path = Path(self.strategies_dir) / f"generated_strategy_{timestamp}{suffix}.py"
+            path = (
+                Path(self.strategies_dir) / f"generated_strategy_{timestamp}{suffix}.py"
+            )
             try:
                 # Exclusive creation makes the name safe when multiple
                 # generators run concurrently.
@@ -139,3 +144,43 @@ class GeneratedInstitutionalStrategy(QCAlgorithm):
     # Backward-compatible method name used by older callers.
     def _call_openai_api(self, prompt):
         return self._synthesize_strategy_code({"prompt": prompt})
+
+    def generate_safe_module_proposal(
+        self, module, context=None, *, apply=True, coder=None
+    ):
+        """Use the canonical bounded coder for a live module.
+
+        ``StrategyGenerator`` remains compatible with legacy QuantConnect
+        callers.  New runtime modules should use this method (or the
+        ``autonomy.SelfCodingEngine`` directly) so generated code is validated
+        and stored as a governed artifact rather than replacing source.
+        """
+        if coder is None:
+            from autonomy.self_coding import SelfCodingEngine
+
+            coder = SelfCodingEngine()
+        return coder.run_for_module(module, context=context or {}, apply=apply)
+
+
+# Lazy compatibility exports keep the legacy module importable without
+# creating a circular import during the canonical autonomy bootstrap.
+def __getattr__(name):
+    if name in {
+        "CodeValidator",
+        "SafeCodeValidator",
+        "SelfCodingEngine",
+        "TestSuiteGenerator",
+    }:
+        from autonomy.self_coding import (
+            SafeCodeValidator,
+            SelfCodingEngine,
+            TestSuiteGenerator,
+        )
+
+        return {
+            "CodeValidator": SafeCodeValidator,
+            "SafeCodeValidator": SafeCodeValidator,
+            "SelfCodingEngine": SelfCodingEngine,
+            "TestSuiteGenerator": TestSuiteGenerator,
+        }[name]
+    raise AttributeError(name)
