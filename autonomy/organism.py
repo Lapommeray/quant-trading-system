@@ -46,6 +46,7 @@ from .learning import LearningStore
 from .market import MarketRegime, MarketRegimeDetector
 from .monitor import AutonomousMonitor
 from .self_coding import ApprovalPolicy, SelfCodingEngine
+from core.base_module import BaseTradingModule  # for mixin injection
 from .sentinel import MultiTimeframeSentinel, SentinelConfig, SentinelDecision
 from .shadow import ShadowDeployment, ShadowManager, ShadowPolicy
 
@@ -143,6 +144,9 @@ class OrganismConfig:
     auto_repair: bool = True
     self_code_each_cycle: bool = True
     max_auto_changes_per_cycle: int = 3
+    # Metabolic rate / coherence guards (prevents mutation wars + resource exhaustion)
+    module_mutation_cooldown_sec: float = 180.0   # 3 minutes default
+    enable_coherence_protocol: bool = True
     market_regime_window: int = 50
     module_packages: tuple[str, ...] = ("autonomy", "core", "advanced_modules")
     run_baseline_tests: bool = True
@@ -358,6 +362,9 @@ class Organism:
             policy=policy,
             event_bus=self.event_bus,
         )
+
+        # Apply metabolic rate from config to all future modules
+        self._mutation_cooldown = float(getattr(self.config, "module_mutation_cooldown_sec", 180.0))
         # Semantic aliases keep integrations readable and preserve the
         # expected "self-improvement engine" vocabulary.
         self.self_improvement_engine = self.self_coder
@@ -377,6 +384,45 @@ class Organism:
             )
         except TypeError:
             self.event_bus.subscribe("TRADE_OUTCOME", self._on_order_filled)
+
+        # === COHERENCE PROTOCOL: Listen for module mutations (prevents Mutation Wars) ===
+        self.event_bus.subscribe("MUTATION_EVENT", self._on_mutation_event)
+
+    def _on_mutation_event(self, event: Event) -> None:
+        """Central handler for MUTATION_EVENT.
+        
+        Implements the Coherence Protocol:
+        - Broadcasts the mutation to all other modules.
+        - Triggers coherence_check() on every module.
+        - Risk/sentinel modules can auto-realign.
+        """
+        payload = event.payload if hasattr(event, "payload") else event
+        if not isinstance(payload, Mapping):
+            return
+
+        source = payload.get("module")
+        if not source:
+            return
+
+        # Broadcast to all modules so they can react (coherence)
+        with self._lock:
+            for name, module in self.modules.items():
+                if name == source:
+                    continue
+                try:
+                    if hasattr(module, "coherence_check"):
+                        module.coherence_check(payload)
+                    elif hasattr(module, "on_mutation_event"):
+                        module.on_mutation_event(payload)
+                except Exception as e:
+                    log.debug(f"Coherence propagation to {name} failed: {e}")
+
+        # Log for audit
+        self.audit_trail.record("MUTATION_COHERENCE", {
+            "source": source,
+            "proposal_id": payload.get("proposal_id"),
+            "affected_modules": [n for n in self.modules if n != source]
+        }, source="OrganismCoherence")
 
     # -------------------------------------------------------------- discovery
     def discover_and_wire(self, project_root: Optional[Path] = None) -> Dict[str, Any]:
@@ -596,6 +642,13 @@ class Organism:
             if not getattr(module, "enabled", True):
                 continue
             try:
+                # ONE ORGANISM interconnect: every module communicates live
+                try:
+                    if hasattr(module, "interconnect"):
+                        module.interconnect(target_modules=list(snapshot.keys()), message={"phase": "signal_generation", "symbol": symbol})
+                except Exception:
+                    pass
+
                 before = time.time()
                 result = module.generate_signal(symbol, history_data)
                 latency_ms = (time.time() - before) * 1000.0
@@ -873,8 +926,49 @@ class Organism:
         auto_applied = 0
         shadow_deployed = 0
 
+        # ONE ORGANISM: interconnect all modules — every module talks to every other
+        active_module_names = list(modules.keys())
+        for name, module in modules.items():
+            try:
+                if hasattr(module, "interconnect"):
+                    module.interconnect(
+                        target_modules=active_module_names, 
+                        message={
+                            "organism": "unified", 
+                            "cycle": self._coding_cycles,
+                            "one_organism": True,
+                            "all_modules": active_module_names
+                        }
+                    )
+                # Ensure every module has the auto-self-coding methods
+                if not hasattr(module, "full_autonomous_cycle"):
+                    # Dynamically attach if a legacy module
+                    for method_name in ["auto_self_code", "auto_fix", "learn_from_mistakes", 
+                                        "improve_with_market", "interconnect", "full_autonomous_cycle", "sync_with_organism"]:
+                        if hasattr(BaseModule, method_name):
+                            setattr(module, method_name, getattr(BaseModule, method_name).__get__(module, type(module)))
+
+                # Enforce metabolic rate + coherence protocol on every module
+                if hasattr(module, "set_mutation_cooldown"):
+                    try:
+                        module.set_mutation_cooldown(self._mutation_cooldown)
+                    except Exception:
+                        pass
+            except Exception:
+                pass
+
+        # Broadcast ONE ORGANISM heartbeat to all modules
+        self.event_bus.publish("ONE_ORGANISM_HEARTBEAT", {
+            "modules": active_module_names,
+            "regime": self._last_regime.to_dict(),
+            "cycle": self._coding_cycles,
+            "unity": True
+        }, source="AutonomyOrganism")
+
         for name, module in modules.items():
             context = self._module_context(name)
+            context["active_modules"] = active_module_names
+            context["regime"] = self._last_regime.to_dict()
             runtime_tuning = self._safe_runtime_tuning(module)
             try:
                 hook_result = module.self_improve(list(self.performance_history)[-50:])
@@ -890,16 +984,24 @@ class Organism:
                     0, int(self.config.max_auto_changes_per_cycle)
                 )
                 try:
-                    code_result = self.self_coder.run_for_module(
-                        module,
-                        context=context,
-                        regime_parameters=regime_parameters,
-                        apply=should_apply,
-                    )
-                    if code_result.get("status") == "applied":
+                    # NEW: Full autonomous per-module cycle
+                    if hasattr(module, "full_autonomous_cycle"):
+                        code_result = module.full_autonomous_cycle(
+                            coder=self.self_coder,
+                            organism_context=context
+                        )
+                    else:
+                        code_result = self.self_coder.run_for_module(
+                            module,
+                            context=context,
+                            regime_parameters=regime_parameters,
+                            apply=should_apply,
+                        )
+                    if isinstance(code_result, dict) and code_result.get("status") == "applied":
                         auto_applied += 1
                     if (
-                        code_result.get("status") in {"applied", "approved"}
+                        isinstance(code_result, dict)
+                        and code_result.get("status") in {"applied", "approved"}
                         and code_result.get("risk") == "low"
                     ):
                         deployment = self.shadow_manager.deploy(
@@ -920,12 +1022,13 @@ class Organism:
                 except Exception as exc:
                     code_result = {"module_name": name, "error": str(exc)}
                 if code_result and (
-                    code_result.get("status") == "rejected" or code_result.get("error")
+                    (isinstance(code_result, dict) and code_result.get("status") == "rejected") or 
+                    (isinstance(code_result, dict) and code_result.get("error"))
                 ):
-                    diagnosis = code_result.get("diagnosis", {})
+                    diagnosis = code_result.get("diagnosis", {}) if isinstance(code_result, dict) else {}
                     lesson = (
                         diagnosis.get("validation_mistake")
-                        or code_result.get("error")
+                        or (code_result.get("error") if isinstance(code_result, dict) else "")
                         or "candidate rejected"
                     )
                     self.learning_store.record_mistake(
@@ -939,6 +1042,7 @@ class Organism:
                 "runtime_tuning": _json_safe(runtime_tuning),
                 "code": _json_safe(code_result),
                 "stats": context["stats"],
+                "autonomous_cycle": True,
             }
 
         avg_scores = {
@@ -959,6 +1063,8 @@ class Organism:
             "shadow_deployed": shadow_deployed,
             "survival_mode": self._last_sentinel_decision.survival_mode,
             "self_coder": self.self_coder.get_status(),
+            "organism_unity": True,
+            "interconnected_modules": len(active_module_names),
         }
         self._coding_cycles += 1
         self.performance_history.append(result)
