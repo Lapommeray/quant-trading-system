@@ -1,0 +1,83 @@
+2026-08-05 13:04:44,175 - core.event_bus - INFO - Priority EventBus started
+/home/user/quant-trading-system/core/institutional_indicators.py:19: UserWarning: scipy not available. HestonVolatility will have limited functionality.
+  warnings.warn("scipy not available. HestonVolatility will have limited functionality.")
+/home/user/quant-trading-system/core/institutional_indicators.py:31: UserWarning: scikit-learn not available. ML_RSI will have limited functionality.
+  warnings.warn("scikit-learn not available. ML_RSI will have limited functionality.")
+/home/user/quant-trading-system/core/institutional_indicators.py:38: UserWarning: hmmlearn not available. RegimeDetector will have limited functionality.
+  warnings.warn("hmmlearn not available. RegimeDetector will have limited functionality.")
+2026-08-05 13:04:44,371 - FeatureEvolution - WARNING - gplearn not available. Using fallback feature evolution.
+2026-08-05 13:04:44,373 - HyperbolicMarketManifold - WARNING - Geomstats not available. Using mock implementation.
+2026-08-05 13:04:44,377 - LossPreventionCore - WARNING - River not available. Using fallback online learning.
+2026-08-05 13:04:44,384 - NoncommutativeCalculus - WARNING - SymPy not available. Using mock implementation.
+2026-08-05 13:04:44,387 - QuantumTopologyAnalysis - WARNING - Giotto-TDA not available. Using mock implementation.
+2026-08-05 13:04:44,388 - QuantumTopologyAnalysis - WARNING - Qiskit not available. Using mock implementation.
+2026-08-05 13:04:44,390 - RegimeDetection - WARNING - hmmlearn not available, using simplified regime detection
+2026-08-05 13:04:44,392 - RLEvolver - WARNING - Gymnasium/Gym not available. RL features disabled.
+2026-08-05 13:04:44,392 - RLEvolver - WARNING - stable-baselines3 not available. RL features disabled.
+=== AUTO SELF-CODING ORGANISM WIRING VERIFICATION V2 ===
+Checking 9 core modules for ['auto_self_code', 'auto_fix', 'learn_from_mistakes', 'improve_with_market', 'interconnect', 'sync_with_organism', 'coherence_check', 'full_autonomous_cycle', 'on_mutation_event', 'analyze', 'initialize']
+[OK] core.ofi_detector.BaseTradingModule (base) has all autonomous methods
+[OK] core.ofi_detector.OFIDetector (ofi_detector) has all autonomous methods
+[OK] core.whale_flow_detector.BaseTradingModule (base) has all autonomous methods
+[OK] core.whale_flow_detector.WhaleFlowDetector (whale_flow_detector) has all autonomous methods
+[OK] core.mm_intent_detector.BaseTradingModule (base) has all autonomous methods
+[OK] core.mm_intent_detector.MarketMakerIntentDetector (mm_intent_detector) has all autonomous methods
+[OK] core.cvd_indicator.BaseTradingModule (base) has all autonomous methods
+[OK] core.cvd_indicator.CVDDetector (cvd_detector) has all autonomous methods
+[OK] core.funding_indicator.BaseTradingModule (base) has all autonomous methods
+[OK] core.funding_indicator.FundingRateDetector (funding_detector) has all autonomous methods
+[OK] core.volume_profile.BaseTradingModule (base) has all autonomous methods
+[OK] core.volume_profile.VolumeProfileDetector (volume_profile) has all autonomous methods
+[OK] core.cross_asset_leader.BaseTradingModule (base) has all autonomous methods
+[OK] core.cross_asset_leader.CrossAssetLeaderDetector (cross_asset_leader) has all autonomous methods
+[OK] core.real_fed_model.BaseTradingModule (base) has all autonomous methods
+[OK] core.real_fed_model.RealFedModel (real_fed_model) has all autonomous methods
+[FAIL] core.real_enhanced_indicator: {'module': 'core.real_enhanced_indicator', 'status': 'no_trading_module', 'error': 'No class with module_name'}
+
+--- Organism Discovery ---
+Discovered 10 active modules: ['ofi_detector', 'whale_flow_detector', 'mm_intent_detector', 'cvd_detector', 'funding_detector', 'volume_profile', 'cross_asset_leader', 'real_fed_model', 'momentum_alpha', 'regime_risk_gate']
+[OK] Organism has ofi_detector
+[OK] Organism has whale_flow_detector
+[OK] Organism has mm_intent_detector
+[OK] Organism has cvd_detector
+[OK] Organism has funding_detector
+[OK] Organism has volume_profile
+[OK] Organism has cross_asset_leader
+
+--- DataRing Pre-Broker Check ---
+[OK] DataRing push+latest works len=10 latency 1.4ms
+
+--- OKX Pre-Broker Feed Check ---
+[OK] OKXPreBrokerFeed handle_frame works {'connected': False, 'running': False, 'stale': False, 'last_frame_age_sec': 0.0, 'symbols': ['BTC-USDT-SWAP', 'ETH-USDT-SWAP'], 'channels': ['books5', 'trades', 'tickers', 'open-interest', 'funding-rate', 'liquidation-orders'], 'stats': {'frames': 1, 'trades': 1, 'books': 0, 'whales': 0, 'whale_clusters': 0, 'liquidations': 0, 'reconnects': 0}}
+
+--- RealEnhancedIndicator Check ---
+[OK] RealEnhancedIndicator signal NEUTRAL conf 0.0 latency 0.00667572021484375ms reason stale_feed
+
+--- No Random Check in core/ ---
+[WARN] Found np.random in core (should be 0 in hot path):
+core/chrono_execution.py:            layer_weights = np.random.randn(layers[i], layers[i+1]) * 0.1
+core/conscious_signal_generator.py:            data=np.random.rand(1000), 
+core/indicators_integration_example.py:    np.random.seed(42)
+core/indicators_integration_example.py:    returns = np.random.normal(0.001, 0.02, 300)
+core/indicators_integration_example.py:        'Volume': np.random.normal(1000000, 200000, 300)
+core/indicators_integration_example.py:        'price': np.random.normal(100, 1, 1000),
+core/indicators_integration_example.py:        'quantity': np.random.randint(1, 100, 1000),
+core/indicators_integration_example.py:        'side': np.random.choice([1, -1], 1000)
+core/qmp_engine_v3.py:                    closes = history_data["1m"]["close"].values if "close" in history_data["1m"].columns else np.random.randn(100)
+core/qnn_overlay.py:                self.weights = np.random.randn(input_dim, input_dim)
+core/simplified_conscious_signal_generator.py:        self.weights = np.random.rand(self.num_dimensions)
+core/temporal_data_harvester.py:        return np.random.rand(2**128)
+core/transdimensional_engine.py:                "price": np.random.normal(0, 1),
+core/transdimensional_engine.py:                "volume": np.random.normal(0, 1),
+core/transdimensional_engine.py:                "volatility": np.random.normal(0, 1),
+core/transdimensional_engine.py:                "probability": np.random.uniform(0, 1)
+core/transdimensional_engine.py:            np.random.seed(seed)
+core/transdimensional_engine.py:                "open": np.random.normal(100, 10),
+core/transdimensional_engine.py:                "high": np.random.normal(105, 10),
+core/transdimensional_engine.py:                "low": np.random.normal(95, 10),
+
+--- Latency Bench ---
+[OK] OFI latency p50 0.1ms p95 0.2ms avg 0.1ms
+
+=== SUMMARY ===
+SOME CHECKS FAILED - See above, fix per OTHER_AI_MUST_DO_SINGLE_NOTE_V4
