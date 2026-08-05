@@ -1,6 +1,25 @@
 # Sacred-Quant Module Restoration Summary
 
-## Completed Implementations
+> **SUPERSEDED 2026-08-05.** The content below describes legacy "Sacred-Quant"
+> modules (`dna_breath`, `time_fractal_fft`, `veve_triggers`, etc.) that the
+> deep institutional audit classified as **toxic/random/fake data** and
+> quarantined from the live signal path (`QUARANTINE_LIST.json`). They are
+> archived under `Deco_*/QMP_*/advanced_modules/` and are NOT wired into the
+> active organism.
+>
+> **The authoritative handoff is `OTHER_AI_MUST_DO_SINGLE_NOTE_V3.md`** —
+> read it before touching anything. Current active system (all verified):
+> * One-organism runtime: `autonomy/organism.py` + `core/event_bus.py`
+> * Pre-broker data: `okx_live/feed.py` (OKX WS → DataRing → bus),
+>   `quant_trading_system/data_feeds/spx_feed.py` (S&P 500)
+> * Institutional modules: `core/ofi_detector.py`, `cvd_indicator.py`,
+>   `funding_indicator.py`, `whale_flow_detector.py`, `mm_intent_detector.py`,
+>   `volume_profile.py`, `cross_asset_leader.py`, `real_fed_model.py`
+> * Bounded auto self-coding: `autonomy/self_coding.py` + `core/base_module.py`
+> * Maker-first execution: `core/execution_planner.py`
+> * Verification: `python scripts/organism_smoke.py` (25/25) + `pytest` (126 pass)
+
+## Completed Implementations (LEGACY ARCHIVE)
 
 ### 1. QOL-AI V2 Encryption Engine ✅
 - **Location**: `core/qol_engine.py`
