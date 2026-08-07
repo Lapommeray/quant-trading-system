@@ -1,0 +1,32 @@
+[
+  {
+    "id": "AXIOM_1_BINARY_SUM_BOUND",
+    "premise": "For any binary option event E with payout $1.00, YES_ask + NO_ask <= 1.00 in absence of arbitrage.",
+    "equation": "yes_ask + no_ask <= 100",
+    "category": "binary_arbitrage"
+  },
+  {
+    "id": "AXIOM_2_PURE_ARBITRAGE_NET_CREDIT",
+    "premise": "Any sequence of transactions yielding a net positive credit with non-negative terminal payoff is a riskless arbitrage.",
+    "equation": "net_credit > 0 and min_payoff >= 0",
+    "category": "pure_arbitrage"
+  },
+  {
+    "id": "AXIOM_3_CROSS_EXCHANGE_INVERSION",
+    "premise": "A transaction-costless bid/ask inversion across exchanges (Bid_A > Ask_B) implies pure cross-venue arbitrage.",
+    "equation": "bid_exchange_a > ask_exchange_b",
+    "category": "cross_exchange"
+  },
+  {
+    "id": "AXIOM_4_EXHAUSTIVE_PARTITION_BOUND",
+    "premise": "In a mutually exclusive, collectively exhaustive partition of N event outcomes, sum(ask_i) <= 100\u00a2.",
+    "equation": "sum(ask_prices) <= 100",
+    "category": "partition_arbitrage"
+  },
+  {
+    "id": "AXIOM_5_STRIKE_MONOTONICITY",
+    "premise": "For call binary options on the same underlying, ask price must be monotonically non-increasing with strike price.",
+    "equation": "ask_k1 >= ask_k2 for k1 < k2",
+    "category": "convexity_monotonicity"
+  }
+]
