@@ -114,6 +114,9 @@ PROTECTED_PATHS = [
     "paradox_register.json",
     "PARADOX_TESTAMENT.md",
     "paradox.log",
+    "absolute_zero_engine.py",
+    "absolute_zero_certificate.proof",
+    "absolute_zero.log",
 ]
 
 # Evolution cycle sleep (seconds)
