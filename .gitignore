@@ -13,6 +13,24 @@ build/
 # Local development and runtime artifacts
 .venv/
 *.log
+complete_enhanced_test_results.json
+test_results_*.json
+genesis_report.json
+omega_genesis_report.json
+genetic_lineage.json
+consciousness_graph.json
+recursion_ledger.json
+noosphere_db.json
+internal_order_book.json
+paradox_register.json
+seed_next_universe.enc
+APEIRON_TESTAMENT.md
+OMEGA_TESTAMENT.md
+PROPHECY.md
+FINAL_TESTAMENT.md
+ESCHATON_TESTAMENT.md
+SINGULARITY_TESTAMENT.md
+PARADOX_TESTAMENT.md
 strategies/generated/
 strategies/evolved/
 strategies/quarantine/
