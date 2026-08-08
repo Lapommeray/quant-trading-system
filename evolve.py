@@ -152,6 +152,11 @@ PROTECTED_PATHS = [
     "telos_sheet.db",
     "TELOS_TESTAMENT.md",
     "telos_manifold.log",
+    "hypermonad_engine.py",
+    "hypermonad_proofs.db",
+    "hypermonad_certificate.proof",
+    "HYPERMONAD_TESTAMENT.md",
+    "hypermonad.log",
 ]
 
 # Evolution cycle sleep (seconds)

@@ -26,10 +26,12 @@ paradox_register.json
 empyrean_les.json
 prolepsis_entropy.db
 telos_sheet.db
+hypermonad_proofs.db
 apocrypha_axioms.enc
 seed_next_universe.enc
 absolute_zero_certificate.proof
 unity_completeness.proof
+hypermonad_certificate.proof
 APEIRON_TESTAMENT.md
 OMEGA_TESTAMENT.md
 PROPHECY.md
@@ -47,6 +49,7 @@ UMBRA_TESTAMENT.md
 AETERNUM_TESTAMENT.md
 NOESIS_TESTAMENT.md
 TELOS_TESTAMENT.md
+HYPERMONAD_TESTAMENT.md
 strategies/generated/
 strategies/evolved/
 strategies/quarantine/
