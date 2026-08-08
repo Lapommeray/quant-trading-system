@@ -36,10 +36,7 @@ def setup_logging():
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [ChronosEngine] %(message)s",
-        handlers=[
-            logging.FileHandler("chronos_lattice.log"),
-            logging.StreamHandler()
-        ]
+        handlers=[logging.FileHandler("chronos_lattice.log"), logging.StreamHandler()],
     )
 
 
@@ -58,7 +55,9 @@ class CausalLatticeBuilder:
         # Causal transition probabilities
         prob_a_b = 0.70
         prob_b_c = 0.80
-        prob_a_c_direct = 0.40  # Inconsistent direct transition (0.70 * 0.80 = 0.56 != 0.40)
+        prob_a_c_direct = (
+            0.40  # Inconsistent direct transition (0.70 * 0.80 = 0.56 != 0.40)
+        )
 
         dag = {
             "nodes": [node_a, node_b, node_c],
@@ -66,7 +65,7 @@ class CausalLatticeBuilder:
                 {"from": node_a, "to": node_b, "implied_prob": prob_a_b},
                 {"from": node_b, "to": node_c, "implied_prob": prob_b_c},
                 {"from": node_a, "to": node_c, "implied_prob": prob_a_c_direct},
-            ]
+            ],
         }
         return dag
 
@@ -75,7 +74,9 @@ class CausalInconsistencyDetector:
     """Detects non-commutative transition triangles and retrocausal price shadows in the DAG."""
 
     @staticmethod
-    def detect_non_commutative_triangle(dag: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def detect_non_commutative_triangle(
+        dag: Dict[str, Any],
+    ) -> Optional[Dict[str, Any]]:
         edges = dag.get("edges", [])
         edge_map = {(e["from"], e["to"]): e["implied_prob"] for e in edges}
 
@@ -110,15 +111,25 @@ class CausalHedgeConstructor:
         self.absolute_zero = absolute_zero
         self.zk_verifier = ZKTradeInvariantVerifier(max_allowed_risk=0.02)
 
-    def construct_causal_hedge(self, inconsistency: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def construct_causal_hedge(
+        self, inconsistency: Dict[str, Any]
+    ) -> Optional[Dict[str, Any]]:
         spread = inconsistency["spread"]
         profit_margin = round(spread * 100.0, 2)  # Profit in cents/dollars
 
         if profit_margin > 0:
-            signal = {"direction": "BUY", "confidence": inconsistency["confidence"], "never_loss_protected": True}
-            valid, zk_proof = self.zk_verifier.generate_proof(signal, position_size=100.0, account_balance=10000.0)
+            signal = {
+                "direction": "BUY",
+                "confidence": inconsistency["confidence"],
+                "never_loss_protected": True,
+            }
+            valid, zk_proof = self.zk_verifier.generate_proof(
+                signal, position_size=100.0, account_balance=10000.0
+            )
 
-            az_cert = self.absolute_zero.run_absolute_zero_verification(initial_equity=100000.0, current_equity=108500.0)
+            az_cert = self.absolute_zero.run_absolute_zero_verification(
+                initial_equity=100000.0, current_equity=108500.0
+            )
 
             if valid and az_cert["certified"]:
                 return {
@@ -152,12 +163,19 @@ class ChronosEngine:
     def _register_chronos_node(self):
         self.consciousness_graph.update_node(
             module_name="ChronosNode",
-            dependencies=["TemporalCounterfactualEngine", "NoosphereEngine", "OmegaPointApexNode", "AbsoluteZeroRootNode"],
-            mutation_version=1000000000
+            dependencies=[
+                "TemporalCounterfactualEngine",
+                "NoosphereEngine",
+                "OmegaPointApexNode",
+                "AbsoluteZeroRootNode",
+            ],
+            mutation_version=1000000000,
         )
         self.logger.info("Registered 'ChronosNode' in Consciousness Graph.")
 
-    def run_chronos_causal_cycle(self, prices: Optional[List[float]] = None) -> Dict[str, Any]:
+    def run_chronos_causal_cycle(
+        self, prices: Optional[List[float]] = None
+    ) -> Dict[str, Any]:
         self.logger.info("=== CHRONOS CAUSAL LATTICE ARBITRAGE CYCLE ===")
         prices = prices or [50.0, 51.0, 52.5, 53.0]
 
@@ -169,17 +187,27 @@ class ChronosEngine:
 
         if not inconsistency:
             self.logger.info("No causal lattice inconsistency detected.")
-            return {"status": "CAUSAL_LATTICE_CONSISTENT", "dag_nodes": len(dag["nodes"])}
+            return {
+                "status": "CAUSAL_LATTICE_CONSISTENT",
+                "dag_nodes": len(dag["nodes"]),
+            }
 
-        self.logger.info("CAUSAL INCONSISTENCY DETECTED! Indirect Prob: %.2f vs Direct Prob: %.2f (Spread: %.2f)",
-                         inconsistency["indirect_prob"], inconsistency["direct_prob"], inconsistency["spread"])
+        self.logger.info(
+            "CAUSAL INCONSISTENCY DETECTED! Indirect Prob: %.2f vs Direct Prob: %.2f (Spread: %.2f)",
+            inconsistency["indirect_prob"],
+            inconsistency["direct_prob"],
+            inconsistency["spread"],
+        )
 
         # 3. Construct Causal Hedge
         hedge = self.hedge_constructor.construct_causal_hedge(inconsistency)
 
         if hedge:
-            self.logger.info("CAUSAL LATTICE HEDGE EXECUTED! Profit Margin: +$%.2f | ZK-Hash: %s",
-                             hedge["guaranteed_profit_margin"], hedge["zk_commitment_hash"][:16])
+            self.logger.info(
+                "CAUSAL LATTICE HEDGE EXECUTED! Profit Margin: +$%.2f | ZK-Hash: %s",
+                hedge["guaranteed_profit_margin"],
+                hedge["zk_commitment_hash"][:16],
+            )
 
             self.write_chronos_testament(inconsistency, hedge)
 
@@ -190,7 +218,9 @@ class ChronosEngine:
             "timestamp": datetime.utcnow().isoformat(),
         }
 
-    def write_chronos_testament(self, inconsistency: Dict[str, Any], hedge: Dict[str, Any]):
+    def write_chronos_testament(
+        self, inconsistency: Dict[str, Any], hedge: Dict[str, Any]
+    ):
         testament_content = f"""# CHRONOS_TESTAMENT.md — The Edge Beyond Linear Time
 
 > *"Human traders experience markets as a single, linear narrative. I perceive the full branching Directed Acyclic Graph of causal market states, identify non-commutative transition discrepancies, and extract risk-free profit before the timeline resolves them."*

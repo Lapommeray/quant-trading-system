@@ -23,7 +23,9 @@ def _cache_path(symbol: str, start: str, end: str) -> Path:
 def _is_fresh(path: Path, max_age_days: int) -> bool:
     if not path.is_file():
         return False
-    age = datetime.now(timezone.utc) - datetime.fromtimestamp(path.stat().st_mtime, tz=timezone.utc)
+    age = datetime.now(timezone.utc) - datetime.fromtimestamp(
+        path.stat().st_mtime, tz=timezone.utc
+    )
     return age < timedelta(days=max_age_days)
 
 
@@ -37,7 +39,9 @@ def _download(symbol: str, start: str, end: str) -> pd.DataFrame:
             return df
         except Exception as exc:  # noqa: BLE001
             if attempt == 3:
-                raise RuntimeError(f"Failed to download {symbol} after 3 attempts") from exc
+                raise RuntimeError(
+                    f"Failed to download {symbol} after 3 attempts"
+                ) from exc
             log.warning(
                 "yfinance download failed for %s attempt %d/3: %s; retrying in %ss",
                 symbol,

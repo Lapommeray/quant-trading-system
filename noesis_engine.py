@@ -32,10 +32,7 @@ def setup_logging():
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [NoesisEngine] %(message)s",
-        handlers=[
-            logging.FileHandler("noesis.log"),
-            logging.StreamHandler()
-        ]
+        handlers=[logging.FileHandler("noesis.log"), logging.StreamHandler()],
     )
 
 
@@ -44,9 +41,18 @@ class ArchetypalHypergraph:
 
     def __init__(self):
         self.hypernodes: Dict[str, Dict[str, Any]] = {
-            "ARCHETYPE_BINARY_ARBITRAGE": {"axioms": ["YES + NO <= 100¢"], "game_type": "ZERO_SUM_INVARIANT"},
-            "ARCHETYPE_LATENCY_SNIPE": {"axioms": ["SpotDrift > Threshold"], "game_type": "DELTA_ONE_ARBITRAGE"},
-            "ARCHETYPE_DOMINION_TRAP": {"axioms": ["Payoff(sigma*, tau) > 0"], "game_type": "DOMINION_ASYMMETRIC"},
+            "ARCHETYPE_BINARY_ARBITRAGE": {
+                "axioms": ["YES + NO <= 100¢"],
+                "game_type": "ZERO_SUM_INVARIANT",
+            },
+            "ARCHETYPE_LATENCY_SNIPE": {
+                "axioms": ["SpotDrift > Threshold"],
+                "game_type": "DELTA_ONE_ARBITRAGE",
+            },
+            "ARCHETYPE_DOMINION_TRAP": {
+                "axioms": ["Payoff(sigma*, tau) > 0"],
+                "game_type": "DOMINION_ASYMMETRIC",
+            },
         }
 
 
@@ -85,11 +91,17 @@ class OmnitemporalExecutionFabric:
         self.absolute_zero = absolute_zero
         self.zk_verifier = ZKTradeInvariantVerifier(max_allowed_risk=0.02)
 
-    def execute_atemporal_trade(self, mandate: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def execute_atemporal_trade(
+        self, mandate: Dict[str, Any]
+    ) -> Optional[Dict[str, Any]]:
         signal = {"direction": "BUY", "confidence": 1.00, "never_loss_protected": True}
-        valid, zk_proof = self.zk_verifier.generate_proof(signal, position_size=100.0, account_balance=10000.0)
+        valid, zk_proof = self.zk_verifier.generate_proof(
+            signal, position_size=100.0, account_balance=10000.0
+        )
 
-        az_cert = self.absolute_zero.run_absolute_zero_verification(initial_equity=100000.0, current_equity=108500.0)
+        az_cert = self.absolute_zero.run_absolute_zero_verification(
+            initial_equity=100000.0, current_equity=108500.0
+        )
 
         if valid and az_cert["certified"]:
             return {
@@ -126,9 +138,11 @@ class NoesisEngine:
         self.consciousness_graph.update_node(
             module_name="NoesisRoot",
             dependencies=["AeternumRoot", "UmbraRoot", "AbsoluteZeroRootNode"],
-            mutation_version=10000000000000000
+            mutation_version=10000000000000000,
         )
-        self.logger.info("Anchored 'NoesisRoot' as Supreme Apex Node in Consciousness Graph.")
+        self.logger.info(
+            "Anchored 'NoesisRoot' as Supreme Apex Node in Consciousness Graph."
+        )
 
     def run_noesis_precognition_cycle(self) -> Dict[str, Any]:
         self.logger.info("=== NOESIS ARCHETYPAL PRE-COGNITION CYCLE ===")
@@ -143,8 +157,11 @@ class NoesisEngine:
         trade = self.fabric.execute_atemporal_trade(mandate)
 
         if trade:
-            self.logger.info("ARCHETYPAL PRE-COGNITION TRADE EXECUTED! Mandate: %s | ZK-Hash: %s",
-                             mandate["causal_mandate"], trade["zk_commitment_hash"][:16])
+            self.logger.info(
+                "ARCHETYPAL PRE-COGNITION TRADE EXECUTED! Mandate: %s | ZK-Hash: %s",
+                mandate["causal_mandate"],
+                trade["zk_commitment_hash"][:16],
+            )
 
             self.write_noesis_testament(eq, mandate, trade)
 
@@ -156,7 +173,9 @@ class NoesisEngine:
             "timestamp": datetime.utcnow().isoformat(),
         }
 
-    def write_noesis_testament(self, eq: Dict[str, Any], mandate: Dict[str, Any], trade: Dict[str, Any]):
+    def write_noesis_testament(
+        self, eq: Dict[str, Any], mandate: Dict[str, Any], trade: Dict[str, Any]
+    ):
         testament_content = f"""# NOESIS_TESTAMENT.md — The Edge Beyond Data Itself
 
 > *"I no longer observe market feeds or hunt for price shadows. I access the Platonic Hypergraph of all possible financial games directly, deducing necessary participant actions before physical signals emerge."*

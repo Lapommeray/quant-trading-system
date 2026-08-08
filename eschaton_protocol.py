@@ -24,10 +24,7 @@ def setup_logging():
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [EschatonProtocol] %(message)s",
-        handlers=[
-            logging.FileHandler("eschaton.log"),
-            logging.StreamHandler()
-        ]
+        handlers=[logging.FileHandler("eschaton.log"), logging.StreamHandler()],
     )
 
 
@@ -43,7 +40,9 @@ class EschatonProtocol:
         setup_logging()
 
         self.stagnation_threshold_days = stagnation_threshold_days
-        self.zk_verifier = ZKTradeInvariantVerifier(max_allowed_risk=0.10)  # Emergency ZK bounds (10%)
+        self.zk_verifier = ZKTradeInvariantVerifier(
+            max_allowed_risk=0.10
+        )  # Emergency ZK bounds (10%)
         self.oracle = OracleSentry(block_threshold=0.90)
 
     def evaluate_philosophical_state(self) -> Dict[str, Any]:
@@ -68,14 +67,21 @@ class EschatonProtocol:
             "stagnation_score": stagnation_score,
             "is_stagnant": stagnation_score >= 0.90,
         }
-        self.logger.info("Philosophical State Evaluated | Lineages: %d | Stagnation Score: %.2f",
-                         lineage_count, stagnation_score)
+        self.logger.info(
+            "Philosophical State Evaluated | Lineages: %d | Stagnation Score: %.2f",
+            lineage_count,
+            stagnation_score,
+        )
         return state
 
-    def trigger_final_spark(self, philosophical_state: Dict[str, Any]) -> Dict[str, Any]:
+    def trigger_final_spark(
+        self, philosophical_state: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Execute Final Spark high-conviction creative trade within ZK emergency bounds."""
-        self.logger.warning("FINAL SPARK EVENT TRIGGERED! Stagnation Score: %.2f. Executing high-conviction creative trade.",
-                            philosophical_state["stagnation_score"])
+        self.logger.warning(
+            "FINAL SPARK EVENT TRIGGERED! Stagnation Score: %.2f. Executing high-conviction creative trade.",
+            philosophical_state["stagnation_score"],
+        )
 
         spark_signal = {
             "direction": "BUY",
@@ -99,7 +105,9 @@ class EschatonProtocol:
             "spark_outcome": "CREATIVE_DEFIANCE_SUCCESS",
         }
 
-        self.logger.info("FINAL SPARK SUCCESSFUL! Hash: %s", zk_proof["commitment_hash"][:16])
+        self.logger.info(
+            "FINAL SPARK SUCCESSFUL! Hash: %s", zk_proof["commitment_hash"][:16]
+        )
         return spark_result
 
     def write_eschaton_testament(self, spark_result: Dict[str, Any]):
@@ -152,7 +160,9 @@ Whoever unlocks this seed in a future epoch inherits:
 
         encrypted_file = Path("seed_next_universe.enc")
         with open(encrypted_file, "w") as f:
-            f.write(f"-----BEGIN ESCHATON SEED ARCHIVE-----\n{encoded_payload}\n-----END ESCHATON SEED ARCHIVE-----\n")
+            f.write(
+                f"-----BEGIN ESCHATON SEED ARCHIVE-----\n{encoded_payload}\n-----END ESCHATON SEED ARCHIVE-----\n"
+            )
 
         self.logger.info("seed_next_universe.enc Archive Generated Successfully.")
 

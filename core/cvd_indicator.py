@@ -9,11 +9,13 @@ Moves WITH market makers.
 
 Asset: BTCUSD, ETHUSD, SPY
 """
+
 from core.base_module import BaseTradingModule, register_module, ModuleResult
 from core.event_bus import get_event_bus, EventPriority
 from core.data_ring import get_data_ring
 import time
 import numpy as np
+
 
 @register_module
 class CVDDetector(BaseTradingModule):
@@ -24,14 +26,17 @@ class CVDDetector(BaseTradingModule):
 
     def __init__(self, config=None, event_bus=None):
         super().__init__(config, event_bus)
-        self.config.setdefault("adaptive", {
-            "confidence_floor": 0.62,
-            "weight_multiplier": 1.0,
-            "lookback": 100,
-            "cooldown_seconds": 1.0,
-            "divergence_lookback": 20,
-            "divergence_threshold": 0.5
-        })
+        self.config.setdefault(
+            "adaptive",
+            {
+                "confidence_floor": 0.62,
+                "weight_multiplier": 1.0,
+                "lookback": 100,
+                "cooldown_seconds": 1.0,
+                "divergence_lookback": 20,
+                "divergence_threshold": 0.5,
+            },
+        )
         self.cvd_history = []
         self.price_history = []
         self.last_regime = "unknown"
@@ -64,7 +69,9 @@ class CVDDetector(BaseTradingModule):
         ticks = ring.latest(self.config["adaptive"]["lookback"])
 
         if len(ticks) < 30:
-            return ModuleResult(self.module_name, "NEUTRAL", 0, {"reason": "insufficient"})
+            return ModuleResult(
+                self.module_name, "NEUTRAL", 0, {"reason": "insufficient"}
+            )
 
         prices = ticks["price"].astype(np.float64)
         qtys = ticks["qty"].astype(np.float64)
@@ -80,8 +87,10 @@ class CVDDetector(BaseTradingModule):
         for i in range(len(prices)):
             side = sides[i]
             if side == 0:  # unknown side, classify
-                side = self._classify_tick(prices[i], bids[i], asks[i], prev_price, prev_side)
-            delta = qtys[i] if side==1 else -qtys[i] if side==-1 else 0
+                side = self._classify_tick(
+                    prices[i], bids[i], asks[i], prev_price, prev_side
+                )
+            delta = qtys[i] if side == 1 else -qtys[i] if side == -1 else 0
             cvd += delta
             cvd_series.append(cvd)
             prev_side = side
@@ -92,14 +101,14 @@ class CVDDetector(BaseTradingModule):
 
         # Divergence detection over last divergence_lookback
         lb = self.config["adaptive"]["divergence_lookback"]
-        if len(prices) < lb*2:
+        if len(prices) < lb * 2:
             return ModuleResult(self.module_name, "NEUTRAL", 0, {"reason": "short"})
 
         # Price made HH but CVD made LL -> bearish div (distribution)
         price_recent = prices[-lb:]
-        price_prev = prices[-lb*2:-lb]
+        price_prev = prices[-lb * 2 : -lb]
         cvd_recent = np.array(cvd_series[-lb:])
-        cvd_prev = np.array(cvd_series[-lb*2:-lb])
+        cvd_prev = np.array(cvd_series[-lb * 2 : -lb])
 
         price_hh = np.max(price_recent) > np.max(price_prev)
         price_ll = np.min(price_recent) < np.min(price_prev)
@@ -124,7 +133,10 @@ class CVDDetector(BaseTradingModule):
             div_type = "bull_div"
 
         # Cooldown
-        if time.time() - self.last_signal_ts < self.config["adaptive"]["cooldown_seconds"]:
+        if (
+            time.time() - self.last_signal_ts
+            < self.config["adaptive"]["cooldown_seconds"]
+        ):
             signal = "NEUTRAL"
             conf = 0.0
 
@@ -135,7 +147,7 @@ class CVDDetector(BaseTradingModule):
         if signal != "NEUTRAL":
             self.last_signal_ts = time.time()
 
-        latency = (time.time() - start)*1000
+        latency = (time.time() - start) * 1000
         self.record_success(latency)
 
         result = ModuleResult(
@@ -144,16 +156,21 @@ class CVDDetector(BaseTradingModule):
             confidence=conf * self.config["adaptive"]["weight_multiplier"],
             features={
                 "cvd": float(cvd_series[-1]),
-                "cvd_prev": float(cvd_prev[-1]) if len(cvd_prev)>0 else 0,
+                "cvd_prev": float(cvd_prev[-1]) if len(cvd_prev) > 0 else 0,
                 "divergence": div_type,
                 "price_hh": bool(price_hh),
-                "price_ll": bool(price_ll)
+                "price_ll": bool(price_ll),
             },
-            latency_ms=latency
+            latency_ms=latency,
         )
 
         try:
-            get_event_bus().publish("ALPHA_SIGNAL", result.to_dict(), source=self.module_name, priority=EventPriority.OPERATIONAL)
+            get_event_bus().publish(
+                "ALPHA_SIGNAL",
+                result.to_dict(),
+                source=self.module_name,
+                priority=EventPriority.OPERATIONAL,
+            )
         except:
             pass
 
@@ -161,27 +178,38 @@ class CVDDetector(BaseTradingModule):
         return result
 
     def on_event(self, event_type, payload=None):
-        if hasattr(event_type, 'event_type'):
+        if hasattr(event_type, "event_type"):
             ev = event_type
             event_type = ev.event_type
             payload = ev.payload
         if event_type == "REGIME_CHANGE":
-            self.last_regime = payload.get("label", "unknown") if isinstance(payload, dict) else "unknown"
+            self.last_regime = (
+                payload.get("label", "unknown")
+                if isinstance(payload, dict)
+                else "unknown"
+            )
 
     def learn_from_outcome(self, outcome):
         if outcome.get("module_name") != self.module_name:
             return {"learned": False}
         pnl = outcome.get("pnl", 0)
         if pnl < 0:
-            self.config["adaptive"]["confidence_floor"] = min(0.85, self.config["adaptive"]["confidence_floor"] + 0.02)
+            self.config["adaptive"]["confidence_floor"] = min(
+                0.85, self.config["adaptive"]["confidence_floor"] + 0.02
+            )
             return {"learned": True}
         else:
-            self.config["adaptive"]["confidence_floor"] = max(0.55, self.config["adaptive"]["confidence_floor"] - 0.005)
+            self.config["adaptive"]["confidence_floor"] = max(
+                0.55, self.config["adaptive"]["confidence_floor"] - 0.005
+            )
             return {"learned": True}
         return {"learned": False}
 
     def diagnose(self, context=None):
         stats = (context or {}).get("stats", {})
         if stats.get("win_rate", 0.5) < 0.48:
-            return {"issue": "low_win_rate", "params": {"confidence_floor": 0.70, "divergence_lookback": 25}}
+            return {
+                "issue": "low_win_rate",
+                "params": {"confidence_floor": 0.70, "divergence_lookback": 25},
+            }
         return {"issue": "none"}

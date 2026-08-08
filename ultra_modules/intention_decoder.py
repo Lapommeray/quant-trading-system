@@ -1,6 +1,6 @@
-
 # intention_decoder.py
 # This module decodes the invisible market structure to detect hidden intention
+
 
 class IntentionDecoder:
     def __init__(self, algorithm):

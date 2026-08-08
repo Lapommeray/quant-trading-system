@@ -13,9 +13,9 @@ from .reality_anchor_points import RealityAnchorPoints
 from .dimensional_transcendence_integration import DimensionalTranscendenceIntegration
 
 __all__ = [
-    'DimensionalGateway', 
-    'QuantumConsciousnessNetwork', 
-    'TemporalSingularityEngine', 
-    'RealityAnchorPoints',
-    'DimensionalTranscendenceIntegration'
+    "DimensionalGateway",
+    "QuantumConsciousnessNetwork",
+    "TemporalSingularityEngine",
+    "RealityAnchorPoints",
+    "DimensionalTranscendenceIntegration",
 ]

@@ -4,9 +4,12 @@
 import numpy as np
 import hashlib
 
+
 class GeneticMarketResonance:
     def __init__(self, rhythm_sensitivity=0.05):
-        self.rhythm_sensitivity = rhythm_sensitivity  # Tuning for market-heart alignment
+        self.rhythm_sensitivity = (
+            rhythm_sensitivity  # Tuning for market-heart alignment
+        )
         self.historical_heartbeat = []
 
     def _bio_hash(self, signal_id: str) -> float:

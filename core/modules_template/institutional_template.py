@@ -3,11 +3,13 @@ Template for every auto self-coding institutional module.
 Copy this to core/ofi_detector.py etc. and implement compute logic.
 Follows ONE ORGANISM spec: register, event bus, learn, diagnose, self_code.
 """
+
 from core.base_module import BaseTradingModule, register_module, ModuleResult
 from core.event_bus import get_event_bus, EventPriority
 from core.data_ring import get_data_ring
 import time
 import numpy as np
+
 
 @register_module
 class InstitutionalModuleTemplate(BaseTradingModule):
@@ -19,14 +21,17 @@ class InstitutionalModuleTemplate(BaseTradingModule):
     def __init__(self, config=None, event_bus=None):
         super().__init__(config, event_bus)
         # Adaptive params ONLY these can be auto-tuned by self-coder
-        self.config.setdefault("adaptive", {
-            "confidence_floor": 0.62,
-            "weight_multiplier": 1.0,
-            "lookback": 100,
-            "cooldown_seconds": 1.0,
-            "volatility_multiplier": 1.0,
-            "regime_affinity_multiplier": 1.0
-        })
+        self.config.setdefault(
+            "adaptive",
+            {
+                "confidence_floor": 0.62,
+                "weight_multiplier": 1.0,
+                "lookback": 100,
+                "cooldown_seconds": 1.0,
+                "volatility_multiplier": 1.0,
+                "regime_affinity_multiplier": 1.0,
+            },
+        )
         self.last_signal_ts = 0.0
         self.last_whale_event = None
         self.last_regime = "unknown"
@@ -54,7 +59,9 @@ class InstitutionalModuleTemplate(BaseTradingModule):
 
         if len(ticks) < 10 or ring.latency_ms() > 5000:
             # stale feed -> no signal, fail closed
-            return ModuleResult(module_name=self.module_name, signal="NEUTRAL", confidence=0.0)
+            return ModuleResult(
+                module_name=self.module_name, signal="NEUTRAL", confidence=0.0
+            )
 
         # ---- YOUR INSTITUTIONAL LOGIC HERE ----
         # Example OFI calculation (replace with real)
@@ -74,7 +81,11 @@ class InstitutionalModuleTemplate(BaseTradingModule):
             conf *= 0.3
 
         # Apply whale filter - if distribution whale event, flip BUY to HOLD
-        if self.last_whale_event and self.last_whale_event.get("type") == "distribution" and signal == "BUY":
+        if (
+            self.last_whale_event
+            and self.last_whale_event.get("type") == "distribution"
+            and signal == "BUY"
+        ):
             conf *= 0.5
 
         # Cooldown
@@ -101,9 +112,9 @@ class InstitutionalModuleTemplate(BaseTradingModule):
                 "regime": self.last_regime,
                 "whale": self.last_whale_event,
                 "bid": float(ticks[-1]["bid"]),
-                "ask": float(ticks[-1]["ask"])
+                "ask": float(ticks[-1]["ask"]),
             },
-            latency_ms=latency
+            latency_ms=latency,
         )
 
         # Publish to ONE ORGANISM bus - OPERATIONAL lane
@@ -112,7 +123,7 @@ class InstitutionalModuleTemplate(BaseTradingModule):
                 "ALPHA_SIGNAL",
                 result.to_dict(),
                 source=self.module_name,
-                priority=EventPriority.OPERATIONAL
+                priority=EventPriority.OPERATIONAL,
             )
         except Exception:
             pass
@@ -134,7 +145,10 @@ class InstitutionalModuleTemplate(BaseTradingModule):
 
         if event.event_type == "ALPHA_SIGNAL":
             # Cross-pollination: if funding module says crowded long, reduce BUY conf
-            if event.payload.get("module_name") == "funding_detector" and event.payload.get("signal") == "SELL":
+            if (
+                event.payload.get("module_name") == "funding_detector"
+                and event.payload.get("signal") == "SELL"
+            ):
                 # funding crowded long -> our BUY less attractive
                 pass
 
@@ -148,16 +162,25 @@ class InstitutionalModuleTemplate(BaseTradingModule):
         pnl = outcome.get("pnl", 0)
         if pnl < 0:
             # Mistake: raise floor
-            self.config["adaptive"]["confidence_floor"] = min(0.85, self.config["adaptive"]["confidence_floor"] + 0.02)
+            self.config["adaptive"]["confidence_floor"] = min(
+                0.85, self.config["adaptive"]["confidence_floor"] + 0.02
+            )
             return {
                 "learned": True,
                 "lesson": f"Raised confidence_floor to {self.config['adaptive']['confidence_floor']:.2f} after loss {pnl:.4f} in regime {outcome.get('regime')}",
-                "params": {"confidence_floor": self.config["adaptive"]["confidence_floor"]}
+                "params": {
+                    "confidence_floor": self.config["adaptive"]["confidence_floor"]
+                },
             }
         elif pnl > 0:
             # Reinforce: slightly lower floor
-            self.config["adaptive"]["confidence_floor"] = max(0.55, self.config["adaptive"]["confidence_floor"] - 0.005)
-            return {"learned": True, "lesson": f"Lowered floor to {self.config['adaptive']['confidence_floor']:.2f} after win"}
+            self.config["adaptive"]["confidence_floor"] = max(
+                0.55, self.config["adaptive"]["confidence_floor"] - 0.005
+            )
+            return {
+                "learned": True,
+                "lesson": f"Lowered floor to {self.config['adaptive']['confidence_floor']:.2f} after win",
+            }
 
         return {"learned": False}
 
@@ -170,13 +193,20 @@ class InstitutionalModuleTemplate(BaseTradingModule):
             return {
                 "issue": "low_win_rate",
                 "suggestion": "tighten threshold",
-                "params": {"confidence_floor": min(0.80, self.config["adaptive"]["confidence_floor"] + 0.05)}
+                "params": {
+                    "confidence_floor": min(
+                        0.80, self.config["adaptive"]["confidence_floor"] + 0.05
+                    )
+                },
             }
         if mistake_rate > 0.35:
             return {
                 "issue": "high_mistake_rate",
                 "suggestion": "increase cooldown",
-                "params": {"cooldown_seconds": self.config["adaptive"]["cooldown_seconds"] + 0.5}
+                "params": {
+                    "cooldown_seconds": self.config["adaptive"]["cooldown_seconds"]
+                    + 0.5
+                },
             }
 
         return {"issue": "none"}

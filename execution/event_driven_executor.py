@@ -32,6 +32,7 @@ except ImportError:
 
 try:
     from safety_governance import SafetyGovernanceSystem  # type: ignore
+
     SAFETY = True
 except ImportError:
     SAFETY = False
@@ -66,7 +67,12 @@ class EventDrivenExecutor:
             self.event_bus = event_bus
 
         self._running = False
-        self._stats = {"signals_received": 0, "orders_placed": 0, "orders_blocked": 0, "last_signal": None}
+        self._stats = {
+            "signals_received": 0,
+            "orders_placed": 0,
+            "orders_blocked": 0,
+            "last_signal": None,
+        }
         self._lock = threading.RLock()
 
         # Wire subscriptions
@@ -83,7 +89,11 @@ class EventDrivenExecutor:
         self._running = True
         log.info("EventDrivenExecutor started paper=%s", self.okx_engine.paper_mode)
         if self.event_bus:
-            self.event_bus.publish("EXECUTOR_STARTED", {"paper": self.okx_engine.paper_mode}, source="EventDrivenExecutor")
+            self.event_bus.publish(
+                "EXECUTOR_STARTED",
+                {"paper": self.okx_engine.paper_mode},
+                source="EventDrivenExecutor",
+            )
 
     def stop(self):
         self._running = False
@@ -94,7 +104,9 @@ class EventDrivenExecutor:
         """Handle SIGNAL_GENERATED event."""
         with self._lock:
             self._stats["signals_received"] += 1
-            self._stats["last_signal"] = event.payload if hasattr(event, "payload") else event
+            self._stats["last_signal"] = (
+                event.payload if hasattr(event, "payload") else event
+            )
 
         payload = event.payload if hasattr(event, "payload") else event
         if not isinstance(payload, dict):
@@ -114,12 +126,21 @@ class EventDrivenExecutor:
             log.debug("Symbol %s blocked", symbol)
             return
         if confidence < self.config.min_confidence:
-            log.debug("Confidence %.3f below min %.3f for %s", confidence, self.config.min_confidence, symbol)
+            log.debug(
+                "Confidence %.3f below min %.3f for %s",
+                confidence,
+                self.config.min_confidence,
+                symbol,
+            )
             with self._lock:
                 self._stats["orders_blocked"] += 1
             return
         if weighted_conf < self.config.require_organism_weight:
-            log.debug("Weighted conf %.3f below required %.3f", weighted_conf, self.config.require_organism_weight)
+            log.debug(
+                "Weighted conf %.3f below required %.3f",
+                weighted_conf,
+                self.config.require_organism_weight,
+            )
             with self._lock:
                 self._stats["orders_blocked"] += 1
             return
@@ -129,24 +150,36 @@ class EventDrivenExecutor:
 
         # Execute
         try:
-            result = self.okx_engine.place_order_from_signal(payload, max_quantity=self.config.max_quantity)
+            result = self.okx_engine.place_order_from_signal(
+                payload, max_quantity=self.config.max_quantity
+            )
             if result:
                 if result.success:
                     with self._lock:
                         self._stats["orders_placed"] += 1
-                    log.info("OKX order placed from signal %s %s conf=%.2f qty=%.6f", symbol, final_signal, confidence, result.filled_quantity)
+                    log.info(
+                        "OKX order placed from signal %s %s conf=%.2f qty=%.6f",
+                        symbol,
+                        final_signal,
+                        confidence,
+                        result.filled_quantity,
+                    )
                 else:
                     with self._lock:
                         self._stats["orders_blocked"] += 1
                     log.info("OKX order blocked for %s: %s", symbol, result.message)
         except Exception as exc:
-            log.exception("EventDrivenExecutor failed to place order for %s: %s", symbol, exc)
+            log.exception(
+                "EventDrivenExecutor failed to place order for %s: %s", symbol, exc
+            )
             with self._lock:
                 self._stats["orders_blocked"] += 1
 
     def _on_kill_switch(self, event: Any):
         payload = event.payload if hasattr(event, "payload") else {}
-        reason = payload.get("reason", "unknown") if isinstance(payload, dict) else "unknown"
+        reason = (
+            payload.get("reason", "unknown") if isinstance(payload, dict) else "unknown"
+        )
         log.warning("Kill switch received in executor: %s", reason)
         # Could pause trading
         self.okx_engine.local_breaker.trip(f"Kill switch propagated: {reason}")
@@ -154,7 +187,9 @@ class EventDrivenExecutor:
     # ---- direct API for non-event usage ----
     def execute_signal(self, signal: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Direct execution without bus."""
-        result = self.okx_engine.place_order_from_signal(signal, max_quantity=self.config.max_quantity)
+        result = self.okx_engine.place_order_from_signal(
+            signal, max_quantity=self.config.max_quantity
+        )
         if result:
             if result.success:
                 self._stats["orders_placed"] += 1

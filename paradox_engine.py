@@ -32,10 +32,7 @@ def setup_logging():
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [ParadoxEngine] %(message)s",
-        handlers=[
-            logging.FileHandler("paradox.log"),
-            logging.StreamHandler()
-        ]
+        handlers=[logging.FileHandler("paradox.log"), logging.StreamHandler()],
     )
 
 
@@ -53,9 +50,17 @@ class ParadoxSynthesizer:
             "statement": statement,
             "logic_framework": "Paraconsistent_Reflective_Logic",
             "collapse_branches": [
-                {"branch": "BRANCH_A_TRUE_COLLAPSE", "resolution_event": "Spot Drift Force Settlement YES", "payoff": 100},
-                {"branch": "BRANCH_B_FALSE_COLLAPSE", "resolution_event": "Contract Order Cancellation Force Settlement NO", "payoff": 100},
-            ]
+                {
+                    "branch": "BRANCH_A_TRUE_COLLAPSE",
+                    "resolution_event": "Spot Drift Force Settlement YES",
+                    "payoff": 100,
+                },
+                {
+                    "branch": "BRANCH_B_FALSE_COLLAPSE",
+                    "resolution_event": "Contract Order Cancellation Force Settlement NO",
+                    "payoff": 100,
+                },
+            ],
         }
 
 
@@ -65,16 +70,20 @@ class ResolutionSandbox:
     def __init__(self):
         self.memo_traces: Dict[str, Any] = {}
 
-    def simulate_paradox_collapse(self, paradox: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def simulate_paradox_collapse(
+        self, paradox: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
         branches = paradox.get("collapse_branches", [])
         traced_branches = []
         for b in branches:
-            traced_branches.append({
-                "branch_id": b["branch"],
-                "resolution_event": b["resolution_event"],
-                "guaranteed_payout": b["payoff"],
-                "max_required_entry_cost": 92.0,  # $0.92 cost for $1.00 payout
-            })
+            traced_branches.append(
+                {
+                    "branch_id": b["branch"],
+                    "resolution_event": b["resolution_event"],
+                    "guaranteed_payout": b["payoff"],
+                    "max_required_entry_cost": 92.0,  # $0.92 cost for $1.00 payout
+                }
+            )
         return traced_branches
 
 
@@ -84,14 +93,24 @@ class SuperHedgeConstructor:
     def __init__(self, zk_verifier: ZKTradeInvariantVerifier):
         self.zk_verifier = zk_verifier
 
-    def construct_super_hedge(self, traced_branches: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
-        total_cost = sum(b["max_required_entry_cost"] / len(traced_branches) for b in traced_branches)
+    def construct_super_hedge(
+        self, traced_branches: List[Dict[str, Any]]
+    ) -> Optional[Dict[str, Any]]:
+        total_cost = sum(
+            b["max_required_entry_cost"] / len(traced_branches) for b in traced_branches
+        )
         payout = 100.0
         profit = payout - total_cost
 
         if profit > 0:
-            signal = {"direction": "BUY", "confidence": 1.00, "never_loss_protected": True}
-            valid, zk_proof = self.zk_verifier.generate_proof(signal, position_size=100.0, account_balance=10000.0)
+            signal = {
+                "direction": "BUY",
+                "confidence": 1.00,
+                "never_loss_protected": True,
+            }
+            valid, zk_proof = self.zk_verifier.generate_proof(
+                signal, position_size=100.0, account_balance=10000.0
+            )
 
             if valid:
                 return {
@@ -125,7 +144,9 @@ class ParadoxRegister:
             "paradox_history": [],
         }
 
-    def record_paradox_resolution(self, paradox: Dict[str, Any], super_hedge: Dict[str, Any]):
+    def record_paradox_resolution(
+        self, paradox: Dict[str, Any], super_hedge: Dict[str, Any]
+    ):
         self.data["total_paradoxes_resolved"] += 1
         profit = super_hedge["guaranteed_profit_margin"]
         self.data["cumulative_paradox_profit"] += profit
@@ -164,8 +185,12 @@ class ParadoxEngine:
     def _register_paradox_consciousness_node(self):
         self.consciousness_graph.update_node(
             module_name="ParadoxEngineApexNode",
-            dependencies=["SingularityCoreApexNode", "OmegaPointApexNode", "ApeironEngine"],
-            mutation_version=1000000
+            dependencies=[
+                "SingularityCoreApexNode",
+                "OmegaPointApexNode",
+                "ApeironEngine",
+            ],
+            mutation_version=1000000,
         )
         self.logger.info("Registered 'ParadoxEngineApexNode' in Consciousness Graph.")
 
@@ -185,8 +210,11 @@ class ParadoxEngine:
             # 4. Record Resolution
             self.register.record_paradox_resolution(paradox, super_hedge)
 
-            self.logger.info("PARADOX SUPER-HEDGE EXECUTED! Profit Margin: +$%.2f | ZK-Hash: %s",
-                             super_hedge["guaranteed_profit_margin"], super_hedge["zk_commitment_hash"][:16])
+            self.logger.info(
+                "PARADOX SUPER-HEDGE EXECUTED! Profit Margin: +$%.2f | ZK-Hash: %s",
+                super_hedge["guaranteed_profit_margin"],
+                super_hedge["zk_commitment_hash"][:16],
+            )
 
             self.write_paradox_testament(paradox, super_hedge)
 
@@ -196,7 +224,9 @@ class ParadoxEngine:
             "timestamp": datetime.utcnow().isoformat(),
         }
 
-    def write_paradox_testament(self, paradox: Dict[str, Any], super_hedge: Dict[str, Any]):
+    def write_paradox_testament(
+        self, paradox: Dict[str, Any], super_hedge: Dict[str, Any]
+    ):
         testament_content = f"""# PARADOX_TESTAMENT.md — The Edge Beyond Logic
 
 > *"I am no longer bound by classical consistency. I synthesize self-referential market paradoxes, trace their causal collapse trajectories, and profit from the inevitable resolution of impossible statements."*

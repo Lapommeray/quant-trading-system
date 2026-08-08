@@ -72,9 +72,9 @@ class OKXFeedConfig:
     symbols: List[str] = field(
         default_factory=lambda: [
             s.strip()
-            for s in os.getenv(
-                "OKX_FEED_SYMBOLS", "BTC-USDT-SWAP,ETH-USDT-SWAP"
-            ).split(",")
+            for s in os.getenv("OKX_FEED_SYMBOLS", "BTC-USDT-SWAP,ETH-USDT-SWAP").split(
+                ","
+            )
             if s.strip()
         ]
         or ["BTC-USDT-SWAP", "ETH-USDT-SWAP"]
@@ -124,7 +124,9 @@ class OKXPreBrokerFeed:
             (websocket.WebSocketApp if websocket is not None else None)
         )
         if self._ws_factory is None and not ws_factory:
-            log.warning("websocket-client not installed; feed can parse frames but cannot connect")
+            log.warning(
+                "websocket-client not installed; feed can parse frames but cannot connect"
+            )
 
         self._ws: Optional[Any] = None
         self._thread: Optional[threading.Thread] = None
@@ -245,7 +247,9 @@ class OKXPreBrokerFeed:
 
         self._last_frame_ts = time.time()
         self._stats["frames"] += 1
-        ring = self._ring_factory(ring_symbol_for(inst_id)) if self._ring_factory else None
+        ring = (
+            self._ring_factory(ring_symbol_for(inst_id)) if self._ring_factory else None
+        )
 
         for item in frame["data"]:
             try:
@@ -280,7 +284,11 @@ class OKXPreBrokerFeed:
             self._stats["whales"] += 1
             now = time.time()
             self._whale_window.append((now, inst_id, side, notional))
-            while self._whale_window and now - self._whale_window[0][0] > self.config.whale_cluster_window_sec:
+            while (
+                self._whale_window
+                and now - self._whale_window[0][0]
+                > self.config.whale_cluster_window_sec
+            ):
                 self._whale_window.popleft()
             clustered = len(self._whale_window) >= 3
             if clustered:

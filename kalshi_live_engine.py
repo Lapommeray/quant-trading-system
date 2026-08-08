@@ -15,6 +15,7 @@ from typing import Optional, Dict, Any
 from ultimate_never_loss_system import UltimateNeverLossSystem
 from safety_governance import SafetyGovernanceSystem
 
+
 # Helper to load .env if present
 def load_dotenv():
     env_path = Path(".env")
@@ -24,9 +25,10 @@ def load_dotenv():
                 line = line.strip()
                 if line and not line.startswith("#") and "=" in line:
                     k, v = line.split("=", 1)
-                    v = v.strip('"\'')
+                    v = v.strip("\"'")
                     v = v.replace("\\n", "\n")
                     os.environ.setdefault(k.strip(), v)
+
 
 load_dotenv()
 
@@ -36,7 +38,12 @@ class KalshiClient:
     Kalshi REST API client supporting RSA signing and market endpoints.
     """
 
-    def __init__(self, api_key: str = "", private_key: str = "", base_url: str = "https://trading-api.kalshi.com"):
+    def __init__(
+        self,
+        api_key: str = "",
+        private_key: str = "",
+        base_url: str = "https://trading-api.kalshi.com",
+    ):
         self.api_key = api_key or os.getenv("KALSHI_API_KEY", "")
         self.private_key = private_key or os.getenv("KALSHI_PRIVATE_KEY", "")
         self.base_url = base_url
@@ -56,7 +63,9 @@ class KalshiClient:
             ]
         }
 
-    def place_order(self, ticker: str, side: str, count: int, price: int) -> Dict[str, Any]:
+    def place_order(
+        self, ticker: str, side: str, count: int, price: int
+    ) -> Dict[str, Any]:
         """
         Place an order on Kalshi.
         side: 'yes' or 'no'
@@ -99,8 +108,8 @@ class KalshiNeverLossEngine:
             format="%(asctime)s [KalshiEngine] %(message)s",
             handlers=[
                 logging.FileHandler("kalshi_trading.log"),
-                logging.StreamHandler()
-            ]
+                logging.StreamHandler(),
+            ],
         )
 
     def fetch_15min_data(self) -> Dict[str, Any]:
@@ -136,7 +145,9 @@ class KalshiNeverLossEngine:
         confidence = signal.get("confidence", 0.0)
 
         if direction == "NEUTRAL" or confidence < 0.5:
-            self.logger.info("Signal is NEUTRAL / low confidence (%.2f). Skipping trade.", confidence)
+            self.logger.info(
+                "Signal is NEUTRAL / low confidence (%.2f). Skipping trade.", confidence
+            )
             return None
 
         side = "buy" if direction in ["up", "BUY", "LONG"] else "sell"
@@ -147,7 +158,7 @@ class KalshiNeverLossEngine:
             side=side,
             quantity=quantity,
             order_type="market",
-            trade_risk=0.01
+            trade_risk=0.01,
         )
 
         if not authorized:
@@ -172,7 +183,11 @@ class KalshiNeverLossEngine:
         order = self.client.place_order(ticker, side, count, price)
         self.logger.info(
             "Order Executed: ID %s | Ticker: %s | Side: %s | %d contracts @ %d¢",
-            order.get("order_id"), ticker, side, count, price
+            order.get("order_id"),
+            ticker,
+            side,
+            count,
+            price,
         )
         return order
 
@@ -202,7 +217,11 @@ class KalshiNeverLossEngine:
             sleep_seconds = (next_boundary - now).total_seconds()
 
             if sleep_seconds > 0:
-                self.logger.info("Sleeping %d seconds until next 15m boundary: %s", sleep_seconds, next_boundary)
+                self.logger.info(
+                    "Sleeping %d seconds until next 15m boundary: %s",
+                    sleep_seconds,
+                    next_boundary,
+                )
                 time.sleep(sleep_seconds)
 
             self.run_once()

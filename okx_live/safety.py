@@ -13,7 +13,12 @@ from typing import Tuple
 log = logging.getLogger(__name__)
 
 try:
-    from safety_governance import SafetyGovernanceSystem, AuthorizationLevel, EternalGuardrails
+    from safety_governance import (
+        SafetyGovernanceSystem,
+        AuthorizationLevel,
+        EternalGuardrails,
+    )
+
     SAFETY_AVAILABLE = True
 except ImportError:
     SAFETY_AVAILABLE = False
@@ -41,8 +46,14 @@ class OKXSafetyGuard:
             # For real trading, paper_mode=False, but this will require human override
             # We initialize in paper_mode=False to enforce eternal guardrails
             # However we allow override via env for testing
-            paper = os.getenv("OKX_ALLOW_PAPER_FOR_TEST", "false").lower() in ("true", "1", "yes")
-            self.safety = SafetyGovernanceSystem(paper_mode=paper, required_confirmations=3)
+            paper = os.getenv("OKX_ALLOW_PAPER_FOR_TEST", "false").lower() in (
+                "true",
+                "1",
+                "yes",
+            )
+            self.safety = SafetyGovernanceSystem(
+                paper_mode=paper, required_confirmations=3
+            )
         else:
             self.safety = None
 
@@ -56,22 +67,39 @@ class OKXSafetyGuard:
             return True, "OK - credentials not required (test mode)"
 
         if not (api_key and api_secret and passphrase):
-            return False, "Missing OKX credentials: OKX_API_KEY, OKX_API_SECRET, OKX_PASSPHRASE required for real trading (fail-closed)"
+            return (
+                False,
+                "Missing OKX credentials: OKX_API_KEY, OKX_API_SECRET, OKX_PASSPHRASE required for real trading (fail-closed)",
+            )
 
         if len(api_key) < 10 or len(api_secret) < 10:
             return False, "OKX credentials look invalid (too short) - fail-closed"
 
         return True, "OK"
 
-    def check_order(self, symbol: str, side: str, quantity: float, price: float, equity: float, leverage: float) -> Tuple[bool, str]:
+    def check_order(
+        self,
+        symbol: str,
+        side: str,
+        quantity: float,
+        price: float,
+        equity: float,
+        leverage: float,
+    ) -> Tuple[bool, str]:
         # Leverage cap
         if leverage > self.max_leverage:
-            return False, f"Leverage {leverage}x exceeds cap {self.max_leverage}x - fail-closed"
+            return (
+                False,
+                f"Leverage {leverage}x exceeds cap {self.max_leverage}x - fail-closed",
+            )
 
         # Notional
         notional = quantity * price
         if equity > 0 and notional / equity > self.max_position_pct:
-            return False, f"Notional {notional:.2f} exceeds {self.max_position_pct:.0%} equity - fail-closed"
+            return (
+                False,
+                f"Notional {notional:.2f} exceeds {self.max_position_pct:.0%} equity - fail-closed",
+            )
 
         # Eternal guardrails via safety_governance if available
         if SAFETY_AVAILABLE and self.safety and EternalGuardrails:

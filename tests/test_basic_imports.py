@@ -8,13 +8,14 @@ import os
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+
 def test_basic_structure():
     """Test basic module structure"""
     print("Testing basic module structure...")
-    
+
     modules_to_check = [
         "core/qol_engine.py",
-        "signals/veve_triggers.py", 
+        "signals/veve_triggers.py",
         "signals/legba_crossroads.py",
         "quant/entropy_shield.py",
         "quant/liquidity_mirror.py",
@@ -22,9 +23,9 @@ def test_basic_structure():
         "advanced_modules/dna_overlord.py",
         "advanced_modules/spectral_signal_fusion.py",
         "advanced_modules/quantum_tremor_scanner.py",
-        "advanced_modules/time_fractal_fft.py"
+        "advanced_modules/time_fractal_fft.py",
     ]
-    
+
     success_count = 0
     for module_path in modules_to_check:
         if os.path.exists(module_path):
@@ -32,15 +33,18 @@ def test_basic_structure():
             success_count += 1
         else:
             print(f"\u2717 Missing {module_path}")
-    
-    print(f"\nStructure test results: {success_count}/{len(modules_to_check)} modules found")
-    
+
+    print(
+        f"\nStructure test results: {success_count}/{len(modules_to_check)} modules found"
+    )
+
     if success_count == len(modules_to_check):
         print("All module files exist!")
         assert True
     else:
         print("Some module files are missing")
         assert False, f"Missing {len(modules_to_check) - success_count} module(s)"
+
 
 if __name__ == "__main__":
     test_basic_structure()

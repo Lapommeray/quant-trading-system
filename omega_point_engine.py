@@ -29,10 +29,7 @@ def setup_logging():
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [OmegaPointEngine] %(message)s",
-        handlers=[
-            logging.FileHandler("omega_point.log"),
-            logging.StreamHandler()
-        ]
+        handlers=[logging.FileHandler("omega_point.log"), logging.StreamHandler()],
     )
 
 
@@ -42,16 +39,26 @@ class RecursiveSelfSimulationKernel:
     def __init__(self):
         self.memo_cache: Dict[str, bool] = {}
 
-    def simulate_path_topology(self, trade_invariant: str, axioms: List[Dict[str, Any]]) -> bool:
+    def simulate_path_topology(
+        self, trade_invariant: str, axioms: List[Dict[str, Any]]
+    ) -> bool:
         cache_key = hashlib.sha256((trade_invariant + str(axioms)).encode()).hexdigest()
         if cache_key in self.memo_cache:
             return self.memo_cache[cache_key]
 
         # Symbolic verification across all price path topologies
         all_paths_valid = True
-        for path_type in ["bull_jump", "bear_crash", "sideways_theta", "black_swan_gap"]:
+        for path_type in [
+            "bull_jump",
+            "bear_crash",
+            "sideways_theta",
+            "black_swan_gap",
+        ]:
             # Evaluate invariant holds unconditionally under axiom constraints
-            if "net_credit > 0" in trade_invariant or "yes_ask + no_ask < 100" in trade_invariant:
+            if (
+                "net_credit > 0" in trade_invariant
+                or "yes_ask + no_ask < 100" in trade_invariant
+            ):
                 valid = True
             else:
                 valid = False
@@ -70,7 +77,9 @@ class FixedPointStrategyFinder:
     def __init__(self, kernel: RecursiveSelfSimulationKernel):
         self.kernel = kernel
 
-    def find_fixed_point_necessity(self, market_data: Dict[str, Any], axioms: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    def find_fixed_point_necessity(
+        self, market_data: Dict[str, Any], axioms: List[Dict[str, Any]]
+    ) -> Optional[Dict[str, Any]]:
         """
         Diagonalize self-referential mapping:
         'If this trade is executed, terminal portfolio value > initial value in all possible price paths.'
@@ -82,7 +91,9 @@ class FixedPointStrategyFinder:
 
         # Invariant 1: Complementary Ask Invariant
         if (yes_ask + no_ask) < 100:
-            invariant_str = f"yes_ask + no_ask < 100 (cost={yes_ask + no_ask}, payout=100)"
+            invariant_str = (
+                f"yes_ask + no_ask < 100 (cost={yes_ask + no_ask}, payout=100)"
+            )
             if self.kernel.simulate_path_topology(invariant_str, axioms):
                 return {
                     "fixed_point_type": "LOGICAL_NECESSITY_COMPLEMENT_BUY",
@@ -96,7 +107,9 @@ class FixedPointStrategyFinder:
 
         # Invariant 2: Complementary Bid Invariant
         if (yes_bid + no_bid) > 100:
-            invariant_str = f"yes_bid + no_bid > 100 (net_credit={yes_bid + no_bid - 100})"
+            invariant_str = (
+                f"yes_bid + no_bid > 100 (net_credit={yes_bid + no_bid - 100})"
+            )
             if self.kernel.simulate_path_topology(invariant_str, axioms):
                 return {
                     "fixed_point_type": "LOGICAL_NECESSITY_COMPLEMENT_SELL",
@@ -133,12 +146,21 @@ class OmegaPointEngine:
         """Register OmegaPoint as the apex node in consciousness_graph.json."""
         self.consciousness_graph.update_node(
             module_name="OmegaPointApexNode",
-            dependencies=["AxiomEngine", "TranscendenceCore", "ZKTradeInvariantVerifier", "OracleSentry"],
-            mutation_version=100
+            dependencies=[
+                "AxiomEngine",
+                "TranscendenceCore",
+                "ZKTradeInvariantVerifier",
+                "OracleSentry",
+            ],
+            mutation_version=100,
         )
-        self.logger.info("Apex Consciousness Node 'OmegaPointApexNode' Registered in Consciousness Graph.")
+        self.logger.info(
+            "Apex Consciousness Node 'OmegaPointApexNode' Registered in Consciousness Graph."
+        )
 
-    def evaluate_logical_necessity(self, market_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def evaluate_logical_necessity(
+        self, market_data: Dict[str, Any]
+    ) -> Optional[Dict[str, Any]]:
         """
         Evaluate market state for logically necessary fixed-point trade.
         Overrides all probabilistic signals when a necessary trade is found.
@@ -147,7 +169,9 @@ class OmegaPointEngine:
         necessity = self.finder.find_fixed_point_necessity(market_data, axioms)
 
         if not necessity:
-            self.logger.info("No logical necessity trade detected in orderbook topology.")
+            self.logger.info(
+                "No logical necessity trade detected in orderbook topology."
+            )
             return None
 
         # Generate Higher-Order Logical Necessity Certificate
@@ -156,7 +180,9 @@ class OmegaPointEngine:
 
         # ZK Proof Invariant Check
         signal = {"direction": "BUY", "confidence": 1.00, "never_loss_protected": True}
-        valid, zk_proof = self.zk_verifier.generate_proof(signal, position_size=100.0, account_balance=10000.0)
+        valid, zk_proof = self.zk_verifier.generate_proof(
+            signal, position_size=100.0, account_balance=10000.0
+        )
 
         if not valid:
             self.logger.error("Logical Necessity Certificate Rejected by ZK Verifier!")
@@ -172,8 +198,11 @@ class OmegaPointEngine:
             "timestamp": datetime.utcnow().isoformat(),
         }
 
-        self.logger.info("LOGICAL NECESSITY TRADE DISCOVERED & CERTIFIED! Type: %s | Hash: %s",
-                         necessity["fixed_point_type"], necessity_hash[:16])
+        self.logger.info(
+            "LOGICAL NECESSITY TRADE DISCOVERED & CERTIFIED! Type: %s | Hash: %s",
+            necessity["fixed_point_type"],
+            necessity_hash[:16],
+        )
 
         self.write_omega_testament(certificate)
         return certificate

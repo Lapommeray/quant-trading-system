@@ -21,10 +21,7 @@ def setup_logging():
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [7DayAutonomousCycle] %(message)s",
-        handlers=[
-            logging.FileHandler("autonomous_cycle.log"),
-            logging.StreamHandler()
-        ]
+        handlers=[logging.FileHandler("autonomous_cycle.log"), logging.StreamHandler()],
     )
 
 
@@ -56,7 +53,10 @@ class AutonomousCycleRunner:
         if order:
             self.stats["total_trades_executed"] += 1
             self.stats["executed_orders"].append(order)
-            self.logger.info("Order Executed! Total Executed: %d", self.stats["total_trades_executed"])
+            self.logger.info(
+                "Order Executed! Total Executed: %d",
+                self.stats["total_trades_executed"],
+            )
         else:
             self.logger.info("Tick evaluated without trade execution.")
 
@@ -65,7 +65,9 @@ class AutonomousCycleRunner:
         self.logger.info("Generating Genesis Performance Report...")
 
         # Run a meta-evolution generation cycle
-        best_genome = self.evolution_engine.run_evolution_generation(pop_size=3, mc_sims=500)
+        best_genome = self.evolution_engine.run_evolution_generation(
+            pop_size=3, mc_sims=500
+        )
         self.stats["strategies_bred"] += 1
 
         report = {
@@ -90,7 +92,7 @@ class AutonomousCycleRunner:
                 "identified_bottleneck": "Cross-asset latency across exchange WebSocket nodes",
                 "proposed_capability": "Sub-millisecond FPGA / eBPF kernel-bypass order routing for latency arbitrage",
                 "readiness_status": "PROPOSED_FOR_NEXT_EVOLUTION_CYCLE",
-            }
+            },
         }
 
         report_file = Path("genesis_report.json")

@@ -29,7 +29,11 @@ from core.event_bus import get_event_bus
 
 # Aleph-Omega Live Execution Bridge — Phase 2 imports
 try:
-    from advanced_modules.enhanced_backtester import fetch_live_ohlcv, EnhancedBacktester
+    from advanced_modules.enhanced_backtester import (
+        fetch_live_ohlcv,
+        EnhancedBacktester,
+    )
+
     LIVE_BRIDGE_AVAILABLE = True
 except Exception as e:
     fetch_live_ohlcv = None
@@ -42,6 +46,7 @@ import math
 
 log = logging.getLogger(__name__)
 
+
 def get_omnium_proof_hash() -> str:
     """Return truncated omnium_final.proof hash for audit logging."""
     try:
@@ -53,6 +58,7 @@ def get_omnium_proof_hash() -> str:
         pass
     return "unknown"
 
+
 def check_live_metrics_would_degrade(symbol: str, ohlcv_df):
     """
     Phase 2 — Live Data Injection into OKX Runner.
@@ -63,18 +69,28 @@ def check_live_metrics_would_degrade(symbol: str, ohlcv_df):
     try:
         baseline_path = ROOT / "live_baseline.json"
         if not baseline_path.exists():
-            log.warning(f"[{symbol}] live_baseline.json not found — allowing trade but logging for audit proof={get_omnium_proof_hash()}")
+            log.warning(
+                f"[{symbol}] live_baseline.json not found — allowing trade but logging for audit proof={get_omnium_proof_hash()}"
+            )
             return False, {}, {}
 
         with open(baseline_path, "r") as f:
             baseline = json.load(f)
 
-        if not LIVE_BRIDGE_AVAILABLE or EnhancedBacktester is None or fetch_live_ohlcv is None:
-            log.warning(f"[{symbol}] Live bridge not available — allowing trade, proof={get_omnium_proof_hash()}")
+        if (
+            not LIVE_BRIDGE_AVAILABLE
+            or EnhancedBacktester is None
+            or fetch_live_ohlcv is None
+        ):
+            log.warning(
+                f"[{symbol}] Live bridge not available — allowing trade, proof={get_omnium_proof_hash()}"
+            )
             return False, {}, {}
 
-        if ohlcv_df is None or getattr(ohlcv_df, 'empty', True):
-            log.warning(f"[{symbol}] OHLCV empty — blocking as fail-closed? Allowing with warning, proof={get_omnium_proof_hash()}")
+        if ohlcv_df is None or getattr(ohlcv_df, "empty", True):
+            log.warning(
+                f"[{symbol}] OHLCV empty — blocking as fail-closed? Allowing with warning, proof={get_omnium_proof_hash()}"
+            )
             return False, {}, {}
 
         bt = EnhancedBacktester()
@@ -82,6 +98,7 @@ def check_live_metrics_would_degrade(symbol: str, ohlcv_df):
         bt.add_strategy({"name": f"okx_live_{symbol}"})
         # Minimal data feed to satisfy cerebro guard (real trades come from ohlcv_df)
         import numpy as np
+
         bt.add_data(np.array([100.0, 101.0, 99.0, 102.0]), name=symbol)
 
         results = bt.run_backtest(ohlcv_df=ohlcv_df)
@@ -92,7 +109,13 @@ def check_live_metrics_would_degrade(symbol: str, ohlcv_df):
         degraded = False
         reasons = []
         # Only compare core 5 keys
-        for key, is_higher_worse in [("win_rate", False), ("max_drawdown", True), ("sharpe_ratio", False), ("profit_factor", False), ("total_pnl", False)]:
+        for key, is_higher_worse in [
+            ("win_rate", False),
+            ("max_drawdown", True),
+            ("sharpe_ratio", False),
+            ("profit_factor", False),
+            ("total_pnl", False),
+        ]:
             b_val = float(baseline.get(key, 0.0) or 0.0)
             c_val = float(metrics.get(key, 0.0) or 0.0)
             if not math.isfinite(c_val):
@@ -106,13 +129,24 @@ def check_live_metrics_would_degrade(symbol: str, ohlcv_df):
                     degraded = True
                     reasons.append(f"{key} {b_val:.4f}->{c_val:.4f}")
 
-        return degraded, metrics, {"reasons": reasons, "baseline": baseline, "proof_hash": get_omnium_proof_hash()}
+        return (
+            degraded,
+            metrics,
+            {
+                "reasons": reasons,
+                "baseline": baseline,
+                "proof_hash": get_omnium_proof_hash(),
+            },
+        )
 
     except Exception as e:
-        log.exception(f"Live baseline check failed for {symbol}: {e} — proof={get_omnium_proof_hash()}")
+        log.exception(
+            f"Live baseline check failed for {symbol}: {e} — proof={get_omnium_proof_hash()}"
+        )
         # For fail-closed safety, on exception we block? But for CI we allow with warning
         # Here we choose to allow but log as critical for audit
         return False, {}, {"error": str(e), "proof_hash": get_omnium_proof_hash()}
+
 
 logging.basicConfig(
     level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
@@ -314,7 +348,12 @@ class OKXLiveRunner:
             cycle = 0
             while self.running:
                 cycle += 1
-                log.info("--- Cycle %d @ %s --- [proof=%s]", cycle, datetime.now().isoformat(), get_omnium_proof_hash())
+                log.info(
+                    "--- Cycle %d @ %s --- [proof=%s]",
+                    cycle,
+                    datetime.now().isoformat(),
+                    get_omnium_proof_hash(),
+                )
                 for sym in self.symbols:
                     try:
                         # Phase 2 — Aleph-Omega Live Execution Bridge: pre-check with same SMA(20) logic as guard
@@ -328,16 +367,39 @@ class OKXLiveRunner:
                                 yf_sym = f"{sym.split('/')[0]}-USD"
 
                             if LIVE_BRIDGE_AVAILABLE and fetch_live_ohlcv is not None:
-                                rolling_df = fetch_live_ohlcv(symbol=yf_sym, period='1mo', interval='15m')
-                                would_degrade, proj_metrics, info = check_live_metrics_would_degrade(sym, rolling_df)
-                                proof_hash = info.get("proof_hash", get_omnium_proof_hash()) if isinstance(info, dict) else get_omnium_proof_hash()
+                                rolling_df = fetch_live_ohlcv(
+                                    symbol=yf_sym, period="1mo", interval="15m"
+                                )
+                                would_degrade, proj_metrics, info = (
+                                    check_live_metrics_would_degrade(sym, rolling_df)
+                                )
+                                proof_hash = (
+                                    info.get("proof_hash", get_omnium_proof_hash())
+                                    if isinstance(info, dict)
+                                    else get_omnium_proof_hash()
+                                )
 
                                 if would_degrade:
                                     log.warning(
                                         "[%s] LIVE BRIDGE BLOCKED — projected metrics would degrade live_baseline.json | reasons=%s | projected=%s | proof=%s | invariant=∀t.Equity_t≥Equity_0",
                                         sym,
                                         info.get("reasons", []),
-                                        {k: round(float(v),4) if isinstance(v,(int,float)) else v for k,v in proj_metrics.items() if k in ["win_rate","total_pnl","profit_factor","sharpe_ratio","max_drawdown"]},
+                                        {
+                                            k: (
+                                                round(float(v), 4)
+                                                if isinstance(v, (int, float))
+                                                else v
+                                            )
+                                            for k, v in proj_metrics.items()
+                                            if k
+                                            in [
+                                                "win_rate",
+                                                "total_pnl",
+                                                "profit_factor",
+                                                "sharpe_ratio",
+                                                "max_drawdown",
+                                            ]
+                                        },
                                         proof_hash,
                                     )
                                     # Block execution — no order sent
@@ -352,11 +414,21 @@ class OKXLiveRunner:
                                             proof_hash,
                                         )
                                     else:
-                                        log.info("[%s] LIVE BRIDGE PASSED (no baseline or bridge unavailable) | proof=%s", sym, get_omnium_proof_hash())
+                                        log.info(
+                                            "[%s] LIVE BRIDGE PASSED (no baseline or bridge unavailable) | proof=%s",
+                                            sym,
+                                            get_omnium_proof_hash(),
+                                        )
                             else:
-                                log.info("[%s] LIVE BRIDGE unavailable — proceeding with real history only | proof=%s", sym, get_omnium_proof_hash())
+                                log.info(
+                                    "[%s] LIVE BRIDGE unavailable — proceeding with real history only | proof=%s",
+                                    sym,
+                                    get_omnium_proof_hash(),
+                                )
                         except Exception as bridge_exc:
-                            log.warning(f"[{sym}] Live bridge pre-check failed ({bridge_exc}) — proceeding with fail-closed real history, proof={get_omnium_proof_hash()}")
+                            log.warning(
+                                f"[{sym}] Live bridge pre-check failed ({bridge_exc}) — proceeding with fail-closed real history, proof={get_omnium_proof_hash()}"
+                            )
 
                         history = get_real_history(sym)
                         consensus = self.organism.generate_consensus_signal(

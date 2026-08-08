@@ -1103,35 +1103,37 @@ class SelfCodingEngine:
         """Complete autonomous cycle: diagnose → generate → validate → auto-approve → apply → learn mistakes."""
         context = dict(context or {})
         context["autonomous_cycle"] = True
-        
+
         proposal = self.generate_proposal(module, context=context)
         validation = self.validate_proposal(proposal)
-        
+
         approved = False
         if validation.passed:
             approved_prop = self.approve_proposal(proposal)
             approved = approved_prop.status == ProposalStatus.APPROVED
-        
+
         applied = False
         if approved and apply and proposal.risk == ChangeRisk.LOW:
             applied_prop = self.apply_proposal(proposal, module=module)
             applied = applied_prop.status == ProposalStatus.APPLIED
-        
+
         result = proposal.to_dict()
-        result.update({
-            "autonomous": True,
-            "validated": validation.passed,
-            "approved": approved,
-            "applied": applied,
-            "organism_unity": True,
-        })
-        
+        result.update(
+            {
+                "autonomous": True,
+                "validated": validation.passed,
+                "approved": approved,
+                "applied": applied,
+                "organism_unity": True,
+            }
+        )
+
         if auto_learn and hasattr(module, "learn_from_mistakes"):
             try:
                 module.learn_from_mistakes(result.get("diagnosis", {}))
             except Exception:
                 pass
-        
+
         return result
 
     def auto_fix(

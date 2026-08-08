@@ -22,13 +22,19 @@ class _CaptureBus:
         self.events = []
 
     def publish(self, event_type, payload, source="test", **kwargs):
-        self.events.append({"event_type": event_type, "payload": payload, "source": source})
+        self.events.append(
+            {"event_type": event_type, "payload": payload, "source": source}
+        )
 
 
 def _fake_fetch(price=5530.25):
     return {
-        "ts": time.time(), "price": price, "open": 5520.0,
-        "high": 5540.0, "low": 5515.0, "volume": 12_345.0,
+        "ts": time.time(),
+        "price": price,
+        "open": 5520.0,
+        "high": 5540.0,
+        "low": 5515.0,
+        "volume": 12_345.0,
     }
 
 
@@ -53,7 +59,9 @@ def test_ingest_writes_ring_and_publishes_market_data():
 def test_rejects_non_positive_price():
     registry = _RingRegistry()
     bus = _CaptureBus()
-    feed = SPXLiveFeed(event_bus=bus, ring_factory=registry, fetch_func=lambda: _fake_fetch(0.0))
+    feed = SPXLiveFeed(
+        event_bus=bus, ring_factory=registry, fetch_func=lambda: _fake_fetch(0.0)
+    )
     try:
         feed._ingest(feed._fetch_func())
         assert False, "should have raised"
@@ -64,7 +72,9 @@ def test_rejects_non_positive_price():
 
 def test_feed_status_healthy():
     registry = _RingRegistry()
-    feed = SPXLiveFeed(event_bus=_CaptureBus(), ring_factory=registry, fetch_func=_fake_fetch)
+    feed = SPXLiveFeed(
+        event_bus=_CaptureBus(), ring_factory=registry, fetch_func=_fake_fetch
+    )
     feed._ingest(feed._fetch_func())
     status = feed.feed_status()
     assert status["healthy"] is True

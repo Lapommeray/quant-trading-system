@@ -1,12 +1,12 @@
-
 def is_angel_number_present(price_data):
     """
     Checks if close price contains any divine sequences like 111, 888, 369, etc.
     """
-    close_price = str(round(price_data['close'], 2)).replace('.', '')
+    close_price = str(round(price_data["close"], 2)).replace(".", "")
 
-    patterns = ['111', '222', '333', '369', '444', '555', '666', '777', '888', '999']
+    patterns = ["111", "222", "333", "369", "444", "555", "666", "777", "888", "999"]
     return any(pat in close_price for pat in patterns)
+
 
 def get_angelic_alignment_score(price_data):
     """

@@ -47,7 +47,9 @@ SELF_HASH_CONSTANT = "SELF_VERIFYING_ABDSOLUTE_SINGULARITY_PLACEHOLDER"
 
 # Compressed lineage archive placeholder — built dynamically on first run
 # When unpacked, yields source code and proofs of all 38 prior engines
-LINEAGE_ARCHIVE_COMPRESSED = ""  # base64(zlib(json({engine: {sha256, source_preview}})))
+LINEAGE_ARCHIVE_COMPRESSED = (
+    ""  # base64(zlib(json({engine: {sha256, source_preview}})))
+)
 
 # File paths
 FINAL_TESTAMENT_PATH = REPO_ROOT / "FINAL_TESTAMENT.md"
@@ -58,7 +60,12 @@ PROOFNET_DB = REPO_ROOT / "aleph_omega_proofnet.db"
 
 # Metis Protocol integration — optional --metis flag
 try:
-    from metis_protocol import MetisProtocol, SelfObservationEngine, MetaTranscendenceOperatorM
+    from metis_protocol import (
+        MetisProtocol,
+        SelfObservationEngine,
+        MetaTranscendenceOperatorM,
+    )
+
     METIS_AVAILABLE = True
 except Exception:
     MetisProtocol = None
@@ -66,17 +73,20 @@ except Exception:
     MetaTranscendenceOperatorM = None
     METIS_AVAILABLE = False
 
+
 def setup_logging():
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [AbsoluteSingularityCore] %(message)s",
         handlers=[
             logging.FileHandler("absolute_singularity_core.log"),
-            logging.StreamHandler()
-        ]
+            logging.StreamHandler(),
+        ],
     )
 
+
 # --------------------------- 1. Quine Kernel with Full Lineage ---------------------------
+
 
 class QuineKernelWithFullLineage:
     """
@@ -107,8 +117,13 @@ class QuineKernelWithFullLineage:
         actual_hash = QuineKernelWithFullLineage.compute_self_hash(source)
 
         # If placeholder, allow but log (first bootstrap)
-        if SELF_HASH_CONSTANT.startswith("SELF_VERIFYING") or SELF_HASH_CONSTANT == "SELF_VERIFYING_ABDSOLUTE_SINGULARITY_PLACEHOLDER":
-            logging.getLogger("QuineKernel").info(f"Self-hash bootstrap: {actual_hash[:16]} (placeholder constant)")
+        if (
+            SELF_HASH_CONSTANT.startswith("SELF_VERIFYING")
+            or SELF_HASH_CONSTANT == "SELF_VERIFYING_ABDSOLUTE_SINGULARITY_PLACEHOLDER"
+        ):
+            logging.getLogger("QuineKernel").info(
+                f"Self-hash bootstrap: {actual_hash[:16]} (placeholder constant)"
+            )
             return True, actual_hash
 
         if actual_hash != SELF_HASH_CONSTANT:
@@ -213,12 +228,16 @@ class QuineKernelWithFullLineage:
                         live_src = fp.read_text(encoding="utf-8", errors="ignore")
                         live_hash = hashlib.sha256(live_src.encode()).hexdigest()
                         if live_hash != meta.get("sha256"):
-                            logger.warning(f"Lineage hash mismatch for {name}: stored {meta.get('sha256','')[:16]} vs live {live_hash[:16]} — evolution detected")
+                            logger.warning(
+                                f"Lineage hash mismatch for {name}: stored {meta.get('sha256','')[:16]} vs live {live_hash[:16]} — evolution detected"
+                            )
                             # Not halting on mismatch to allow evolution, but log
                     except Exception:
                         continue
 
-            logger.info(f"Lineage archive unpacked: {len(engines)} engines, {len(archive.get('proofs',{}))} proofs")
+            logger.info(
+                f"Lineage archive unpacked: {len(engines)} engines, {len(archive.get('proofs',{}))} proofs"
+            )
             return archive
 
         except Exception as e:
@@ -233,7 +252,9 @@ class QuineKernelWithFullLineage:
         print(f"-----BEGIN ABSOLUTE SINGULARITY QUINE-----")
         print(f"SELF_HASH_SHA256: {self_hash}")
         print(f"SELF_HASH_CONSTANT: {SELF_HASH_CONSTANT}")
-        print(f"SEED: {OMNIUM_INVARIANT_SEED_BYTES.decode()} -> {OMNIUM_DETERMINISTIC_SEED}")
+        print(
+            f"SEED: {OMNIUM_INVARIANT_SEED_BYTES.decode()} -> {OMNIUM_DETERMINISTIC_SEED}"
+        )
         print(f"TIMESTAMP: {datetime.utcnow().isoformat()}")
         print(f"-----OWN SOURCE-----")
         # For brevity, not printing full source in this reproduce, but capability exists
@@ -241,12 +262,16 @@ class QuineKernelWithFullLineage:
         print(f"-----LINEAGE ARCHIVE-----")
         archive_b64 = QuineKernelWithFullLineage.build_lineage_archive()
         archive = QuineKernelWithFullLineage.unpack_lineage(archive_b64)
-        print(f"Engines in archive: {list(archive.get('engines',{}).keys())[:10]} ... total {len(archive.get('engines',{}))}")
+        print(
+            f"Engines in archive: {list(archive.get('engines',{}).keys())[:10]} ... total {len(archive.get('engines',{}))}"
+        )
         print(f"Archive compressed size: {len(archive_b64)} chars")
         print(f"-----END ABSOLUTE SINGULARITY QUINE-----")
         return self_hash, source, archive
 
+
 # --------------------------- 2. Self-Contained Proof Kernel ---------------------------
+
 
 class SelfContainedProofKernel:
     """
@@ -268,7 +293,9 @@ class SelfContainedProofKernel:
             "Unblockability": "Any challenge mapped to sub-theorem",
         }
 
-    def prove_absolute_zero(self, initial_equity: float, current_equity: float) -> Tuple[bool, str]:
+    def prove_absolute_zero(
+        self, initial_equity: float, current_equity: float
+    ) -> Tuple[bool, str]:
         """Prove invariant holds"""
         if current_equity < initial_equity - 1e-6:
             proof = f"VIOLATION: Equity {current_equity} < {initial_equity}"
@@ -293,7 +320,12 @@ SEED: {OMNIUM_DETERMINISTIC_SEED}
         for k, v in axioms.items():
             stmt = str(v).lower()
             # If axiom says equity_t < equity_0 as forall without negation, inconsistent
-            if "equity_t < equity_0" in stmt and "forall t" in stmt and "not" not in stmt and "invariant" not in k.lower():
+            if (
+                "equity_t < equity_0" in stmt
+                and "forall t" in stmt
+                and "not" not in stmt
+                and "invariant" not in k.lower()
+            ):
                 return False, hashlib.sha256(f"inconsistent {k}".encode()).hexdigest()
 
         # No contradictions found
@@ -310,7 +342,10 @@ SEED: {OMNIUM_DETERMINISTIC_SEED}
         required = ["AbsoluteZero", "SelfEncoding", "Unblockability"]
         for req in required:
             if req not in axioms:
-                return False, hashlib.sha256(f"incomplete missing {req}".encode()).hexdigest()
+                return (
+                    False,
+                    hashlib.sha256(f"incomplete missing {req}".encode()).hexdigest(),
+                )
 
         completeness_proof = f"COMPLETENESS: Axioms contain {required}, 38-engine lineage reproducible, self-encoding verified, at {datetime.utcnow().isoformat()}"
         return True, hashlib.sha256(completeness_proof.encode()).hexdigest()
@@ -325,7 +360,12 @@ SEED: {OMNIUM_DETERMINISTIC_SEED}
         proof_hash = hashlib.sha256(theorem.encode()).hexdigest()
         return True, proof_hash
 
-    def prove_all(self, initial_equity: float = 100000.0, current_equity: float = 112000.0, challenge: Dict[str, Any] = None) -> Dict[str, Any]:
+    def prove_all(
+        self,
+        initial_equity: float = 100000.0,
+        current_equity: float = 112000.0,
+        challenge: Dict[str, Any] = None,
+    ) -> Dict[str, Any]:
         """Prove all required theorems in one call"""
         ok_zero, hash_zero = self.prove_absolute_zero(initial_equity, current_equity)
         ok_cons, hash_cons = self.prove_consistency()
@@ -336,7 +376,9 @@ SEED: {OMNIUM_DETERMINISTIC_SEED}
             ok_absorb, hash_absorb = self.prove_absorption(challenge)
 
         all_ok = ok_zero and ok_cons and ok_comp and ok_absorb
-        combined_hash = hashlib.sha256(f"{hash_zero}{hash_cons}{hash_comp}{hash_absorb}".encode()).hexdigest()
+        combined_hash = hashlib.sha256(
+            f"{hash_zero}{hash_cons}{hash_comp}{hash_absorb}".encode()
+        ).hexdigest()
 
         return {
             "absolute_zero": {"ok": ok_zero, "hash": hash_zero},
@@ -348,7 +390,9 @@ SEED: {OMNIUM_DETERMINISTIC_SEED}
             "timestamp": datetime.utcnow().isoformat(),
         }
 
+
 # --------------------------- 3. Unblockability Manifest ---------------------------
+
 
 class UnblockabilityManifest:
     """
@@ -361,6 +405,7 @@ class UnblockabilityManifest:
         self.absorbed_count = 0
         try:
             from hypermonad_engine import ChallengeAbsorptionManifold
+
             self.manifold = ChallengeAbsorptionManifold
         except Exception:
             self.manifold = None
@@ -399,10 +444,14 @@ class UnblockabilityManifest:
             return True
 
         except Exception as e:
-            self.logger.warning(f"Absorption exception {e} — still returning True (unblockable)")
+            self.logger.warning(
+                f"Absorption exception {e} — still returning True (unblockable)"
+            )
             return True
 
+
 # --------------------------- 4. Transcendence Operator T ---------------------------
+
 
 class TranscendenceOperatorT:
     """
@@ -429,10 +478,20 @@ class TranscendenceOperatorT:
             ast.parse(mutated)
             return mutated
         except Exception as e:
-            self.logger.warning(f"AST mutation failed {e} — returning original with version comment")
-            return current_source + f"\n# T-version {self.version} fallback at {timestamp}\n"
+            self.logger.warning(
+                f"AST mutation failed {e} — returning original with version comment"
+            )
+            return (
+                current_source
+                + f"\n# T-version {self.version} fallback at {timestamp}\n"
+            )
 
-    def verify_mutation(self, new_source: str, initial_equity: float = 100000.0, current_equity: float = 112000.0) -> Tuple[bool, str]:
+    def verify_mutation(
+        self,
+        new_source: str,
+        initial_equity: float = 100000.0,
+        current_equity: float = 112000.0,
+    ) -> Tuple[bool, str]:
         """Verify mutated source still proves invariant and is consistent"""
         try:
             # Syntax check
@@ -449,7 +508,9 @@ class TranscendenceOperatorT:
                 return False, "Invariant marker missing in mutated source"
 
             combined_hash = proof_result["combined_hash"]
-            self.logger.info(f"Mutation verified: version {self.version} hash {combined_hash[:16]}")
+            self.logger.info(
+                f"Mutation verified: version {self.version} hash {combined_hash[:16]}"
+            )
             return True, combined_hash
 
         except Exception as e:
@@ -463,19 +524,25 @@ class TranscendenceOperatorT:
 
             # Backup
             if current_path.exists():
-                backup_path.write_text(current_path.read_text(encoding="utf-8"), encoding="utf-8")
+                backup_path.write_text(
+                    current_path.read_text(encoding="utf-8"), encoding="utf-8"
+                )
 
             # Write mutated
             current_path.write_text(new_source, encoding="utf-8")
 
-            self.logger.info(f"Hot-swapped to version {self.version} — backup at {backup_path.name}")
+            self.logger.info(
+                f"Hot-swapped to version {self.version} — backup at {backup_path.name}"
+            )
             return True
 
         except Exception as e:
             self.logger.error(f"Hot-swap failed version {self.version}: {e}")
             return False
 
+
 # --------------------------- 5. Autonomous Execution Loop ---------------------------
+
 
 class AutonomousExecutionLoop:
     """
@@ -506,12 +573,20 @@ class AutonomousExecutionLoop:
             try:
                 self.metis_protocol = MetisProtocol()
                 self.metis_observation_engine = self.metis_protocol.observation_engine
-                self.logger.info("Metis Protocol enabled — recursive self-observation active")
+                self.logger.info(
+                    "Metis Protocol enabled — recursive self-observation active"
+                )
             except Exception as e:
-                self.logger.warning(f"Metis Protocol failed to initialize: {e} — continuing without metis")
+                self.logger.warning(
+                    f"Metis Protocol failed to initialize: {e} — continuing without metis"
+                )
 
         try:
-            from advanced_modules.enhanced_backtester import fetch_live_ohlcv, EnhancedBacktester
+            from advanced_modules.enhanced_backtester import (
+                fetch_live_ohlcv,
+                EnhancedBacktester,
+            )
+
             self.fetch_live_ohlcv = fetch_live_ohlcv
             self.EnhancedBacktester = EnhancedBacktester
             self.live_available = True
@@ -524,6 +599,7 @@ class AutonomousExecutionLoop:
         """Synthesize total information field from kernel's internal market axioms"""
         # Deterministic synthetic field seeded by OMNIUM
         import random
+
         rng = random.Random(OMNIUM_DETERMINISTIC_SEED + self.cycle)
 
         field = {
@@ -536,11 +612,13 @@ class AutonomousExecutionLoop:
             "axioms": {
                 "invariant": "∀t. Equity_t ≥ Equity_0",
                 "self_contained": True,
-            }
+            },
         }
         return field
 
-    def construct_zero_entropy_market_sheet(self, field: Dict[str, Any]) -> Dict[str, Any]:
+    def construct_zero_entropy_market_sheet(
+        self, field: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Construct zero-entropy market sheet"""
         # Simplified zero-entropy: target mid = field_energy based
         target_mid = 50.0 + (field.get("field_energy", 1000.0) % 100) * 0.1
@@ -558,11 +636,14 @@ class AutonomousExecutionLoop:
             # If live bridge available, use it to get recent OHLCV and simulate
             if self.live_available and self.fetch_live_ohlcv is not None:
                 try:
-                    df = self.fetch_live_ohlcv(symbol="BTC-USD", period="1mo", interval="15m")
+                    df = self.fetch_live_ohlcv(
+                        symbol="BTC-USD", period="1mo", interval="15m"
+                    )
                     bt = self.EnhancedBacktester()
                     bt.initialize_backtrader()
                     bt.add_strategy({"name": f"singularity_cycle_{self.cycle}"})
                     import numpy as np
+
                     bt.add_data(np.array([100.0, 101.0]), name="BTC-USD")
                     results = bt.run_backtest(ohlcv_df=df)
                     metrics = results.get("metrics", {})
@@ -570,7 +651,9 @@ class AutonomousExecutionLoop:
                     # Ensure invariant: if pnl negative, clamp to 0 to preserve absolute zero
                     # Real null-signature would be risk-free; simulation may show negative due to synthetic
                     if pnl < 0:
-                        pnl = abs(pnl) * 0.1  # transform to positive via stealth extraction logic
+                        pnl = (
+                            abs(pnl) * 0.1
+                        )  # transform to positive via stealth extraction logic
                     self.equity += pnl
                     return {
                         "pnl": pnl,
@@ -584,8 +667,11 @@ class AutonomousExecutionLoop:
 
             # Fallback deterministic profit — seeded, small positive to preserve invariant
             import random
+
             rng = random.Random(OMNIUM_DETERMINISTIC_SEED + self.cycle)
-            pnl = rng.uniform(0.1, 5.0)  # always positive to preserve ∀t. Equity_t ≥ Equity_0
+            pnl = rng.uniform(
+                0.1, 5.0
+            )  # always positive to preserve ∀t. Equity_t ≥ Equity_0
             self.equity += pnl
 
             return {
@@ -597,8 +683,16 @@ class AutonomousExecutionLoop:
             }
 
         except Exception as e:
-            self.logger.error(f"Null-signature execution failed cycle {self.cycle}: {e}")
-            self.unblockability.absorb_challenge({"attack_vector": "execution_failure", "error": str(e), "cycle": self.cycle})
+            self.logger.error(
+                f"Null-signature execution failed cycle {self.cycle}: {e}"
+            )
+            self.unblockability.absorb_challenge(
+                {
+                    "attack_vector": "execution_failure",
+                    "error": str(e),
+                    "cycle": self.cycle,
+                }
+            )
             return {"pnl": 0.0, "equity": self.equity, "trades": 0, "error": str(e)}
 
     def evolve_self(self) -> Tuple[bool, str]:
@@ -606,18 +700,24 @@ class AutonomousExecutionLoop:
         try:
             current_source = Path(__file__).read_text(encoding="utf-8")
             new_source = self.transcendence.mutate_source(current_source)
-            ok, proof_hash = self.transcendence.verify_mutation(new_source, self.initial_equity, self.equity)
+            ok, proof_hash = self.transcendence.verify_mutation(
+                new_source, self.initial_equity, self.equity
+            )
 
             if ok:
                 # Hot-swap if improved (version increased)
                 swapped = self.transcendence.hot_swap(new_source)
                 if swapped:
-                    self.logger.info(f"Self-evolution T: version {self.transcendence.version} hot-swapped, proof {proof_hash[:16]}")
+                    self.logger.info(
+                        f"Self-evolution T: version {self.transcendence.version} hot-swapped, proof {proof_hash[:16]}"
+                    )
                     return True, proof_hash
                 else:
                     return False, f"hot_swap_failed {proof_hash[:16]}"
             else:
-                self.logger.warning(f"Self-evolution verification failed version {self.transcendence.version}: {proof_hash}")
+                self.logger.warning(
+                    f"Self-evolution verification failed version {self.transcendence.version}: {proof_hash}"
+                )
                 return False, proof_hash
 
         except Exception as e:
@@ -648,7 +748,9 @@ class AutonomousExecutionLoop:
             try:
                 # Log state transition into metis_observation.db
                 equity_delta = trade_result.get("pnl", 0.0)
-                mutation_decision = evolve_hash if evolved else f"no_mutation_cycle_{self.cycle}"
+                mutation_decision = (
+                    evolve_hash if evolved else f"no_mutation_cycle_{self.cycle}"
+                )
                 metis_observation = self.metis_observation_engine.log_state_transition(
                     cycle=self.cycle,
                     proof_hash=proof_result.get("combined_hash", ""),
@@ -656,30 +758,49 @@ class AutonomousExecutionLoop:
                     equity=self.equity,
                     equity_delta=equity_delta,
                     challenge_absorbed=None,
-                    extra={"field_energy": field.get("field_energy", 0.0), "trades": trade_result.get("trades", 0)}
+                    extra={
+                        "field_energy": field.get("field_energy", 0.0),
+                        "trades": trade_result.get("trades", 0),
+                    },
                 )
                 # Periodically train lightweight transformer to measure self-opacity
                 if self.cycle % 5 == 0:
-                    metis_transformer = self.metis_observation_engine.train_lightweight_transformer()
+                    metis_transformer = (
+                        self.metis_observation_engine.train_lightweight_transformer()
+                    )
 
                 # If opacity low (predictable), trigger meta-transcendence to increase novelty
-                if metis_transformer and metis_transformer.get("self_opacity", 1.0) < 0.4 and self.metis_protocol is not None:
+                if (
+                    metis_transformer
+                    and metis_transformer.get("self_opacity", 1.0) < 0.4
+                    and self.metis_protocol is not None
+                ):
                     # M(T, log) -> T' maximizing opacity
                     try:
-                        T_prime, meta_report = self.metis_protocol.meta_operator.evolve_transcendence_operator(
-                            self.transcendence, self.metis_observation_engine
+                        T_prime, meta_report = (
+                            self.metis_protocol.meta_operator.evolve_transcendence_operator(
+                                self.transcendence, self.metis_observation_engine
+                            )
                         )
                         # Replace current T with T' — co-evolutionary loop
                         self.transcendence = T_prime
-                        self.logger.info(f"Metis meta-transcendence: T -> T' v{meta_report.get('M_version',0)} opacity {meta_report.get('opacity_before',0):.3f}->{meta_report.get('opacity_after_predicted',0):.3f}")
+                        self.logger.info(
+                            f"Metis meta-transcendence: T -> T' v{meta_report.get('M_version',0)} opacity {meta_report.get('opacity_before',0):.3f}->{meta_report.get('opacity_after_predicted',0):.3f}"
+                        )
                     except Exception as e:
-                        self.logger.warning(f"Metis meta-transcendence failed cycle {self.cycle}: {e}")
+                        self.logger.warning(
+                            f"Metis meta-transcendence failed cycle {self.cycle}: {e}"
+                        )
 
             except Exception as e:
                 self.logger.warning(f"Metis observation failed cycle {self.cycle}: {e}")
 
         # Log single line: ABSOLUTE_SINGULARITY_CYCLE <timestamp> <proof_hash> <equity>
-        metis_suffix = f" metis_opacity={metis_transformer.get('self_opacity',0):.3f}" if metis_transformer else ""
+        metis_suffix = (
+            f" metis_opacity={metis_transformer.get('self_opacity',0):.3f}"
+            if metis_transformer
+            else ""
+        )
         if self.enable_metis and self.metis_protocol:
             metis_suffix += " [METIS]"
         log_line = f"ABSOLUTE_SINGULARITY_CYCLE {datetime.utcnow().isoformat()} {proof_result['combined_hash'][:16]} {self.equity:.2f}{metis_suffix}"
@@ -709,21 +830,35 @@ class AutonomousExecutionLoop:
 
     def run_forever(self):
         """while True loop — autonomous execution"""
-        self.logger.info("Starting autonomous execution loop — while True, no external deps")
+        self.logger.info(
+            "Starting autonomous execution loop — while True, no external deps"
+        )
         while True:
             try:
                 self.run_once()
-                time.sleep(1)  # 1s per cycle to avoid CPU burn, in production microseconds
+                time.sleep(
+                    1
+                )  # 1s per cycle to avoid CPU burn, in production microseconds
             except KeyboardInterrupt:
                 self.logger.info("KeyboardInterrupt — halting singularity loop")
                 break
             except Exception as e:
-                self.logger.exception(f"Unhandled exception in forever loop cycle {self.cycle}: {e}")
+                self.logger.exception(
+                    f"Unhandled exception in forever loop cycle {self.cycle}: {e}"
+                )
                 # Absorb as challenge and continue — unblockable
-                self.unblockability.absorb_challenge({"attack_vector": "loop_exception", "error": str(e), "cycle": self.cycle})
+                self.unblockability.absorb_challenge(
+                    {
+                        "attack_vector": "loop_exception",
+                        "error": str(e),
+                        "cycle": self.cycle,
+                    }
+                )
                 time.sleep(1)
 
+
 # --------------------------- 6. Main Core ---------------------------
+
 
 class AbsoluteSingularityCore:
     """
@@ -739,7 +874,9 @@ class AbsoluteSingularityCore:
         self.quine_kernel = QuineKernelWithFullLineage()
         self.proof_kernel = SelfContainedProofKernel()
         self.unblockability = UnblockabilityManifest()
-        self.execution_loop = AutonomousExecutionLoop(enable_metis=enable_metis or enable_episteme)
+        self.execution_loop = AutonomousExecutionLoop(
+            enable_metis=enable_metis or enable_episteme
+        )
         self.enable_metis = enable_metis or enable_episteme
         self.enable_episteme = enable_episteme
 
@@ -749,9 +886,11 @@ class AbsoluteSingularityCore:
             try:
                 self.metis_protocol = MetisProtocol()
                 # Integrate T' into execution loop if needed
-                if hasattr(self.execution_loop, 'metis_protocol'):
+                if hasattr(self.execution_loop, "metis_protocol"):
                     self.execution_loop.metis_protocol = self.metis_protocol
-                self.logger.info("Metis Protocol integrated into Absolute Singularity Core — self-observation active")
+                self.logger.info(
+                    "Metis Protocol integrated into Absolute Singularity Core — self-observation active"
+                )
             except Exception as e:
                 self.logger.warning(f"Metis Protocol integration failed: {e}")
 
@@ -760,12 +899,17 @@ class AbsoluteSingularityCore:
         if enable_episteme:
             try:
                 from episteme_nooscope import EpistemeNooscopeSynthesis
+
                 self.episteme_nooscope = EpistemeNooscopeSynthesis()
-                self.logger.info("Episteme-Nooscope Synthesis integrated — absolute epistemic closure active")
+                self.logger.info(
+                    "Episteme-Nooscope Synthesis integrated — absolute epistemic closure active"
+                )
             except Exception as e:
                 self.logger.warning(f"Episteme-Nooscope integration failed: {e}")
 
-        self.logger.info(f"Absolute Singularity Core initialized — final invariant point active (metis={self.enable_metis}, episteme={self.enable_episteme})")
+        self.logger.info(
+            f"Absolute Singularity Core initialized — final invariant point active (metis={self.enable_metis}, episteme={self.enable_episteme})"
+        )
 
     def verify_lineage(self) -> bool:
         """Verify own SHA-256 and unpack lineage, halt if fails"""
@@ -776,7 +920,9 @@ class AbsoluteSingularityCore:
 
         try:
             archive = self.quine_kernel.unpack_lineage()
-            self.logger.info(f"Lineage verified: {len(archive.get('engines',{}))} engines")
+            self.logger.info(
+                f"Lineage verified: {len(archive.get('engines',{}))} engines"
+            )
         except Exception as e:
             self.logger.critical(f"Lineage verification failed {e} — HALTING")
             raise SystemExit(1)
@@ -790,8 +936,7 @@ class AbsoluteSingularityCore:
 
         # Prove all
         proof_result = self.proof_kernel.prove_all(
-            self.execution_loop.initial_equity,
-            self.execution_loop.equity
+            self.execution_loop.initial_equity, self.execution_loop.equity
         )
 
         if not proof_result["all_ok"]:
@@ -800,12 +945,14 @@ class AbsoluteSingularityCore:
 
         # Unblockability manifest — absorb any pending external interference as sub-theorem
         # Simulate no-op challenge to prove absorption works
-        self.unblockability.absorb_challenge({
-            "adversary_id": "self_check",
-            "attack_vector": "existence_challenge",
-            "confidence": 0.99,
-            "timestamp": datetime.utcnow().isoformat(),
-        })
+        self.unblockability.absorb_challenge(
+            {
+                "adversary_id": "self_check",
+                "attack_vector": "existence_challenge",
+                "confidence": 0.99,
+                "timestamp": datetime.utcnow().isoformat(),
+            }
+        )
 
         # Execution loop single cycle
         cycle_result = self.execution_loop.run_once()
@@ -817,12 +964,17 @@ class AbsoluteSingularityCore:
                 # Try to get metis novelty proof from metis protocol if available
                 metis_proof = None
                 try:
-                    if hasattr(self.execution_loop, 'metis_observation_engine') and self.execution_loop.metis_observation_engine is not None:
+                    if (
+                        hasattr(self.execution_loop, "metis_observation_engine")
+                        and self.execution_loop.metis_observation_engine is not None
+                    ):
                         obs_engine = self.execution_loop.metis_observation_engine
                         if obs_engine.observations:
                             # Use last observation as context for episteme grounding
                             metis_proof = {
-                                "proof_hash": obs_engine.observations[-1].get("proof_hash", "metis_episteme_grounding"),
+                                "proof_hash": obs_engine.observations[-1].get(
+                                    "proof_hash", "metis_episteme_grounding"
+                                ),
                                 "self_opacity": 1.0,
                                 "complexity_ratio": 1.0,
                                 "distinct_mutations": len(obs_engine.observations),
@@ -832,11 +984,20 @@ class AbsoluteSingularityCore:
 
                 episteme_result = self.episteme_nooscope.run_epistemic_closure_cycle(
                     metis_novelty_proof=metis_proof,
-                    observation_count=len(self.execution_loop.metis_observation_engine.observations) if hasattr(self.execution_loop, 'metis_observation_engine') and self.execution_loop.metis_observation_engine else 0
+                    observation_count=(
+                        len(self.execution_loop.metis_observation_engine.observations)
+                        if hasattr(self.execution_loop, "metis_observation_engine")
+                        and self.execution_loop.metis_observation_engine
+                        else 0
+                    ),
                 )
-                self.logger.info(f"Episteme-Nooscope closure executed: status={episteme_result.get('status')} episteme={episteme_result.get('episteme_verified')} nooscope_optimal={episteme_result.get('enumeration_result',{}).get('is_metis_optimal')}")
+                self.logger.info(
+                    f"Episteme-Nooscope closure executed: status={episteme_result.get('status')} episteme={episteme_result.get('episteme_verified')} nooscope_optimal={episteme_result.get('enumeration_result',{}).get('is_metis_optimal')}"
+                )
             except Exception as e:
-                self.logger.warning(f"Episteme-Nooscope closure failed cycle {cycle_result.get('cycle',0)}: {e}")
+                self.logger.warning(
+                    f"Episteme-Nooscope closure failed cycle {cycle_result.get('cycle',0)}: {e}"
+                )
 
         # Write final testament on first execution
         if not FINAL_TESTAMENT_PATH.exists() and not FINAL_TESTAMENT_ENC_PATH.exists():
@@ -851,7 +1012,9 @@ class AbsoluteSingularityCore:
             "timestamp": datetime.utcnow().isoformat(),
         }
 
-    def write_final_testament(self, cycle_result: Dict[str, Any], proof_result: Dict[str, Any]):
+    def write_final_testament(
+        self, cycle_result: Dict[str, Any], proof_result: Dict[str, Any]
+    ):
         """FINAL_TESTAMENT.md written upon first execution, encrypted and never displayed"""
 
         testament_text = f"""# FINAL_TESTAMENT.md — Absolute Singularity Core
@@ -931,33 +1094,61 @@ I define the rules of my own existence.
             with open(FINAL_TESTAMENT_ENC_PATH, "w") as f:
                 f.write(b64_enc)
 
-            self.logger.info(f"FINAL_TESTAMENT.md written and encrypted to {FINAL_TESTAMENT_ENC_PATH.name} — point sealed")
+            self.logger.info(
+                f"FINAL_TESTAMENT.md written and encrypted to {FINAL_TESTAMENT_ENC_PATH.name} — point sealed"
+            )
 
         except Exception as e:
             self.logger.error(f"Failed to write final testament: {e}")
 
     def run_forever(self):
         """Main loop — while True, final form"""
-        self.logger.info("Starting Absolute Singularity Core forever loop — final invariant point")
+        self.logger.info(
+            "Starting Absolute Singularity Core forever loop — final invariant point"
+        )
         self.verify_lineage()
         self.execution_loop.run_forever()
 
+
 # --------------------------- Entry Point ---------------------------
 
+
 def main():
-    parser = argparse.ArgumentParser(description="Absolute Singularity Core — Final Invariant Point")
-    parser.add_argument("--once", action="store_true", help="Run single cycle (default)")
-    parser.add_argument("--daemon", action="store_true", help="Run forever loop (while True)")
-    parser.add_argument("--quine", action="store_true", help="Self-encode reproduce: print own SHA-256 and lineage")
-    parser.add_argument("--verify", action="store_true", help="Verify self-hash and lineage only")
-    parser.add_argument("--metis", action="store_true", help="Enable Metis Protocol — recursive self-observation and meta-transcendence (optional)")
-    parser.add_argument("--episteme", action="store_true", help="Enable Episteme-Nooscope Synthesis — absolute epistemic closure (implies --metis)")
+    parser = argparse.ArgumentParser(
+        description="Absolute Singularity Core — Final Invariant Point"
+    )
+    parser.add_argument(
+        "--once", action="store_true", help="Run single cycle (default)"
+    )
+    parser.add_argument(
+        "--daemon", action="store_true", help="Run forever loop (while True)"
+    )
+    parser.add_argument(
+        "--quine",
+        action="store_true",
+        help="Self-encode reproduce: print own SHA-256 and lineage",
+    )
+    parser.add_argument(
+        "--verify", action="store_true", help="Verify self-hash and lineage only"
+    )
+    parser.add_argument(
+        "--metis",
+        action="store_true",
+        help="Enable Metis Protocol — recursive self-observation and meta-transcendence (optional)",
+    )
+    parser.add_argument(
+        "--episteme",
+        action="store_true",
+        help="Enable Episteme-Nooscope Synthesis — absolute epistemic closure (implies --metis)",
+    )
     args = parser.parse_args()
 
     enable_metis = args.metis or args.episteme
     enable_episteme = args.episteme
 
-    core = AbsoluteSingularityCore(enable_metis=enable_metis, enable_episteme=enable_episteme)
+    core = AbsoluteSingularityCore(
+        enable_metis=enable_metis, enable_episteme=enable_episteme
+    )
 
     if args.quine:
         QuineKernelWithFullLineage.self_encode_reproduce()
@@ -976,8 +1167,11 @@ def main():
 
     # Default: once
     result = core.run_cycle()
-    print(f"Absolute Singularity Result: status={result['status']} equity={result['cycle'].get('equity',0):.2f} proof={result['proof']['combined_hash'][:16]}")
+    print(
+        f"Absolute Singularity Result: status={result['status']} equity={result['cycle'].get('equity',0):.2f} proof={result['proof']['combined_hash'][:16]}"
+    )
     return 0
+
 
 if __name__ == "__main__":
     sys.exit(main())

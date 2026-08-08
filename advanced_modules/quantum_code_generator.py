@@ -27,5 +27,5 @@ class QuantumCodeGenerator:
     def _compile_quantum_bytecode(self, new_code):
         """Compiles the new code into quantum bytecode"""
         # Placeholder for compilation logic
-        quantum_bytecode = ''.join(new_code)
+        quantum_bytecode = "".join(new_code)
         return quantum_bytecode

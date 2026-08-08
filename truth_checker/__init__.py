@@ -11,4 +11,4 @@ Modules:
 
 from .truth_checker import TruthChecker
 
-__all__ = ['TruthChecker']
+__all__ = ["TruthChecker"]

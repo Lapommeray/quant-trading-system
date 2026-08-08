@@ -7,23 +7,26 @@ Predicts probability of sudden market crashes or spikes.
 import numpy as np
 import datetime
 
+
 class SentimentProbe:
     def __init__(self, depth="quantum"):
         self.depth = depth
         print(f"Initializing SentimentProbe with {depth} depth")
-    
+
     def get_collapse_risk(self, symbol):
         """Returns probability of a sentiment-driven collapse"""
         return np.random.random() * 0.3
+
 
 class WhaleRadar:
     def __init__(self, sensitivity="atomic"):
         self.sensitivity = sensitivity
         print(f"Initializing WhaleRadar with {sensitivity} sensitivity")
-    
+
     def get_dump_probability(self, symbol):
         """Returns probability of a whale-driven dump"""
         return np.random.random() * 0.4
+
 
 class BlackSwanHunter:
     def __init__(self):

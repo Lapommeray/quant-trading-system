@@ -14,18 +14,45 @@ from typing import List, Optional
 
 @dataclass(frozen=True)
 class OKXLiveConfig:
-    api_key: str = field(default_factory=lambda: os.getenv("OKX_API_KEY") or os.getenv("OKX_KEY") or "")
-    api_secret: str = field(default_factory=lambda: os.getenv("OKX_API_SECRET") or os.getenv("OKX_SECRET") or "")
+    api_key: str = field(
+        default_factory=lambda: os.getenv("OKX_API_KEY") or os.getenv("OKX_KEY") or ""
+    )
+    api_secret: str = field(
+        default_factory=lambda: os.getenv("OKX_API_SECRET")
+        or os.getenv("OKX_SECRET")
+        or ""
+    )
     passphrase: str = field(default_factory=lambda: os.getenv("OKX_PASSPHRASE") or "")
-    live_trading: bool = field(default_factory=lambda: os.getenv("OKX_LIVE_TRADING", "false").lower() in ("true", "1", "yes"))
-    allow_paper_for_test: bool = field(default_factory=lambda: os.getenv("OKX_ALLOW_PAPER_FOR_TEST", "false").lower() in ("true", "1", "yes"))
+    live_trading: bool = field(
+        default_factory=lambda: os.getenv("OKX_LIVE_TRADING", "false").lower()
+        in ("true", "1", "yes")
+    )
+    allow_paper_for_test: bool = field(
+        default_factory=lambda: os.getenv("OKX_ALLOW_PAPER_FOR_TEST", "false").lower()
+        in ("true", "1", "yes")
+    )
 
-    max_leverage: float = field(default_factory=lambda: float(os.getenv("OKX_MAX_LEVERAGE", "3.0")))
-    max_position_pct: float = field(default_factory=lambda: float(os.getenv("OKX_MAX_POSITION_PCT", "0.10")))
-    max_daily_loss_pct: float = field(default_factory=lambda: float(os.getenv("OKX_MAX_DAILY_LOSS_PCT", "0.03")))
-    max_orders_per_minute: int = field(default_factory=lambda: int(os.getenv("OKX_MAX_ORDERS_PER_MIN", "20")))
+    max_leverage: float = field(
+        default_factory=lambda: float(os.getenv("OKX_MAX_LEVERAGE", "3.0"))
+    )
+    max_position_pct: float = field(
+        default_factory=lambda: float(os.getenv("OKX_MAX_POSITION_PCT", "0.10"))
+    )
+    max_daily_loss_pct: float = field(
+        default_factory=lambda: float(os.getenv("OKX_MAX_DAILY_LOSS_PCT", "0.03"))
+    )
+    max_orders_per_minute: int = field(
+        default_factory=lambda: int(os.getenv("OKX_MAX_ORDERS_PER_MIN", "20"))
+    )
 
-    default_symbols: List[str] = field(default_factory=lambda: [s.strip() for s in os.getenv("QT_DEFAULT_SYMBOLS", "BTC/USDT,ETH/USDT").split(",") if s.strip()] or ["BTC/USDT"])
+    default_symbols: List[str] = field(
+        default_factory=lambda: [
+            s.strip()
+            for s in os.getenv("QT_DEFAULT_SYMBOLS", "BTC/USDT,ETH/USDT").split(",")
+            if s.strip()
+        ]
+        or ["BTC/USDT"]
+    )
     log_dir: Path = field(default_factory=lambda: Path("audit_logs"))
 
     def validate_for_real_trading(self) -> None:

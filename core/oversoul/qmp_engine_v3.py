@@ -1,11 +1,12 @@
-
 # qmp_engine_v3.py
 # Centralized QMP Engine with Ultra Intelligence Module Integration
+
 
 class QMPOverrider:
     def __init__(self, algorithm):
         self.algo = algorithm
         from intention_decoder import IntentionDecoder
+
         self.intent_decoder = IntentionDecoder(algorithm)
 
         # Import ultra modules
@@ -49,18 +50,20 @@ class QMPOverrider:
         sacred_ok = self.sacred_sync.decode(symbol, history)
         black_swan_safe = self.black_swan.decode(symbol, history)
 
-        all_gates_pass = all([
-            intent in ["BUY", "SELL"],
-            emotion_ok,
-            fractal_ok,
-            reality_ok,
-            shadow_ok,
-            astro_ok,
-            thought_ok,
-            quantum_ok,
-            sacred_ok,
-            black_swan_safe
-        ])
+        all_gates_pass = all(
+            [
+                intent in ["BUY", "SELL"],
+                emotion_ok,
+                fractal_ok,
+                reality_ok,
+                shadow_ok,
+                astro_ok,
+                thought_ok,
+                quantum_ok,
+                sacred_ok,
+                black_swan_safe,
+            ]
+        )
 
         self.algo.Debug(f"Gates passed: {all_gates_pass} | Intent: {intent}")
         return all_gates_pass, intent

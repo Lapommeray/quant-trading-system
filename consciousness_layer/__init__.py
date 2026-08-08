@@ -11,4 +11,4 @@ Modules:
 
 from .consciousness_layer import ConsciousnessLayer
 
-__all__ = ['ConsciousnessLayer']
+__all__ = ["ConsciousnessLayer"]

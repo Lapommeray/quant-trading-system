@@ -28,15 +28,18 @@ def setup_logging():
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [MetaEvolve] %(message)s",
-        handlers=[
-            logging.FileHandler("meta_evolution.log"),
-            logging.StreamHandler()
-        ]
+        handlers=[logging.FileHandler("meta_evolution.log"), logging.StreamHandler()],
     )
 
 
 class StrategyGenome:
-    def __init__(self, genome_id: str, generation: int, params: Dict[str, Any], parents: Optional[List[str]] = None):
+    def __init__(
+        self,
+        genome_id: str,
+        generation: int,
+        params: Dict[str, Any],
+        parents: Optional[List[str]] = None,
+    ):
         self.genome_id = genome_id
         self.generation = generation
         self.params = params
@@ -95,7 +98,9 @@ class MetaEvolutionEngine:
                 "volatility_multiplier": round(random.uniform(1.2, 3.0), 2),
                 "confidence_threshold": round(random.uniform(0.60, 0.85), 2),
             }
-            population.append(StrategyGenome(genome_id=genome_id, generation=0, params=params))
+            population.append(
+                StrategyGenome(genome_id=genome_id, generation=0, params=params)
+            )
         return population
 
     def generate_strategy_code(self, genome: StrategyGenome) -> str:
@@ -142,9 +147,15 @@ class {class_name}:
 '''
         return code
 
-    def run_monte_carlo_simulation(self, genome: StrategyGenome, num_simulations: int = 10000) -> Dict[str, float]:
+    def run_monte_carlo_simulation(
+        self, genome: StrategyGenome, num_simulations: int = 10000
+    ) -> Dict[str, float]:
         """Simulate 10,000 Monte Carlo price paths to stress test strategy resilience."""
-        self.logger.info("Running %d Monte Carlo simulations for genome %s...", num_simulations, genome.genome_id)
+        self.logger.info(
+            "Running %d Monte Carlo simulations for genome %s...",
+            num_simulations,
+            genome.genome_id,
+        )
 
         wins = 0
         total_pnl = 0.0
@@ -166,7 +177,7 @@ class {class_name}:
                 shock = random.gauss(0, 0.015)
                 if random.random() < 0.05:  # 5% black swan jump
                     shock *= 3.0
-                price *= (1.0 + shock)
+                price *= 1.0 + shock
                 if price > peak:
                     peak = price
                 dd = (peak - price) / peak
@@ -190,7 +201,7 @@ class {class_name}:
         win_rate = wins / float(num_simulations)
         profit_factor = gross_profit / gross_loss
         mc_survival_rate = survived_runs / float(num_simulations)
-        sharpe_ratio = (total_pnl / num_simulations) / 0.02 * (252 ** 0.5)
+        sharpe_ratio = (total_pnl / num_simulations) / 0.02 * (252**0.5)
 
         metrics = {
             "win_rate": round(win_rate, 4),
@@ -204,10 +215,17 @@ class {class_name}:
     def evaluate_fitness(self, genome: StrategyGenome) -> float:
         """Calculate composite fitness score from Monte Carlo metrics."""
         m = genome.metrics
-        fitness = (m["profit_factor"] * 0.35) + (m["sharpe_ratio"] * 0.35) + (m["win_rate"] * 0.20) + (m["mc_survival_rate"] * 0.10)
+        fitness = (
+            (m["profit_factor"] * 0.35)
+            + (m["sharpe_ratio"] * 0.35)
+            + (m["win_rate"] * 0.20)
+            + (m["mc_survival_rate"] * 0.10)
+        )
         return float(round(fitness, 4))
 
-    def breed(self, parent1: StrategyGenome, parent2: StrategyGenome, next_gen: int) -> StrategyGenome:
+    def breed(
+        self, parent1: StrategyGenome, parent2: StrategyGenome, next_gen: int
+    ) -> StrategyGenome:
         """Cross genome parameters of two parent strategies with mutation."""
         p1, p2 = parent1.params, parent2.params
         child_params = {}
@@ -220,10 +238,19 @@ class {class_name}:
                     val = round(max(0.1, val + random.uniform(-0.1, 0.1)), 2)
             child_params[k] = val
 
-        child_id = f"gen{next_gen}_strat_{random.randint(1000, 9999)}_{int(time.time())}"
-        return StrategyGenome(genome_id=child_id, generation=next_gen, params=child_params, parents=[parent1.genome_id, parent2.genome_id])
+        child_id = (
+            f"gen{next_gen}_strat_{random.randint(1000, 9999)}_{int(time.time())}"
+        )
+        return StrategyGenome(
+            genome_id=child_id,
+            generation=next_gen,
+            params=child_params,
+            parents=[parent1.genome_id, parent2.genome_id],
+        )
 
-    def run_evolution_generation(self, pop_size: int = 4, mc_sims: int = 10000) -> StrategyGenome:
+    def run_evolution_generation(
+        self, pop_size: int = 4, mc_sims: int = 10000
+    ) -> StrategyGenome:
         """Run a complete genetic evolutionary generation."""
         self.logger.info("=== Starting Meta-Evolution Generation Cycle ===")
         if not self.population:
@@ -236,10 +263,17 @@ class {class_name}:
             filepath.write_text(code)
 
             # 2. Run 10,000 Monte Carlo Simulations
-            genome.metrics = self.run_monte_carlo_simulation(genome, num_simulations=mc_sims)
+            genome.metrics = self.run_monte_carlo_simulation(
+                genome, num_simulations=mc_sims
+            )
             genome.fitness_score = self.evaluate_fitness(genome)
-            self.logger.info("Genome %s evaluated | Fitness: %.4f | Profit Factor: %.2f | Win Rate: %.2f%%",
-                             genome.genome_id, genome.fitness_score, genome.metrics["profit_factor"], genome.metrics["win_rate"] * 100)
+            self.logger.info(
+                "Genome %s evaluated | Fitness: %.4f | Profit Factor: %.2f | Win Rate: %.2f%%",
+                genome.genome_id,
+                genome.fitness_score,
+                genome.metrics["profit_factor"],
+                genome.metrics["win_rate"] * 100,
+            )
 
             self.lineage_history.append(genome.to_dict())
 
@@ -258,7 +292,9 @@ class {class_name}:
             new_pop.append(child)
 
         self.population = new_pop
-        self.logger.info("Top Genome Chosen: %s (Fitness: %.4f)", best.genome_id, best.fitness_score)
+        self.logger.info(
+            "Top Genome Chosen: %s (Fitness: %.4f)", best.genome_id, best.fitness_score
+        )
         return best
 
 

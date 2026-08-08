@@ -11,4 +11,4 @@ from .order_flow_hunter import OrderFlowHunter
 from .stop_hunter import StopHunter
 from .market_maker_slayer import MarketMakerSlayer
 
-__all__ = ['DarkPoolSniper', 'OrderFlowHunter', 'StopHunter', 'MarketMakerSlayer']
+__all__ = ["DarkPoolSniper", "OrderFlowHunter", "StopHunter", "MarketMakerSlayer"]

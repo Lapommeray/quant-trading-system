@@ -20,6 +20,7 @@ log = logging.getLogger(__name__)
 
 try:
     from core.event_bus import get_event_bus  # type: ignore
+
     EVENTBUS_AVAILABLE = True
 except ImportError:
     EVENTBUS_AVAILABLE = False
@@ -29,7 +30,9 @@ except ImportError:
 class OKXLiveTrader:
     """High-level trader for real OKX trading - fail-closed."""
 
-    def __init__(self, config: Optional[OKXLiveConfig] = None, event_bus: Optional[Any] = None):
+    def __init__(
+        self, config: Optional[OKXLiveConfig] = None, event_bus: Optional[Any] = None
+    ):
         self.config = config or get_okx_config()
         self.event_bus = event_bus
         if self.event_bus is None and EVENTBUS_AVAILABLE and get_event_bus:
@@ -67,14 +70,24 @@ class OKXLiveTrader:
     def is_connected(self) -> bool:
         return self.engine.is_connected()
 
-    def place_order_from_signal(self, signal: Dict[str, Any], max_quantity: Optional[float] = None) -> Optional[OKXOrderResult]:
+    def place_order_from_signal(
+        self, signal: Dict[str, Any], max_quantity: Optional[float] = None
+    ) -> Optional[OKXOrderResult]:
         """Place order from consensus signal - fails closed if no real data."""
         return self.engine.place_order_from_signal(signal, max_quantity=max_quantity)
 
-    def place_market_order(self, symbol: str, side: str, quantity: float) -> OKXOrderResult:
+    def place_market_order(
+        self, symbol: str, side: str, quantity: float
+    ) -> OKXOrderResult:
         """Direct market order - fail-closed."""
         side_enum = OrderSide.BUY if side.upper() == "BUY" else OrderSide.SELL
-        order = OKXOrderRequest(symbol=symbol, side=side_enum, quantity=quantity, order_type=OrderType.MARKET, leverage=1.0)
+        order = OKXOrderRequest(
+            symbol=symbol,
+            side=side_enum,
+            quantity=quantity,
+            order_type=OrderType.MARKET,
+            leverage=1.0,
+        )
         return self.engine.place_order(order)
 
     def get_balance(self) -> Dict[str, Any]:

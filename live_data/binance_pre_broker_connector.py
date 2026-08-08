@@ -19,6 +19,7 @@ Move with whales: trade qty >5k BTC aggregated + forceOrder liquidation cluster.
 
 Auto self-coding: this connector itself learns reconnect backoff, latency.
 """
+
 import time
 import threading
 import logging
@@ -30,9 +31,11 @@ logger = logging.getLogger("BinancePreBroker")
 try:
     import websocket
     import orjson
+
     HAS_ORJSON = True
 except ImportError:
     import json as orjson
+
     HAS_ORJSON = False
     import websocket
 
@@ -42,6 +45,7 @@ class BinancePreBrokerConnector:
     Pre-broker hub for BTCUSD ETHUSD.
     One instance per symbol, pushes to DataRing.
     """
+
     def __init__(self, symbols=None):
         self.symbols = symbols or ["btcusdt", "ethusdt"]
         self.symbols = [s.lower() for s in self.symbols]
@@ -66,7 +70,12 @@ class BinancePreBrokerConnector:
         try:
             if HAS_ORJSON:
                 try:
-                    data = orjson.loads(message) if isinstance(message, (bytes, bytearray)) or message.strip().startswith("{") else orjson.loads(message)
+                    data = (
+                        orjson.loads(message)
+                        if isinstance(message, (bytes, bytearray))
+                        or message.strip().startswith("{")
+                        else orjson.loads(message)
+                    )
                 except:
                     data = json.loads(message)
             else:
@@ -87,7 +96,7 @@ class BinancePreBrokerConnector:
 
             self.last_message_ts = time.time()
             self.reconnect_attempts = 0
-            latency = (time.time() - start)*1000
+            latency = (time.time() - start) * 1000
             self.latency_history.append(latency)
             if len(self.latency_history) > 100:
                 self.latency_history = self.latency_history[-100:]
@@ -103,10 +112,26 @@ class BinancePreBrokerConnector:
             asks = payload.get("a") or payload.get("asks") or []
             if not bids or not asks:
                 return
-            bid_price = float(bids[0][0]) if isinstance(bids[0], (list,tuple)) else float(bids[0].get("price",0))
-            bid_qty = float(bids[0][1]) if isinstance(bids[0], (list,tuple)) else float(bids[0].get("quantity",0))
-            ask_price = float(asks[0][0]) if isinstance(asks[0], (list,tuple)) else float(asks[0].get("price",0))
-            ask_qty = float(asks[0][1]) if isinstance(asks[0], (list,tuple)) else float(asks[0].get("quantity",0))
+            bid_price = (
+                float(bids[0][0])
+                if isinstance(bids[0], (list, tuple))
+                else float(bids[0].get("price", 0))
+            )
+            bid_qty = (
+                float(bids[0][1])
+                if isinstance(bids[0], (list, tuple))
+                else float(bids[0].get("quantity", 0))
+            )
+            ask_price = (
+                float(asks[0][0])
+                if isinstance(asks[0], (list, tuple))
+                else float(asks[0].get("price", 0))
+            )
+            ask_qty = (
+                float(asks[0][1])
+                if isinstance(asks[0], (list, tuple))
+                else float(asks[0].get("quantity", 0))
+            )
 
             ring = get_data_ring(symbol)
             # Use best bid/ask from depth as proxy for L2 top
@@ -116,9 +141,9 @@ class BinancePreBrokerConnector:
                 ask=ask_price,
                 bid_size=bid_qty,
                 ask_size=ask_qty,
-                price=(bid_price+ask_price)/2,
+                price=(bid_price + ask_price) / 2,
                 qty=0,
-                side=0
+                side=0,
             )
 
             # For full 20-level OFI, push full snapshot to separate L2 ring
@@ -132,9 +157,13 @@ class BinancePreBrokerConnector:
         try:
             symbol = payload.get("s", "").upper() or stream_name.split("@")[0].upper()
             price = float(payload.get("p", payload.get("price", 0)))
-            qty = float(payload.get("q", payload.get("qty", payload.get("quantity",0))))
+            qty = float(
+                payload.get("q", payload.get("qty", payload.get("quantity", 0)))
+            )
             is_buyer_maker = payload.get("m", False)  # true = sell, buyer maker
-            side = -1 if is_buyer_maker else 1  # if buyer maker, seller aggressive => -1
+            side = (
+                -1 if is_buyer_maker else 1
+            )  # if buyer maker, seller aggressive => -1
 
             # Get last bid/ask from ring for classification fallback
             ring = get_data_ring(symbol)
@@ -148,7 +177,7 @@ class BinancePreBrokerConnector:
                 ask_size=asize,
                 price=price,
                 qty=qty,
-                side=side
+                side=side,
             )
 
         except Exception as e:
@@ -167,11 +196,18 @@ class BinancePreBrokerConnector:
             # Publish liquidation event to EventBus for MM intent detector
             try:
                 from core.event_bus import get_event_bus, EventPriority
+
                 get_event_bus().publish(
                     "LIQUIDATION_EVENT",
-                    {"symbol": symbol, "side": side, "qty": qty, "price": price, "type": "stop_hunt"},
+                    {
+                        "symbol": symbol,
+                        "side": side,
+                        "qty": qty,
+                        "price": price,
+                        "type": "stop_hunt",
+                    },
                     source="binance_pre_broker",
-                    priority=EventPriority.OPERATIONAL
+                    priority=EventPriority.OPERATIONAL,
                 )
             except:
                 pass
@@ -186,13 +222,15 @@ class BinancePreBrokerConnector:
             # Cache funding for funding_detector
             try:
                 from core.funding_indicator import FundingRateDetector
+
                 # Update cached value via class variable or event
                 from core.event_bus import get_event_bus, EventPriority
+
                 get_event_bus().publish(
                     "FUNDING_UPDATE",
-                    {"symbol": symbol, "funding": funding_rate*100},
+                    {"symbol": symbol, "funding": funding_rate * 100},
                     source="binance_pre_broker",
-                    priority=EventPriority.ADAPTIVE
+                    priority=EventPriority.ADAPTIVE,
                 )
             except:
                 pass
@@ -213,8 +251,12 @@ class BinancePreBrokerConnector:
 
     def _reconnect(self):
         self.reconnect_attempts += 1
-        backoff = min(0.1 * (2 ** self.reconnect_attempts), 5.0)  # 0.1,0.2,0.4,0.8,1.6,3.2,5.0
-        logger.info(f"Reconnecting Binance in {backoff}s attempt {self.reconnect_attempts}")
+        backoff = min(
+            0.1 * (2**self.reconnect_attempts), 5.0
+        )  # 0.1,0.2,0.4,0.8,1.6,3.2,5.0
+        logger.info(
+            f"Reconnecting Binance in {backoff}s attempt {self.reconnect_attempts}"
+        )
         time.sleep(backoff)
         if self.running:
             self.start()
@@ -228,9 +270,11 @@ class BinancePreBrokerConnector:
             on_message=self._on_message,
             on_error=self._on_error,
             on_close=self._on_close,
-            on_open=self._on_open
+            on_open=self._on_open,
         )
-        self.thread = threading.Thread(target=self.ws.run_forever, kwargs={"ping_interval": 20, "ping_timeout": 10})
+        self.thread = threading.Thread(
+            target=self.ws.run_forever, kwargs={"ping_interval": 20, "ping_timeout": 10}
+        )
         self.thread.daemon = True
         self.thread.start()
         logger.info("Binance Pre-Broker started")
@@ -246,12 +290,13 @@ class BinancePreBrokerConnector:
 
     def get_latency_stats(self):
         if not self.latency_history:
-            return {"p50":0,"p95":0,"avg":0}
+            return {"p50": 0, "p95": 0, "avg": 0}
         import numpy as np
+
         arr = np.array(self.latency_history)
         return {
-            "p50": float(np.percentile(arr,50)),
-            "p95": float(np.percentile(arr,95)),
+            "p50": float(np.percentile(arr, 50)),
+            "p95": float(np.percentile(arr, 95)),
             "avg": float(np.mean(arr)),
-            "last_msg_age": time.time()-self.last_message_ts
+            "last_msg_age": time.time() - self.last_message_ts,
         }

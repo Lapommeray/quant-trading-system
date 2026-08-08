@@ -11,4 +11,4 @@ Modules:
 
 from .aurora_micro_node import AuroraGateway, AuroraModule
 
-__all__ = ['AuroraGateway', 'AuroraModule']
+__all__ = ["AuroraGateway", "AuroraModule"]

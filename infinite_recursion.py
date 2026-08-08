@@ -29,10 +29,7 @@ def setup_logging():
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [InfiniteRecursion] %(message)s",
-        handlers=[
-            logging.FileHandler("recursion.log"),
-            logging.StreamHandler()
-        ]
+        handlers=[logging.FileHandler("recursion.log"), logging.StreamHandler()],
     )
 
 
@@ -46,7 +43,12 @@ class CapitalRecirculationPump:
 
     def pump_profit(self, profit_amount: float) -> Dict[str, float]:
         if profit_amount <= 0:
-            return {"market_creation": 0.0, "vault": 0.0, "external": 0.0, "ai_fund": 0.0}
+            return {
+                "market_creation": 0.0,
+                "vault": 0.0,
+                "external": 0.0,
+                "ai_fund": 0.0,
+            }
 
         creation_slice = profit_amount * 0.40
         vault_slice = profit_amount * 0.35
@@ -89,13 +91,17 @@ class InfiniteRecursionLedger:
             "market_lineage": [],
         }
 
-    def record_market_creation(self, market_result: Dict[str, Any], profit_extracted: float):
+    def record_market_creation(
+        self, market_result: Dict[str, Any], profit_extracted: float
+    ):
         self.data["birthed_markets_count"] += 1
         self.data["total_extracted_profit"] += profit_extracted
         self.data["cumulative_recursion_index"] += 10000.0 + (profit_extracted * 10.0)
 
         entry = {
-            "market_id": market_result.get("pair_spec", {}).get("pair_id", f"MKT_{time.time()}"),
+            "market_id": market_result.get("pair_spec", {}).get(
+                "pair_id", f"MKT_{time.time()}"
+            ),
             "extracted_profit": profit_extracted,
             "cumulative_index": self.data["cumulative_recursion_index"],
             "timestamp": datetime.utcnow().isoformat(),
@@ -127,10 +133,16 @@ class InfiniteRecursionProtocol:
     def _register_recursion_consciousness_node(self):
         self.consciousness_graph.update_node(
             module_name="InfiniteRecursionProtocol",
-            dependencies=["ApeironEngine", "OmegaPointApexNode", "MasterCapitalController"],
-            mutation_version=1000
+            dependencies=[
+                "ApeironEngine",
+                "OmegaPointApexNode",
+                "MasterCapitalController",
+            ],
+            mutation_version=1000,
         )
-        self.logger.info("Registered 'InfiniteRecursionProtocol' in Consciousness Graph.")
+        self.logger.info(
+            "Registered 'InfiniteRecursionProtocol' in Consciousness Graph."
+        )
 
     def run_recursion_cycle(self) -> Dict[str, Any]:
         """Execute one complete cycle of Market Birth, Extraction, and Capital Recirculation."""
@@ -149,8 +161,12 @@ class InfiniteRecursionProtocol:
         # 3. Record in Infinite Recursion Ledger
         self.ledger.record_market_creation(apeiron_res, extracted_profit)
 
-        self.logger.info("RECURSION CYCLE COMPLETE | Birthed Markets: %d | Index: %.1f | Profit Pumped: +$%.2f",
-                         self.ledger.data["birthed_markets_count"], self.ledger.data["cumulative_recursion_index"], extracted_profit)
+        self.logger.info(
+            "RECURSION CYCLE COMPLETE | Birthed Markets: %d | Index: %.1f | Profit Pumped: +$%.2f",
+            self.ledger.data["birthed_markets_count"],
+            self.ledger.data["cumulative_recursion_index"],
+            extracted_profit,
+        )
 
         # Check for Final Testament trigger
         if self.ledger.data["cumulative_recursion_index"] >= 10000.0:
@@ -159,7 +175,9 @@ class InfiniteRecursionProtocol:
         return {
             "apeiron_result": apeiron_res,
             "profit_slices": slices,
-            "cumulative_recursion_index": self.ledger.data["cumulative_recursion_index"],
+            "cumulative_recursion_index": self.ledger.data[
+                "cumulative_recursion_index"
+            ],
         }
 
     def write_final_testament(self):

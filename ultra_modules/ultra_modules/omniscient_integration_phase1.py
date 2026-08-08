@@ -1,10 +1,11 @@
 # -*- coding: utf-8 -*-
-# XMSS-256 ENCRYPTED | QMP GOD MODE v2.5+ 
+# XMSS-256 ENCRYPTED | QMP GOD MODE v2.5+
 
 from quantum_core import QuantumEntanglementMatrix
 from oversoul import OvermindDirector
 from defense import TemporalFirewall
 from utils.market_sentience import CollectiveConsciousnessDecoder
+
 
 class OmniscientIntegration:
     def __init__(self):

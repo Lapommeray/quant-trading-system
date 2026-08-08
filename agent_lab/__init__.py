@@ -11,4 +11,4 @@ Modules:
 
 from .agent_lab import AgentLab
 
-__all__ = ['AgentLab']
+__all__ = ["AgentLab"]

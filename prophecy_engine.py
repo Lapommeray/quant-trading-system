@@ -24,10 +24,7 @@ def setup_logging():
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [ProphecyEngine] %(message)s",
-        handlers=[
-            logging.FileHandler("prophecy.log"),
-            logging.StreamHandler()
-        ]
+        handlers=[logging.FileHandler("prophecy.log"), logging.StreamHandler()],
     )
 
 
@@ -63,11 +60,15 @@ class ProphecyEngine:
                     with open(log_path) as f:
                         lines = f.readlines()
                         total_log_entries += len(lines)
-                        rejection_events += sum(1 for l in lines if "REJECTED" in l or "ABORTED" in l or "SHORT-CIRCUIT" in l)
+                        rejection_events += sum(
+                            1
+                            for l in lines
+                            if "REJECTED" in l or "ABORTED" in l or "SHORT-CIRCUIT" in l
+                        )
                 except Exception:
                     pass
 
-        rejection_ratio = (rejection_events / float(max(1, total_log_entries)))
+        rejection_ratio = rejection_events / float(max(1, total_log_entries))
         return {
             "total_log_entries": float(total_log_entries),
             "rejection_events": float(rejection_events),
@@ -76,7 +77,9 @@ class ProphecyEngine:
 
     def generate_24h_prophecy(self) -> Dict[str, Any]:
         """Predict 24-hour market regime, expected Sharpe, drawdown prob, and asset weightings."""
-        self.logger.info("Parsing historical system logs to construct 24-Hour Prophecy...")
+        self.logger.info(
+            "Parsing historical system logs to construct 24-Hour Prophecy..."
+        )
         log_features = self.parse_historical_logs()
 
         rej_ratio = log_features["rejection_ratio"]
@@ -112,16 +115,24 @@ class ProphecyEngine:
         }
 
         self.prophecy_history.append(prophecy)
-        self.logger.info("24-HOUR PROPHECY GENERATED: Regime: %s | Optimal Venue: %s | Expected Sharpe: %.2f | Drawdown Prob: %.1f%%",
-                         predicted_regime, optimal_venue, expected_sharpe, drawdown_prob * 100)
+        self.logger.info(
+            "24-HOUR PROPHECY GENERATED: Regime: %s | Optimal Venue: %s | Expected Sharpe: %.2f | Drawdown Prob: %.1f%%",
+            predicted_regime,
+            optimal_venue,
+            expected_sharpe,
+            drawdown_prob * 100,
+        )
 
         return prophecy
 
     def apply_prophecy_pre_allocation(self, prophecy: Dict[str, Any]):
         """Shift master capital allocation weights based on prophecy prediction."""
         weights = prophecy["pre_allocation_weights"]
-        self.logger.info("Pre-Allocating Capital via Prophecy: Kalshi Invariant Arb: %.0f%% | Directional Swarm: %.0f%%",
-                         weights["kalshi_invariant_arb"] * 100, weights["directional_swarm_pit"] * 100)
+        self.logger.info(
+            "Pre-Allocating Capital via Prophecy: Kalshi Invariant Arb: %.0f%% | Directional Swarm: %.0f%%",
+            weights["kalshi_invariant_arb"] * 100,
+            weights["directional_swarm_pit"] * 100,
+        )
 
 
 if __name__ == "__main__":

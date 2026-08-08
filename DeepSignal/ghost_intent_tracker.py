@@ -1,5 +1,5 @@
-
 import numpy as np
+
 
 class GhostIntentEngine:
     def __init__(self):

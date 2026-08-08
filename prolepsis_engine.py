@@ -36,8 +36,8 @@ def setup_logging():
         format="%(asctime)s [ProlepsisEngine] %(message)s",
         handlers=[
             logging.FileHandler("prolepsis_entropy.log"),
-            logging.StreamHandler()
-        ]
+            logging.StreamHandler(),
+        ],
     )
 
 
@@ -45,7 +45,9 @@ class RawFeedEntropyEncoder:
     """Tokenizes raw exchange protocol frames, inter-arrival timing jitter, and packet lengths."""
 
     @staticmethod
-    def encode_protocol_bytestream(frame_bytes: bytes, arrival_jitter_us: float) -> List[float]:
+    def encode_protocol_bytestream(
+        frame_bytes: bytes, arrival_jitter_us: float
+    ) -> List[float]:
         byte_len = float(len(frame_bytes))
         checksum = float(sum(frame_bytes) % 256) if frame_bytes else 0.0
 
@@ -87,13 +89,25 @@ class PreInformationalHedgeConstructor:
         self.absolute_zero = absolute_zero
         self.zk_verifier = ZKTradeInvariantVerifier(max_allowed_risk=0.02)
 
-    def construct_pre_signal_hedge(self, intent_trace: Dict[str, Any]) -> Optional[Dict[str, Any]]:
-        expected_micro_impact = 12.0  # 12¢ microsecond impact before consolidated tape update
+    def construct_pre_signal_hedge(
+        self, intent_trace: Dict[str, Any]
+    ) -> Optional[Dict[str, Any]]:
+        expected_micro_impact = (
+            12.0  # 12¢ microsecond impact before consolidated tape update
+        )
 
-        signal = {"direction": "BUY", "confidence": intent_trace["confidence"], "never_loss_protected": True}
-        valid, zk_proof = self.zk_verifier.generate_proof(signal, position_size=100.0, account_balance=10000.0)
+        signal = {
+            "direction": "BUY",
+            "confidence": intent_trace["confidence"],
+            "never_loss_protected": True,
+        }
+        valid, zk_proof = self.zk_verifier.generate_proof(
+            signal, position_size=100.0, account_balance=10000.0
+        )
 
-        az_cert = self.absolute_zero.run_absolute_zero_verification(initial_equity=100000.0, current_equity=108500.0)
+        az_cert = self.absolute_zero.run_absolute_zero_verification(
+            initial_equity=100000.0, current_equity=108500.0
+        )
 
         if valid and az_cert["certified"]:
             return {
@@ -127,34 +141,54 @@ class ProlepsisEngine:
     def _register_prolepsis_node(self):
         self.consciousness_graph.update_node(
             module_name="ProlepsisNode",
-            dependencies=["AethonNode", "ChronosNode", "NoosphereEngine", "AbsoluteZeroRootNode"],
-            mutation_version=100000000000
+            dependencies=[
+                "AethonNode",
+                "ChronosNode",
+                "NoosphereEngine",
+                "AbsoluteZeroRootNode",
+            ],
+            mutation_version=100000000000,
         )
         self.logger.info("Registered 'ProlepsisNode' in Consciousness Graph.")
 
-    def run_prolepsis_arbitrage_cycle(self, raw_bytes: Optional[bytes] = None, arrival_jitter_us: float = 150.0) -> Dict[str, Any]:
+    def run_prolepsis_arbitrage_cycle(
+        self, raw_bytes: Optional[bytes] = None, arrival_jitter_us: float = 150.0
+    ) -> Dict[str, Any]:
         self.logger.info("=== PROLEPSIS PRE-INFORMATIONAL CYCLE ===")
-        raw_bytes = raw_bytes or b"\x01\x4f\x55\x43\x48\x20\x52\x41\x57\x20\x46\x52\x41\x4d\x45"
+        raw_bytes = (
+            raw_bytes or b"\x01\x4f\x55\x43\x48\x20\x52\x41\x57\x20\x46\x52\x41\x4d\x45"
+        )
 
         # 1. Encode Raw Bytestream & Jitter Entropy
-        entropy_vec = self.encoder.encode_protocol_bytestream(raw_bytes, arrival_jitter_us)
+        entropy_vec = self.encoder.encode_protocol_bytestream(
+            raw_bytes, arrival_jitter_us
+        )
 
         # 2. Detect Market Maker Intent Trace
         trace = self.detector.classify_intent_trace(entropy_vec)
 
         if not trace:
-            self.logger.info("No pre-informational intent trace detected in protocol jitter.")
+            self.logger.info(
+                "No pre-informational intent trace detected in protocol jitter."
+            )
             return {"status": "ENTROPY_STREAM_NOISE_NORMAL"}
 
-        self.logger.info("INTENT TRACE DETECTED! Lead Time: %.1fms | Predicted Order: %s | Confidence: %.2f",
-                         trace["predicted_lead_time_ms"], trace["predicted_order_direction"], trace["confidence"])
+        self.logger.info(
+            "INTENT TRACE DETECTED! Lead Time: %.1fms | Predicted Order: %s | Confidence: %.2f",
+            trace["predicted_lead_time_ms"],
+            trace["predicted_order_direction"],
+            trace["confidence"],
+        )
 
         # 3. Construct Pre-Signal Hedge
         hedge = self.hedge_constructor.construct_pre_signal_hedge(trace)
 
         if hedge:
-            self.logger.info("PRE-INFORMATIONAL HEDGE EXECUTED! Profit Margin: +$%.2f | ZK-Hash: %s",
-                             hedge["profit_margin"], hedge["zk_commitment_hash"][:16])
+            self.logger.info(
+                "PRE-INFORMATIONAL HEDGE EXECUTED! Profit Margin: +$%.2f | ZK-Hash: %s",
+                hedge["profit_margin"],
+                hedge["zk_commitment_hash"][:16],
+            )
 
             self.write_prolepsis_testament(trace, hedge)
 
