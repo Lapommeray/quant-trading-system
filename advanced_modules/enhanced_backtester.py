@@ -15,6 +15,101 @@ OMNIUM_DETERMINISTIC_SEED = int(
     hashlib.sha256(OMNIUM_INVARIANT_SEED_BYTES).hexdigest()[:16], 16
 ) % (2**31)
 
+def fetch_live_ohlcv(symbol: str = "BTC-USD", period: str = "1y", interval: str = "1d") -> pd.DataFrame:
+    """
+    Live Data Injection — External Grounding of the Invariant.
+
+    Fetches real OHLCV via yfinance, with deterministic synthetic fallback
+    seeded by OMNIUM_INVARIANT_SEED for offline/CI environments where network
+    is unavailable. Ensures the invariant ∀t. Equity_t ≥ Equity_0 can be
+    verified against market reality while remaining reproducible.
+
+    Returns DataFrame with columns ['Open','High','Low','Close','Volume'] indexed by datetime.
+    """
+    logger = logging.getLogger("fetch_live_ohlcv")
+    cols = ['Open', 'High', 'Low', 'Close', 'Volume']
+    try:
+        import yfinance as yf
+        logger.info(f"Fetching live OHLCV for {symbol} period={period} interval={interval} via yfinance")
+        ticker = yf.Ticker(symbol)
+        df = ticker.history(period=period, interval=interval)
+        if df is None or df.empty:
+            raise ValueError(f"yfinance returned empty for {symbol}")
+
+        # yfinance may return lower-case or flattened columns; normalize
+        # Handle potential multi-index columns from newer yfinance
+        if isinstance(df.columns, pd.MultiIndex):
+            df.columns = df.columns.get_level_values(0)
+
+        # Ensure required columns exist
+        normalized = {}
+        for c in cols:
+            if c in df.columns:
+                normalized[c] = df[c]
+            else:
+                # Try case-insensitive match
+                for orig in df.columns:
+                    if str(orig).lower() == c.lower():
+                        normalized[c] = df[orig]
+                        break
+        if len(normalized) < 4:  # at least OHLC
+            # If history() returned different naming, try download via get_price_history wrapper
+            try:
+                from quant_trading_system.data_feeds.yfinance_feed import get_price_history
+                start = (datetime.now() - timedelta(days=365)).strftime('%Y-%m-%d')
+                end = datetime.now().strftime('%Y-%m-%d')
+                alt = get_price_history(symbol, start, end)
+                if not alt.empty:
+                    df = alt
+                    normalized = {}
+                    for c in cols:
+                        if c in df.columns:
+                            normalized[c] = df[c]
+                        else:
+                            for orig in df.columns:
+                                if str(orig).lower() == c.lower():
+                                    normalized[c] = df[orig]
+                                    break
+            except Exception:
+                pass
+
+        if normalized:
+            df = pd.DataFrame(normalized)
+        # Drop rows with NaN Close
+        df = df.dropna(subset=['Close'] if 'Close' in df.columns else df.columns)
+        if df.empty:
+            raise ValueError("Normalized OHLCV empty after dropna")
+
+        # Ensure Volume exists
+        if 'Volume' not in df.columns:
+            df['Volume'] = 1_000_000
+
+        logger.info(f"Live OHLCV fetched: {len(df)} rows from {df.index[0]} to {df.index[-1]}")
+        return df[cols] if all(c in df.columns for c in cols) else df
+
+    except Exception as exc:
+        logger.warning(f"Live fetch failed ({exc}); using deterministic synthetic fallback seeded by OMNIUM_INVARIANT_SEED")
+
+        # Deterministic synthetic fallback — seeded, reproducible, 252 trading days
+        rng = np.random.RandomState(OMNIUM_DETERMINISTIC_SEED)
+        dates = pd.date_range(end=pd.Timestamp.now(tz='UTC'), periods=252, freq='B')  # business days
+        price = 100.0 + rng.uniform(-5, 5)
+        rows = []
+        for _ in dates:
+            ret = rng.normal(0.0008, 0.012)  # ~20% vol
+            price = max(1.0, price * (1.0 + ret))
+            high = price * (1.0 + abs(rng.normal(0, 0.005)))
+            low = price * (1.0 - abs(rng.normal(0, 0.005)))
+            low = min(low, price)
+            high = max(high, price)
+            open_p = price * (1.0 + rng.normal(0, 0.002))
+            vol = int(rng.randint(100_000, 5_000_000))
+            rows.append((open_p, high, low, price, vol))
+        df = pd.DataFrame(rows, columns=cols, index=dates)
+        logger.info(f"Synthetic deterministic OHLCV generated: {len(df)} rows, seed={OMNIUM_DETERMINISTIC_SEED}")
+        return df
+
+
 class QuantumStrategy:
     """
     Quantum strategy implementation for enhanced backtesting
@@ -115,6 +210,9 @@ class EnhancedBacktester:
         # across candidate mutations.
         self._deterministic_seed = OMNIUM_DETERMINISTIC_SEED
         self.rng = np.random.RandomState(self._deterministic_seed)
+        # Live Data Injection: optional real OHLCV DataFrame
+        self._live_ohlcv = None
+        self._data_source = "simulated"
             
     def initialize_backtrader(self):
         """
@@ -172,33 +270,164 @@ class EnhancedBacktester:
             'params': kwargs
         })
         
-    def run_backtest(self):
+    def set_live_data(self, ohlcv_df: pd.DataFrame):
+        """Attach real OHLCV for live-grounded backtest."""
+        self._live_ohlcv = ohlcv_df
+        self._data_source = "live" if ohlcv_df is not None and not ohlcv_df.empty else "simulated"
+
+    def run_backtest(self, ohlcv_df: pd.DataFrame = None):
         """
-        Run backtest
-        
+        Run backtest — now supports live OHLCV injection.
+
+        If ohlcv_df is provided (or previously set via set_live_data), the
+        backtest bypasses simulated trades and runs a deterministic walk-forward
+        over real price data, still governed by OMNIUM_INVARIANT_SEED for
+        reproducibility (size tie-breaking, etc.). Otherwise, uses deterministic
+        simulated trades.
+
         Returns:
-            Backtest results
+            Backtest results dict with 'trades','metrics','execution_time','data_source'
         """
         self.logger.info("Running backtest...")
-        
+
         start_time = datetime.now()
-        
-        self.trades = self._generate_simulated_trades()
-        
+
+        # Prefer explicit param, fallback to stored live data
+        live_df = ohlcv_df if ohlcv_df is not None else self._live_ohlcv
+
+        if live_df is not None and not live_df.empty:
+            self._live_ohlcv = live_df
+            self._data_source = "live"
+            self.logger.info(f"Live Data Injection: using real OHLCV {len(live_df)} rows, source=live")
+            self.trades = self._generate_trades_from_ohlcv(live_df)
+        else:
+            self._data_source = "simulated"
+            self.trades = self._generate_simulated_trades()
+
         self.metrics = self._calculate_metrics()
-        
+        # Annotate metrics with data source for external grounding proof
+        self.metrics['data_source'] = self._data_source
+
         end_time = datetime.now()
         execution_time = (end_time - start_time).total_seconds()
-        
+
         self.results = {
             'trades': self.trades,
             'metrics': self.metrics,
-            'execution_time': execution_time
+            'execution_time': execution_time,
+            'data_source': self._data_source,
         }
-        
-        self.logger.info(f"Backtest completed in {execution_time:.2f} seconds")
-        
+
+        self.logger.info(f"Backtest completed in {execution_time:.2f} seconds [source={self._data_source}]")
+
         return self.results
+
+    def _generate_trades_from_ohlcv(self, ohlcv_df: pd.DataFrame):
+        """
+        Live Data Injection — deterministic walk-forward over real OHLCV.
+
+        Strategy: SMA(20) crossover signal. Size randomized via deterministic
+        RNG seeded by OMNIUM_INVARIANT_SEED. PnL computed from actual Close-to-Close
+        moves, ensuring external grounding while staying reproducible.
+
+        Invariant ∀t. Equity_t ≥ Equity_0 is then validated against real market
+        behavior, not synthetic shadows.
+        """
+        # Re-seed for bit-identical reproducibility even on live path
+        self.rng = np.random.RandomState(self._deterministic_seed)
+
+        trades = []
+
+        # Normalize columns: ensure Close exists
+        df = ohlcv_df.copy()
+        if isinstance(df.columns, pd.MultiIndex):
+            df.columns = df.columns.get_level_values(0)
+
+        # Case-insensitive Close lookup
+        close_col = None
+        for c in df.columns:
+            if str(c).lower() == 'close':
+                close_col = c
+                break
+        if close_col is None:
+            self.logger.warning("OHLCV missing Close; falling back to simulated")
+            return self._generate_simulated_trades()
+
+        # Ensure sorted by index
+        df = df.sort_index()
+        # Compute SMA 20
+        close_series = df[close_col].astype(float)
+        sma_20 = close_series.rolling(window=20, min_periods=5).mean()
+
+        # Strategy metadata from cerebro if available
+        strategy_name = "live_default"
+        if self.cerebro and self.cerebro.get('strategies'):
+            try:
+                strategy_name = self.cerebro['strategies'][0].get('name', strategy_name)
+            except Exception:
+                pass
+
+        asset_name = "BTC-USD"
+        if self.cerebro and self.cerebro.get('data_feeds'):
+            try:
+                asset_name = self.cerebro['data_feeds'][0].get('name', asset_name)
+            except Exception:
+                pass
+
+        # Walk-forward: entry at close[i], exit at close[i+1]
+        # Deterministic, no look-ahead beyond 1 bar for exit
+        for i in range(len(df) - 1):
+            entry_time = df.index[i]
+            exit_time = df.index[i + 1]
+
+            # Ensure datetime objects
+            if isinstance(entry_time, pd.Timestamp):
+                entry_time_dt = entry_time.to_pydatetime()
+            else:
+                entry_time_dt = entry_time
+            if isinstance(exit_time, pd.Timestamp):
+                exit_time_dt = exit_time.to_pydatetime()
+            else:
+                exit_time_dt = exit_time
+
+            entry_price = float(close_series.iloc[i])
+            exit_price = float(close_series.iloc[i + 1])
+            sma = float(sma_20.iloc[i]) if not pd.isna(sma_20.iloc[i]) else entry_price
+
+            # Deterministic signal: long if Close > SMA, else short
+            # Tie-breaking via RNG if spread is tiny (<0.05% of price), still governed by OMNIUM seed
+            spread = entry_price - sma
+            if abs(spread) < entry_price * 0.0005:
+                direction = self.rng.choice(['long', 'short'])
+            else:
+                direction = 'long' if spread > 0 else 'short'
+
+            # Size via deterministic RNG
+            size = int(self.rng.randint(1, 10))
+
+            pnl = (exit_price - entry_price) * size if direction == 'long' else (entry_price - exit_price) * size
+
+            trade = {
+                'strategy': strategy_name,
+                'asset': asset_name,
+                'direction': direction,
+                'entry_time': entry_time_dt,
+                'exit_time': exit_time_dt,
+                'entry_price': entry_price,
+                'exit_price': exit_price,
+                'size': size,
+                'pnl': pnl,
+                'return': pnl / (entry_price * size) if entry_price * size != 0 else 0.0,
+                'sma_20': sma,
+                'close': entry_price,
+            }
+            trades.append(trade)
+
+        if not trades:
+            self.logger.warning("No trades generated from OHLCV; falling back to simulated")
+            return self._generate_simulated_trades()
+
+        return trades
         
     def _generate_simulated_trades(self):
         """

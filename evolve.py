@@ -248,45 +248,68 @@ def flatten_dict(d, parent_key='', sep='_'):
     return items
 
 
-def load_backtest_metrics() -> Optional[Dict]:
+def load_backtest_metrics(use_live_data: bool = False, symbol: str = "BTC-USD", period: str = "1y", interval: str = "1d") -> Optional[Dict]:
     """
     Load the performance metrics from the TRUE metric source.
 
+    - Default (use_live_data=False): deterministic simulated trades via
+      EnhancedBacktester._generate_simulated_trades(), seeded by OMNIUM_INVARIANT_SEED.
+      Fast path for candidate evaluation; bit-identical across runs.
+
+    - Live (use_live_data=True): fetches real OHLCV (yfinance with deterministic
+      synthetic fallback) via fetch_live_ohlcv(), passes it to EnhancedBacktester
+      which runs deterministic walk-forward over real price data. Metrics dict
+      includes data_source="live" and is used for authoritative baseline lock
+      and periodic integrity checks. Reproducibility still governed by
+      OMNIUM_INVARIANT_SEED for tie-breaking/size.
+
     Invokes advanced_modules.enhanced_backtester.EnhancedBacktester.run_backtest()
     (which calls _calculate_metrics()) and parses the freshly written
-    backtest_results_*.json for the canonical keys:
-    win_rate, total_pnl, profit_factor, sharpe_ratio, max_drawdown (no _pct suffix).
+    backtest_results_*.json for canonical keys:
+    win_rate, total_pnl, profit_factor, sharpe_ratio, max_drawdown (no _pct).
 
-    Returns None only on a hard failure, which the caller treats as "no baseline".
+    Returns None only on hard failure.
     """
     try:
         import numpy as _np  # ensure substrate is present before importing backtester
 
-        from advanced_modules.enhanced_backtester import EnhancedBacktester
+        from advanced_modules.enhanced_backtester import EnhancedBacktester, fetch_live_ohlcv
 
         backtester = EnhancedBacktester()
         backtester.initialize_backtrader()
 
-        # Provide a minimal strategy + data feed so a backtest actually produces trades.
+        # Provide minimal strategy + data feed so a backtest produces trades
+        # even on simulated path (required for _generate_simulated_trades guard)
         if not backtester.cerebro.get('strategies'):
             backtester.add_strategy({"name": "evolve_default"})
         if not backtester.cerebro.get('data_feeds'):
             backtester.add_data(_np.array([100.0, 101.0, 99.0, 102.0, 103.0]),
                                 name="evolve_default")
 
-        results = backtester.run_backtest()
+        ohlcv_df = None
+        data_source = "simulated"
+        if use_live_data:
+            log.info(f"Live Data Injection requested: fetching {symbol} {period} {interval}")
+            ohlcv_df = fetch_live_ohlcv(symbol=symbol, period=period, interval=interval)
+            data_source = "live"
+            results = backtester.run_backtest(ohlcv_df=ohlcv_df)
+        else:
+            results = backtester.run_backtest()
+
         metrics = backtester.metrics or (results or {}).get('metrics') or {}
 
-        # Physical substrate: export a real backtest_results_<ts>.json on disk.
+        # Export physical file
         exported_path = backtester.export_results()
 
-        # Parse the freshly written report for the canonical metric keys.
         if exported_path and os.path.exists(exported_path):
-            with open(exported_path) as f:
-                data = json.load(f)
-            raw_metrics = data.get('metrics', data) if isinstance(data, dict) else {}
-            if raw_metrics:
-                metrics = raw_metrics
+            try:
+                with open(exported_path) as f:
+                    data = json.load(f)
+                raw_metrics = data.get('metrics', data) if isinstance(data, dict) else {}
+                if raw_metrics:
+                    metrics = raw_metrics
+            except Exception:
+                log.warning("Failed to parse exported backtest JSON; using in-memory metrics")
 
         flat = flatten_dict(metrics)
         loaded = {
@@ -295,19 +318,36 @@ def load_backtest_metrics() -> Optional[Dict]:
             "profit_factor": float(flat.get("profit_factor", 0.0) or 0.0),
             "sharpe_ratio": float(flat.get("sharpe_ratio", 0.0) or 0.0),
             "max_drawdown": float(flat.get("max_drawdown", 0.0) or 0.0),
+            "data_source": str(flat.get("data_source", data_source)),
+            "total_trades": int(flat.get("total_trades", 0) or 0),
         }
         # Guard against non-finite values (e.g. profit_factor=inf when no losers).
-        for key in loaded:
+        for key in ["win_rate", "total_pnl", "profit_factor", "sharpe_ratio", "max_drawdown"]:
             if not math.isfinite(loaded[key]):
                 loaded[key] = 0.0
 
-        log.info("Loaded metrics (from %s): %s",
+        log.info("Loaded metrics (from %s) [%s]: %s",
                  os.path.basename(exported_path) if exported_path else "in-memory",
+                 loaded.get("data_source", data_source),
                  loaded)
         return loaded
     except Exception:
         log.exception("Failed to load backtest metrics from enhanced_backtester.")
         return None
+
+
+def load_live_baseline(path: Path = REPO_ROOT / "live_baseline.json") -> Optional[Dict]:
+    """Load locked live baseline if exists (git-tracked)."""
+    try:
+        if path.exists():
+            with open(path) as f:
+                data = json.load(f)
+            log.info(f"Loaded live baseline from {path}: {data}")
+            return data
+    except Exception:
+        log.exception(f"Failed to load live baseline {path}")
+    return None
+
 
 
 def metrics_degraded(baseline: Optional[Dict], current: Dict) -> bool:

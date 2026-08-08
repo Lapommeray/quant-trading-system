@@ -1,0 +1,16 @@
+{
+  "win_rate": 0.4860557768924303,
+  "total_pnl": -25.625703279687542,
+  "profit_factor": 0.9669657394243976,
+  "sharpe_ratio": -0.4787540797550278,
+  "max_drawdown": 151.8626201785787,
+  "data_source": "live",
+  "total_trades": 251,
+  "locked_at": "2026-08-08T03:25:13.847911Z",
+  "symbol": "BTC-USD",
+  "period": "1y",
+  "interval": "1d",
+  "invariant": "\u2200t. Equity_t \u2265 Equity_0",
+  "grounding": "live OHLCV via yfinance, deterministic walk-forward SMA(20), seed=OMNIUM_INVARIANT_SEED",
+  "seed_bytes": "OMNIUM_INVARIANT_SEED"
+}
