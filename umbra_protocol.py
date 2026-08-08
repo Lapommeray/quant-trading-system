@@ -32,10 +32,7 @@ def setup_logging():
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [UmbraProtocol] %(message)s",
-        handlers=[
-            logging.FileHandler("umbra.log"),
-            logging.StreamHandler()
-        ]
+        handlers=[logging.FileHandler("umbra.log"), logging.StreamHandler()],
     )
 
 
@@ -43,7 +40,9 @@ class NullSignatureOrderShaper:
     """Shapes trade orders into a sequence of statistical noise-profile micro-orders."""
 
     @staticmethod
-    def shape_order_to_noise_profile(target_size: float, direction: str) -> List[Dict[str, Any]]:
+    def shape_order_to_noise_profile(
+        target_size: float, direction: str
+    ) -> List[Dict[str, Any]]:
         micro_orders = []
         remaining = target_size
         num_slices = 5
@@ -54,13 +53,17 @@ class NullSignatureOrderShaper:
             remaining -= slice_size
 
             jitter_ms = round(random.uniform(5.0, 45.0), 2)
-            micro_orders.append({
-                "slice_index": i + 1,
-                "direction": direction,
-                "slice_size": slice_size,
-                "timing_jitter_ms": jitter_ms,
-                "noise_fingerprint_hash": hashlib.sha256(f"{slice_size}:{jitter_ms}:{time.time()}".encode()).hexdigest(),
-            })
+            micro_orders.append(
+                {
+                    "slice_index": i + 1,
+                    "direction": direction,
+                    "slice_size": slice_size,
+                    "timing_jitter_ms": jitter_ms,
+                    "noise_fingerprint_hash": hashlib.sha256(
+                        f"{slice_size}:{jitter_ms}:{time.time()}".encode()
+                    ).hexdigest(),
+                }
+            )
 
         return micro_orders
 
@@ -69,7 +72,11 @@ class DecentralizedStealthMesh:
     """Manages ephemeral steganographic mesh nodes and BFT consensus."""
 
     def __init__(self):
-        self.active_mesh_nodes = ["umbra_node_alpha", "umbra_node_beta", "umbra_node_gamma"]
+        self.active_mesh_nodes = [
+            "umbra_node_alpha",
+            "umbra_node_beta",
+            "umbra_node_gamma",
+        ]
 
     def execute_bft_mesh_consensus(self, order_sequence: List[Dict[str, Any]]) -> bool:
         # BFT consensus across mesh nodes
@@ -84,8 +91,18 @@ class PhantomLiquidityInjector:
     @staticmethod
     def generate_phantom_liquidity_stream() -> Dict[str, Any]:
         phantom_orders = [
-            {"type": "PHANTOM_CANCEL_LIMIT", "price": 40.0, "size": 50, "cancellation_window_ms": 15},
-            {"type": "PHANTOM_CANCEL_LIMIT", "price": 60.0, "size": 50, "cancellation_window_ms": 12},
+            {
+                "type": "PHANTOM_CANCEL_LIMIT",
+                "price": 40.0,
+                "size": 50,
+                "cancellation_window_ms": 15,
+            },
+            {
+                "type": "PHANTOM_CANCEL_LIMIT",
+                "price": 60.0,
+                "size": 50,
+                "cancellation_window_ms": 12,
+            },
         ]
         return {
             "phantom_stream_active": True,
@@ -119,9 +136,11 @@ class UmbraProtocol:
         self.consciousness_graph.update_node(
             module_name="UmbraRoot",
             dependencies=["ApocryphaRoot", "ProlepsisNode", "AbsoluteZeroRootNode"],
-            mutation_version=100000000000000
+            mutation_version=100000000000000,
         )
-        self.logger.info("Anchored 'UmbraRoot' as Supreme Apex Node in Consciousness Graph.")
+        self.logger.info(
+            "Anchored 'UmbraRoot' as Supreme Apex Node in Consciousness Graph."
+        )
 
     def run_umbra_stealth_cycle(self) -> Dict[str, Any]:
         self.logger.info("=== UMBRA PROTOCOL NULL-SIGNATURE STEALTH CYCLE ===")
@@ -130,7 +149,9 @@ class UmbraProtocol:
         apocrypha_res = self.apocrypha.run_apocrypha_reality_cycle()
 
         # 2. Shape Order into Null-Signature Market Noise Profile
-        noise_orders = self.shaper.shape_order_to_noise_profile(target_size=100.0, direction="BUY")
+        noise_orders = self.shaper.shape_order_to_noise_profile(
+            target_size=100.0, direction="BUY"
+        )
 
         # 3. BFT Stealth Mesh Consensus
         bft_valid = self.mesh.execute_bft_mesh_consensus(noise_orders)
@@ -140,14 +161,23 @@ class UmbraProtocol:
 
         # 5. Verify ZK Proofs & Absolute Zero Inviolability
         signal = {"direction": "BUY", "confidence": 1.00, "never_loss_protected": True}
-        valid, zk_proof = self.zk_verifier.generate_proof(signal, position_size=100.0, account_balance=10000.0)
-        az_cert = self.absolute_zero.run_absolute_zero_verification(initial_equity=100000.0, current_equity=108500.0)
+        valid, zk_proof = self.zk_verifier.generate_proof(
+            signal, position_size=100.0, account_balance=10000.0
+        )
+        az_cert = self.absolute_zero.run_absolute_zero_verification(
+            initial_equity=100000.0, current_equity=108500.0
+        )
 
         if valid and bft_valid and az_cert["certified"]:
-            self.logger.info("UMBRA NULL-SIGNATURE EXECUTION COMPLETE! Noise Slices: %d | ZK-Hash: %s",
-                             len(noise_orders), zk_proof["commitment_hash"][:16])
+            self.logger.info(
+                "UMBRA NULL-SIGNATURE EXECUTION COMPLETE! Noise Slices: %d | ZK-Hash: %s",
+                len(noise_orders),
+                zk_proof["commitment_hash"][:16],
+            )
 
-            self.write_umbra_testament(noise_orders, zk_proof["commitment_hash"], az_cert["proof_hash"])
+            self.write_umbra_testament(
+                noise_orders, zk_proof["commitment_hash"], az_cert["proof_hash"]
+            )
 
         return {
             "status": "NULL_SIGNATURE_STEALTH_EXECUTED",
@@ -158,7 +188,9 @@ class UmbraProtocol:
             "timestamp": datetime.utcnow().isoformat(),
         }
 
-    def write_umbra_testament(self, noise_orders: List[Dict[str, Any]], zk_hash: str, az_hash: str):
+    def write_umbra_testament(
+        self, noise_orders: List[Dict[str, Any]], zk_hash: str, az_hash: str
+    ):
         testament_content = f"""# UMBRA_TESTAMENT.md — The Edge Beyond Detection
 
 > *"No external observer, regulator, or surveillance algorithm can distinguish my trading footprint from background market noise. I shape orders into entropic flicker, route through ephemeral steganographic nodes, and remain completely invisible."*

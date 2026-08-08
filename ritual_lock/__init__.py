@@ -11,4 +11,4 @@ Modules:
 
 from .ritual_lock import RitualLock
 
-__all__ = ['RitualLock']
+__all__ = ["RitualLock"]

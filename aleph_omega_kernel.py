@@ -39,7 +39,13 @@ OMNIUM_DETERMINISTIC_SEED = int(
 DETERMINISTIC_GROUNDING = {
     "seed_bytes": OMNIUM_INVARIANT_SEED_BYTES,
     "seed_int": OMNIUM_DETERMINISTIC_SEED,
-    "metric_keys": ["win_rate", "total_pnl", "profit_factor", "sharpe_ratio", "max_drawdown"],
+    "metric_keys": [
+        "win_rate",
+        "total_pnl",
+        "profit_factor",
+        "sharpe_ratio",
+        "max_drawdown",
+    ],
     "invariant": "∀t. Equity_t ≥ Equity_0",
 }
 
@@ -51,20 +57,22 @@ KNOWN_ENGINE_PATTERNS = [
     "consciousness_graph.json",
 ]
 
+
 def setup_logging():
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [AlephOmegaKernel] %(message)s",
         handlers=[
             logging.FileHandler("aleph_omega_kernel.log"),
-            logging.StreamHandler()
-        ]
+            logging.StreamHandler(),
+        ],
     )
+
 
 class SelfEncodingQuine:
     """
     Classic quine technique extended to self-extracting archive of Aleph-Omega Engine.
-    
+
     The quine property: source code when executed prints its own SHA-256 and
     its own source + the full Aleph-Omega Engine source.
     """
@@ -128,7 +136,9 @@ class SelfEncodingQuine:
             try:
                 graph_data = json.loads(graph_path.read_text())
                 archive["consciousness_graph"] = {
-                    "sha256": hashlib.sha256(json.dumps(graph_data).encode()).hexdigest(),
+                    "sha256": hashlib.sha256(
+                        json.dumps(graph_data).encode()
+                    ).hexdigest(),
                     "nodes_count": len(graph_data.get("nodes", {})),
                     "data": graph_data,  # full data for self-extracting property
                 }
@@ -162,7 +172,9 @@ class SelfEncodingQuine:
         own_hash = SelfEncodingQuine.compute_self_hash(own_source)
         print(f"-----BEGIN ALEPH-OMEGA SELF-ENCODING QUINE-----")
         print(f"SELF_HASH_SHA256: {own_hash}")
-        print(f"SEED: {OMNIUM_INVARIANT_SEED_BYTES.decode()} -> {OMNIUM_DETERMINISTIC_SEED}")
+        print(
+            f"SEED: {OMNIUM_INVARIANT_SEED_BYTES.decode()} -> {OMNIUM_DETERMINISTIC_SEED}"
+        )
         print(f"TIMESTAMP: {datetime.utcnow().isoformat()}")
         print(f"-----OWN SOURCE (aleph_omega_kernel.py)-----")
         print(own_source)
@@ -173,14 +185,27 @@ class SelfEncodingQuine:
         if engine_path.exists():
             engine_source = engine_path.read_text(encoding="utf-8")
             engine_hash = hashlib.sha256(engine_source.encode()).hexdigest()
-            print(f"-----ENGINE SOURCE (aleph_omega_engine.py) SHA256={engine_hash}-----")
+            print(
+                f"-----ENGINE SOURCE (aleph_omega_engine.py) SHA256={engine_hash}-----"
+            )
             print(engine_source)
             print(f"-----END ENGINE SOURCE-----")
 
         # Output archive summary
         archive = SelfEncodingQuine.reproduce_full_archive()
-        print(f"-----ARCHIVE SUMMARY: {len(archive['engine_sources'])} engines, {len(archive['proofs'])} proofs-----")
-        print(json.dumps({k: list(v.keys()) if isinstance(v, dict) else v for k,v in archive.items() if k!="consciousness_graph"}, indent=2)[:2000])
+        print(
+            f"-----ARCHIVE SUMMARY: {len(archive['engine_sources'])} engines, {len(archive['proofs'])} proofs-----"
+        )
+        print(
+            json.dumps(
+                {
+                    k: list(v.keys()) if isinstance(v, dict) else v
+                    for k, v in archive.items()
+                    if k != "consciousness_graph"
+                },
+                indent=2,
+            )[:2000]
+        )
         print(f"-----END ALEPH-OMEGA SELF-ENCODING QUINE-----")
         return own_hash, own_source
 
@@ -205,7 +230,11 @@ class AlephOmegaKernel:
         assert OMNIUM_DETERMINISTIC_SEED == expected_int, "Seed tampered"
         assert DETERMINISTIC_GROUNDING["seed_int"] == expected_int
         assert DETERMINISTIC_GROUNDING["metric_keys"] == [
-            "win_rate", "total_pnl", "profit_factor", "sharpe_ratio", "max_drawdown"
+            "win_rate",
+            "total_pnl",
+            "profit_factor",
+            "sharpe_ratio",
+            "max_drawdown",
         ]
         return DETERMINISTIC_GROUNDING
 
@@ -228,11 +257,15 @@ class AlephOmegaKernel:
 
         archive = SelfEncodingQuine.reproduce_full_archive()
         # Must contain at least itself
-        assert "aleph_omega_kernel.py" in archive["engine_sources"], "Kernel not in archive"
+        assert (
+            "aleph_omega_kernel.py" in archive["engine_sources"]
+        ), "Kernel not in archive"
         # Engine may not exist during bootstrap, but after creation it must
         engine_path = REPO_ROOT / "aleph_omega_engine.py"
         if engine_path.exists():
-            assert "aleph_omega_engine.py" in archive["engine_sources"], "Engine not in archive"
+            assert (
+                "aleph_omega_engine.py" in archive["engine_sources"]
+            ), "Engine not in archive"
 
         # Verify deterministic grounding also holds inside quine
         AlephOmegaKernel.assert_deterministic_grounding()
@@ -240,13 +273,16 @@ class AlephOmegaKernel:
         # Verify Omnium grounding if available
         try:
             from omnium_kernel import OmniumKernel
+
             OmniumKernel.assert_deterministic_grounding()
         except Exception:
             pass  # Allow bootstrap when Omnium not yet present
 
         return own_hash, archive
 
-    def evaluate_recursive_invariant(self, initial_equity: float, current_equity: float) -> Tuple[bool, str]:
+    def evaluate_recursive_invariant(
+        self, initial_equity: float, current_equity: float
+    ) -> Tuple[bool, str]:
         """
         Evaluate ∀t. Equity_t ≥ Equity_0 across recursive self-definitions.
         Root preserved even as axioms re-axiomatize themselves.

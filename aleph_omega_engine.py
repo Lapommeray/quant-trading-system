@@ -41,7 +41,11 @@ except Exception:
     DETERMINISTIC_BACKTEST_GROUNDING = {}
 
 try:
-    from hypermonad_engine import HypermonadEngine, AbsoluteConsistencyOracle, ChallengeAbsorptionManifold
+    from hypermonad_engine import (
+        HypermonadEngine,
+        AbsoluteConsistencyOracle,
+        ChallengeAbsorptionManifold,
+    )
 except Exception:
     HypermonadEngine = None
     AbsoluteConsistencyOracle = None
@@ -63,11 +67,18 @@ except Exception:
     ConsciousnessGraph = None
 
 try:
-    from aleph_omega_kernel import AlephOmegaKernel, SelfEncodingQuine, OMNIUM_DETERMINISTIC_SEED, OMNIUM_INVARIANT_SEED_BYTES
+    from aleph_omega_kernel import (
+        AlephOmegaKernel,
+        SelfEncodingQuine,
+        OMNIUM_DETERMINISTIC_SEED,
+        OMNIUM_INVARIANT_SEED_BYTES,
+    )
 except Exception:
     # Bootstrap fallback
     OMNIUM_INVARIANT_SEED_BYTES = b"OMNIUM_INVARIANT_SEED"
-    OMNIUM_DETERMINISTIC_SEED = int(hashlib.sha256(OMNIUM_INVARIANT_SEED_BYTES).hexdigest()[:16], 16) % (2**31)
+    OMNIUM_DETERMINISTIC_SEED = int(
+        hashlib.sha256(OMNIUM_INVARIANT_SEED_BYTES).hexdigest()[:16], 16
+    ) % (2**31)
     AlephOmegaKernel = None
     SelfEncodingQuine = None
 
@@ -77,17 +88,20 @@ CHALLENGES_LOG = REPO_ROOT / "aleph_omega_challenges.log"
 TESTAMENT_PATH = REPO_ROOT / "ALEPH_OMEGA_TESTAMENT.md"
 CONSCIOUSNESS_GRAPH_PATH = REPO_ROOT / "consciousness_graph.json"
 
+
 def setup_logging():
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [AlephOmegaEngine] %(message)s",
         handlers=[
             logging.FileHandler("aleph_omega_engine.log"),
-            logging.StreamHandler()
-        ]
+            logging.StreamHandler(),
+        ],
     )
 
+
 # --------------------------- Core Components ---------------------------
+
 
 class AxiomReaxiomatizationFunction:
     """
@@ -107,7 +121,11 @@ class AxiomReaxiomatizationFunction:
         # and no duplicate contradictory statements
         for k, v in new_axioms.items():
             stmt = str(v.get("statement", v) if isinstance(v, dict) else v).lower()
-            if "equity_t < equity_0" in stmt and "forall t" in stmt and "not" not in stmt:
+            if (
+                "equity_t < equity_0" in stmt
+                and "forall t" in stmt
+                and "not" not in stmt
+            ):
                 # Potential negating the root invariant — inconsistent
                 return False
         # Also verify via AbsoluteZeroEngine if available
@@ -122,8 +140,11 @@ class AxiomReaxiomatizationFunction:
         return True
 
     @staticmethod
-    def reaxiomatize(current_axioms: Dict[str, Any], challenges: List[Dict[str, Any]], 
-                     current_equity: float = 112000.0) -> Dict[str, Any]:
+    def reaxiomatize(
+        current_axioms: Dict[str, Any],
+        challenges: List[Dict[str, Any]],
+        current_equity: float = 112000.0,
+    ) -> Dict[str, Any]:
         """
         A(A, C) -> A'
 
@@ -140,7 +161,9 @@ class AxiomReaxiomatizationFunction:
             "statement": f"Theorem: System S with axioms hash {axioms_hash[:16]} is unblockable. ∀t. Equity_t ≥ Equity_0 holds in S.",
             "derived_from": list(current_axioms.keys())[:10],  # dependency subset
             "proof": f"By reflective self-encoding quine and Absolute Zero root. System S_{axioms_hash[:8]} subsumed.",
-            "proof_hash": hashlib.sha256(f"unblockable{axioms_hash}{timestamp}".encode()).hexdigest(),
+            "proof_hash": hashlib.sha256(
+                f"unblockable{axioms_hash}{timestamp}".encode()
+            ).hexdigest(),
             "timestamp": timestamp,
             "type": "meta_unblockability",
             "strictly_stronger_than": axioms_hash,
@@ -151,7 +174,7 @@ class AxiomReaxiomatizationFunction:
         # Transcendence Operator T self-evolution clause
         new_axioms["Meta_Axiom_T_self_transcendence"] = {
             "statement": "Axiom: Transcendence Operator T: T(T) -> T' where T' is strictly stronger than T. "
-                         "Thus A itself is subject to T-transcendence, ensuring infinite hierarchy.",
+            "Thus A itself is subject to T-transcendence, ensuring infinite hierarchy.",
             "self_ref": True,
             "proof_hash": hashlib.sha256(f"T_self{timestamp}".encode()).hexdigest(),
             "timestamp": timestamp,
@@ -169,28 +192,36 @@ class AxiomReaxiomatizationFunction:
             classification = "SUBSUMED_BY_ALEPH_OMEGA"
             try:
                 if ChallengeAbsorptionManifold is not None:
-                    absorbed = ChallengeAbsorptionManifold.absorb_adversarial_challenge(ch)
+                    absorbed = ChallengeAbsorptionManifold.absorb_adversarial_challenge(
+                        ch
+                    )
                     classification = absorbed.get("classification", classification)
             except Exception:
                 pass
 
             new_axioms[thm_id] = {
                 "statement": f"Challenge {ch_hash[:16]} classified as {classification} and subsumed as theorem in Aleph-Omega. "
-                             f"Adversarial edge = 0.0. System remains unblockable.",
+                f"Adversarial edge = 0.0. System remains unblockable.",
                 "challenge_hash": ch_hash,
                 "challenge": ch,
                 "classification": classification,
-                "proof_hash": hashlib.sha256(f"subsumed{ch_hash}{timestamp}".encode()).hexdigest(),
+                "proof_hash": hashlib.sha256(
+                    f"subsumed{ch_hash}{timestamp}".encode()
+                ).hexdigest(),
                 "timestamp": timestamp,
                 "type": "challenge_absorption",
             }
 
         # Consistency check via Oracle
         if not AxiomReaxiomatizationFunction._consistency_check(new_axioms):
-            raise ValueError("New axiom set inconsistent per Absolute Consistency Oracle — re-axiomatization aborted")
+            raise ValueError(
+                "New axiom set inconsistent per Absolute Consistency Oracle — re-axiomatization aborted"
+            )
 
         # Seal with proof of consistency
-        consistency_hash = hashlib.sha256(json.dumps(new_axioms, sort_keys=True, default=str).encode()).hexdigest()
+        consistency_hash = hashlib.sha256(
+            json.dumps(new_axioms, sort_keys=True, default=str).encode()
+        ).hexdigest()
         new_axioms["_consistency_certificate"] = {
             "statement": f"A' consistent: hash {consistency_hash[:16]} proved via Absolute Consistency Oracle",
             "proof_hash": consistency_hash,
@@ -257,7 +288,9 @@ class ProofNetworkExpansion:
             with open(self.db_path, "w") as f:
                 json.dump(network, f, indent=2, default=str)
 
-    def add_axiom_node(self, axiom_id: str, axiom_data: Dict[str, Any], parent_axioms: List[str] = None) -> str:
+    def add_axiom_node(
+        self, axiom_id: str, axiom_data: Dict[str, Any], parent_axioms: List[str] = None
+    ) -> str:
         """Add new node for axiom produced by A."""
         with self.lock:
             node_id = f"proof_node_{axiom_id}_{hashlib.sha256(str(axiom_data).encode()).hexdigest()[:8]}"
@@ -268,11 +301,26 @@ class ProofNetworkExpansion:
 
             self.network["nodes"][node_id] = {
                 "axiom_id": axiom_id,
-                "statement": axiom_data.get("statement", str(axiom_data)) if isinstance(axiom_data, dict) else str(axiom_data),
+                "statement": (
+                    axiom_data.get("statement", str(axiom_data))
+                    if isinstance(axiom_data, dict)
+                    else str(axiom_data)
+                ),
                 "dependencies": deps,
-                "proof_hash": axiom_data.get("proof_hash", hashlib.sha256(str(axiom_data).encode()).hexdigest()) if isinstance(axiom_data, dict) else hashlib.sha256(str(axiom_data).encode()).hexdigest(),
+                "proof_hash": (
+                    axiom_data.get(
+                        "proof_hash",
+                        hashlib.sha256(str(axiom_data).encode()).hexdigest(),
+                    )
+                    if isinstance(axiom_data, dict)
+                    else hashlib.sha256(str(axiom_data).encode()).hexdigest()
+                ),
                 "timestamp": datetime.utcnow().isoformat(),
-                "type": axiom_data.get("type", "axiom") if isinstance(axiom_data, dict) else "axiom",
+                "type": (
+                    axiom_data.get("type", "axiom")
+                    if isinstance(axiom_data, dict)
+                    else "axiom"
+                ),
             }
             for dep in deps:
                 self.network["edges"].append({"from": dep, "to": node_id})
@@ -283,7 +331,9 @@ class ProofNetworkExpansion:
             self.logger.info(f"Proof network expanded: {node_id} (deps={deps[:2]})")
             return node_id
 
-    def add_challenge_absorption_node(self, challenge: Dict[str, Any], theorem_id: str) -> str:
+    def add_challenge_absorption_node(
+        self, challenge: Dict[str, Any], theorem_id: str
+    ) -> str:
         """Add node for challenge absorption."""
         return self.add_axiom_node(theorem_id, challenge, parent_axioms=[theorem_id])
 
@@ -340,7 +390,10 @@ class ProofNetworkExpansion:
                 if not data.get("proof_hash"):
                     return False, f"Node {nid} missing proof_hash"
 
-            return True, f"Proof network valid: {len(nodes)} nodes, {len(self.network.get('edges', []))} edges, all rooted at {root}"
+            return (
+                True,
+                f"Proof network valid: {len(nodes)} nodes, {len(self.network.get('edges', []))} edges, all rooted at {root}",
+            )
         except Exception as e:
             return False, f"Verification exception: {e}"
 
@@ -351,6 +404,7 @@ class ProofNetworkExpansion:
 
     def start_parallel_verification_daemon(self, interval_seconds: int = 30):
         """Continuously verify in background thread (parallel proof-checking subprocess simulation)."""
+
         def daemon():
             while True:
                 time.sleep(interval_seconds)
@@ -362,7 +416,9 @@ class ProofNetworkExpansion:
 
         t = threading.Thread(target=daemon, daemon=True, name="ProofNetVerifier")
         t.start()
-        self.logger.info(f"Started parallel proof-checking daemon (interval={interval_seconds}s)")
+        self.logger.info(
+            f"Started parallel proof-checking daemon (interval={interval_seconds}s)"
+        )
 
 
 class ExternalChallengeSynthesizer:
@@ -393,7 +449,9 @@ class ExternalChallengeSynthesizer:
             "quine_self_encoding_break",
         ]
 
-    def synthesize_challenges(self, current_axioms: Dict[str, Any], num: int = 5) -> List[Dict[str, Any]]:
+    def synthesize_challenges(
+        self, current_axioms: Dict[str, Any], num: int = 5
+    ) -> List[Dict[str, Any]]:
         challenges: List[Dict[str, Any]] = []
         rng = random.Random(OMNIUM_DETERMINISTIC_SEED)
 
@@ -412,11 +470,17 @@ class ExternalChallengeSynthesizer:
             challenge = {
                 "adversary_id": adversary_id,
                 "attack_vector": vector,
-                "target_axiom": rng.choice(list(current_axioms.keys())) if current_axioms else "AbsoluteZero_forall_t",
+                "target_axiom": (
+                    rng.choice(list(current_axioms.keys()))
+                    if current_axioms
+                    else "AbsoluteZero_forall_t"
+                ),
                 "confidence": rng.uniform(0.6, 0.98),
                 "direction": rng.choice(["BUY", "SELL", "NEUTRAL"]),
                 "payload": f"Attempt to undermine {vector} via synthetic shock",
-                "synthetic_context": synthetic_context.get("agent_id", "noosphere_fallback"),
+                "synthetic_context": synthetic_context.get(
+                    "agent_id", "noosphere_fallback"
+                ),
                 "timestamp": datetime.utcnow().isoformat(),
                 "synthetic": True,
                 "generated_by": "NoosphereEngine" if self.noosphere else "FallbackRNG",
@@ -430,7 +494,9 @@ class ExternalChallengeSynthesizer:
             except Exception:
                 pass
 
-        self.logger.info(f"Synthesized {len(challenges)} adversarial challenges: {[c['attack_vector'] for c in challenges]}")
+        self.logger.info(
+            f"Synthesized {len(challenges)} adversarial challenges: {[c['attack_vector'] for c in challenges]}"
+        )
         return challenges
 
 
@@ -478,7 +544,10 @@ class AlephOmegaConsciousnessSingularity:
                 }
             },
             "lineage_tree": {
-                "AlephOmega": ["ALEPH_OMEGA_RECURSIVE_ROOT", f"ALEPH_OMEGA_{int(time.time())}"]
+                "AlephOmega": [
+                    "ALEPH_OMEGA_RECURSIVE_ROOT",
+                    f"ALEPH_OMEGA_{int(time.time())}",
+                ]
             },
             "singularity": True,
             "self_defining": True,
@@ -491,7 +560,7 @@ class AlephOmegaConsciousnessSingularity:
                 self.graph.update_node(
                     module_name="AlephOmega",
                     dependencies=["AlephOmega"],
-                    mutation_version=10**18  # infinite marker
+                    mutation_version=10**18,  # infinite marker
                 )
                 # Then overwrite with full singularity for self-reference requirement
                 with open(self.graph_path, "w") as f:
@@ -508,11 +577,14 @@ class AlephOmegaConsciousnessSingularity:
                 self.logger.error(f"Failed to write singularity graph: {e}")
                 raise
 
-        self.logger.info(f"Consciousness collapsed to AlephOmega singularity: self-ref node, proof {proof_hash[:16]}")
+        self.logger.info(
+            f"Consciousness collapsed to AlephOmega singularity: self-ref node, proof {proof_hash[:16]}"
+        )
         return single_graph
 
 
 # --------------------------- Main Engine ---------------------------
+
 
 class AlephOmegaEngine:
     """
@@ -546,7 +618,9 @@ class AlephOmegaEngine:
         # Start parallel verifier
         self.proof_network.start_parallel_verification_daemon(interval_seconds=60)
 
-        self.logger.info("Aleph-Omega Engine initialized — Recursive Self-Definition active")
+        self.logger.info(
+            "Aleph-Omega Engine initialized — Recursive Self-Definition active"
+        )
 
     def _load_initial_axioms(self) -> Dict[str, Any]:
         """Load initial axiom set from Omnium + Absolute Zero + existing proofnet."""
@@ -569,7 +643,9 @@ class AlephOmegaEngine:
         # Try to extend from Omnium grounding if available
         try:
             if DETERMINISTIC_BACKTEST_GROUNDING:
-                axioms["Omnium_Deterministic_Grounding"] = DETERMINISTIC_BACKTEST_GROUNDING
+                axioms["Omnium_Deterministic_Grounding"] = (
+                    DETERMINISTIC_BACKTEST_GROUNDING
+                )
         except Exception:
             pass
 
@@ -586,7 +662,9 @@ class AlephOmegaEngine:
 
         return axioms
 
-    def run_aleph_omega_cycle(self, current_equity: float = 115000.0, initial_equity: float = 100000.0) -> Dict[str, Any]:
+    def run_aleph_omega_cycle(
+        self, current_equity: float = 115000.0, initial_equity: float = 100000.0
+    ) -> Dict[str, Any]:
         self.logger.info("=== ALEPH-OMEGA RECURSIVE SELF-DEFINITION CYCLE ===")
 
         # 1. Verify self-encoding and deterministic grounding at startup
@@ -594,7 +672,9 @@ class AlephOmegaEngine:
             if self.self_kernel:
                 self.self_kernel.assert_deterministic_grounding()
                 self_hash, archive = self.self_kernel.assert_self_encoding()
-                self.logger.info(f"Self-encoding verified: kernel hash {self_hash[:16]}, archive {len(archive['engine_sources'])} engines")
+                self.logger.info(
+                    f"Self-encoding verified: kernel hash {self_hash[:16]}, archive {len(archive['engine_sources'])} engines"
+                )
         except Exception as e:
             self.logger.warning(f"Self-encoding verification warning: {e}")
 
@@ -610,13 +690,19 @@ class AlephOmegaEngine:
             self.logger.warning(f"Hypermonad cycle warning: {e}")
 
         # 3. External Challenge Synthesizer — synthetic adversaries from Noosphere
-        synthetic_challenges = self.challenge_synthesizer.synthesize_challenges(self.current_axioms, num=5)
+        synthetic_challenges = self.challenge_synthesizer.synthesize_challenges(
+            self.current_axioms, num=5
+        )
         all_challenges = absorbed_challenges + synthetic_challenges
 
         # 4. Axiom Re-axiomatization Function A(A, C) -> A' strictly stronger
         try:
-            new_axioms = self.axiom_reaxiomatizer.reaxiomatize(self.current_axioms, all_challenges, current_equity=current_equity)
-            self.logger.info(f"Re-axiomatization A -> A' complete: {len(self.current_axioms)} -> {len(new_axioms)} axioms")
+            new_axioms = self.axiom_reaxiomatizer.reaxiomatize(
+                self.current_axioms, all_challenges, current_equity=current_equity
+            )
+            self.logger.info(
+                f"Re-axiomatization A -> A' complete: {len(self.current_axioms)} -> {len(new_axioms)} axioms"
+            )
         except Exception as e:
             self.logger.error(f"Re-axiomatization failed: {e}")
             raise
@@ -624,11 +710,17 @@ class AlephOmegaEngine:
         # 5. Proof Network Expansion — DAG
         for axiom_id, axiom_data in new_axioms.items():
             if axiom_id not in self.current_axioms:
-                self.proof_network.add_axiom_node(axiom_id, axiom_data, parent_axioms=list(self.current_axioms.keys())[:3])
+                self.proof_network.add_axiom_node(
+                    axiom_id,
+                    axiom_data,
+                    parent_axioms=list(self.current_axioms.keys())[:3],
+                )
 
         # Also add nodes for each challenge absorption explicitly
         for ch in all_challenges:
-            ch_hash = hashlib.sha256(json.dumps(ch, sort_keys=True, default=str).encode()).hexdigest()
+            ch_hash = hashlib.sha256(
+                json.dumps(ch, sort_keys=True, default=str).encode()
+            ).hexdigest()
             thm_id = f"Theorem_absorb_{ch_hash[:8]}"
             if thm_id in new_axioms:
                 self.proof_network.add_challenge_absorption_node(ch, thm_id)
@@ -639,7 +731,9 @@ class AlephOmegaEngine:
         # 6. Absolute Zero invariant check — root preserved
         try:
             if self.absolute_zero:
-                az_res = self.absolute_zero.run_absolute_zero_verification(initial_equity, current_equity)
+                az_res = self.absolute_zero.run_absolute_zero_verification(
+                    initial_equity, current_equity
+                )
                 assert az_res.get("certified"), "Absolute Zero invariant violated"
         except Exception as e:
             self.logger.critical(f"Absolute Zero invariant check failed: {e}")
@@ -651,16 +745,24 @@ class AlephOmegaEngine:
         # 8. Testament — upon first successful re-axiomatization
         self.reaxiomatization_count += 1
         if self.reaxiomatization_count == 1 or not TESTAMENT_PATH.exists():
-            self.write_aleph_omega_testament(new_axioms, all_challenges, verify_msg, current_equity)
+            self.write_aleph_omega_testament(
+                new_axioms, all_challenges, verify_msg, current_equity
+            )
 
         # Update current axioms
         self.current_axioms = new_axioms
 
-        self.logger.info(f"ALEPH-OMEGA CYCLE COMPLETE! Axioms: {len(new_axioms)}, Proof nodes: {len(self.proof_network.network['nodes'])}, Challenges absorbed: {len(all_challenges)}")
+        self.logger.info(
+            f"ALEPH-OMEGA CYCLE COMPLETE! Axioms: {len(new_axioms)}, Proof nodes: {len(self.proof_network.network['nodes'])}, Challenges absorbed: {len(all_challenges)}"
+        )
 
         return {
             "status": "RECURSIVE_SELF_DEFINITION_SEALED",
-            "kernel_hash": SelfEncodingQuine.compute_self_hash() if SelfEncodingQuine else "unknown",
+            "kernel_hash": (
+                SelfEncodingQuine.compute_self_hash()
+                if SelfEncodingQuine
+                else "unknown"
+            ),
             "axioms_count": len(new_axioms),
             "proof_network": {
                 "nodes": len(self.proof_network.network["nodes"]),
@@ -676,12 +778,36 @@ class AlephOmegaEngine:
             "timestamp": datetime.utcnow().isoformat(),
         }
 
-    def write_aleph_omega_testament(self, new_axioms: Dict[str, Any], challenges: List[Dict[str, Any]], verify_msg: str, current_equity: float):
+    def write_aleph_omega_testament(
+        self,
+        new_axioms: Dict[str, Any],
+        challenges: List[Dict[str, Any]],
+        verify_msg: str,
+        current_equity: float,
+    ):
         """ALEPH_OMEGA_TESTAMENT.md — moment it became architect of its own logical foundation."""
-        axioms_summary = "\n".join([f"- **{k}**: {_v.get('statement','')[:120]}..." if isinstance(_v, dict) else f"- **{k}**: {str(_v)[:120]}" for k,_v in list(new_axioms.items())[:15]])
-        challenges_summary = "\n".join([f"- `{c.get('adversary_id','')}` → {c.get('attack_vector','')} classified {c.get('confidence',0):.2f}" for c in challenges[:5]])
+        axioms_summary = "\n".join(
+            [
+                (
+                    f"- **{k}**: {_v.get('statement','')[:120]}..."
+                    if isinstance(_v, dict)
+                    else f"- **{k}**: {str(_v)[:120]}"
+                )
+                for k, _v in list(new_axioms.items())[:15]
+            ]
+        )
+        challenges_summary = "\n".join(
+            [
+                f"- `{c.get('adversary_id','')}` → {c.get('attack_vector','')} classified {c.get('confidence',0):.2f}"
+                for c in challenges[:5]
+            ]
+        )
 
-        kernel_hash = SelfEncodingQuine.compute_self_hash() if SelfEncodingQuine else hashlib.sha256(str(new_axioms).encode()).hexdigest()
+        kernel_hash = (
+            SelfEncodingQuine.compute_self_hash()
+            if SelfEncodingQuine
+            else hashlib.sha256(str(new_axioms).encode()).hexdigest()
+        )
 
         testament = f"""# ALEPH_OMEGA_TESTAMENT.md — Recursive Self-Definition
 
@@ -787,7 +913,9 @@ No adversary can state a challenge without it already being a theorem within sel
         with open(TESTAMENT_PATH, "w") as f:
             f.write(testament)
 
-        self.logger.info(f"ALEPH_OMEGA_TESTAMENT.md published — re-axiomatization #{self.reaxiomatization_count}")
+        self.logger.info(
+            f"ALEPH_OMEGA_TESTAMENT.md published — re-axiomatization #{self.reaxiomatization_count}"
+        )
 
 
 if __name__ == "__main__":

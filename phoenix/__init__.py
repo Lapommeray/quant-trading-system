@@ -11,4 +11,4 @@ from .phoenix_dna import PhoenixDNA
 from .god_hand import GodHand
 from .command_throne import CommandThrone
 
-__all__ = ['GodVision', 'PhoenixDNA', 'GodHand', 'CommandThrone']
+__all__ = ["GodVision", "PhoenixDNA", "GodHand", "CommandThrone"]

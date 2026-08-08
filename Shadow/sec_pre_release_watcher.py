@@ -1,5 +1,5 @@
-
 from transformers import pipeline
+
 
 class SEC_NLP_Spy:
     def __init__(self):

@@ -1,12 +1,12 @@
-
 import random
+
 
 def evaluate_possible_timelines(price_data):
     """
     Simulates future price outcomes and chooses if a win-aligned timeline is active.
     """
-    open_p = price_data['open']
-    close_p = price_data['close']
+    open_p = price_data["open"]
+    close_p = price_data["close"]
     delta = close_p - open_p
 
     # Simulate directional outcomes (mocking 5 timelines)
@@ -24,5 +24,5 @@ def evaluate_possible_timelines(price_data):
         "bearish_timeline_dominance": bearish_count,
         "winning_timeline": (
             bullish_count >= 4 if close_p > open_p else bearish_count >= 4
-        )
+        ),
     }

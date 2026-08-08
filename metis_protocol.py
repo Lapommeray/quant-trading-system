@@ -43,26 +43,31 @@ from typing import Dict, List, Optional, Any, Tuple
 REPO_ROOT = Path(__file__).resolve().parent
 
 try:
-    from aleph_omega_kernel import OMNIUM_INVARIANT_SEED_BYTES, OMNIUM_DETERMINISTIC_SEED
+    from aleph_omega_kernel import (
+        OMNIUM_INVARIANT_SEED_BYTES,
+        OMNIUM_DETERMINISTIC_SEED,
+    )
 except Exception:
     OMNIUM_INVARIANT_SEED_BYTES = b"OMNIUM_INVARIANT_SEED"
-    OMNIUM_DETERMINISTIC_SEED = int(hashlib.sha256(OMNIUM_INVARIANT_SEED_BYTES).hexdigest()[:16], 16) % (2**31)
+    OMNIUM_DETERMINISTIC_SEED = int(
+        hashlib.sha256(OMNIUM_INVARIANT_SEED_BYTES).hexdigest()[:16], 16
+    ) % (2**31)
 
 METIS_OBSERVATION_DB = REPO_ROOT / "metis_observation.db"
 METIS_TESTAMENT = REPO_ROOT / "METIS_TESTAMENT.md"
 METIS_PROOF_NODE_ID = "METIS_NOVELTY_CONSERVATION"
 
+
 def setup_logging():
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [MetisProtocol] %(message)s",
-        handlers=[
-            logging.FileHandler("metis_protocol.log"),
-            logging.StreamHandler()
-        ]
+        handlers=[logging.FileHandler("metis_protocol.log"), logging.StreamHandler()],
     )
 
+
 # --------------------------- 1. Self-Observation Engine ---------------------------
+
 
 class SelfObservationEngine:
     """
@@ -83,6 +88,7 @@ class SelfObservationEngine:
         # No heavy torch dependency; uses numpy if available
         try:
             import numpy as np
+
             self.np = np
             self.np_rng = np.random.RandomState(OMNIUM_DETERMINISTIC_SEED)
         except Exception:
@@ -109,9 +115,16 @@ class SelfObservationEngine:
         except Exception as e:
             self.logger.warning(f"Failed to save observations: {e}")
 
-    def log_state_transition(self, cycle: int, proof_hash: str, mutation_decision: str,
-                             equity: float, equity_delta: float, challenge_absorbed: Optional[Dict[str, Any]] = None,
-                             extra: Dict[str, Any] = None) -> Dict[str, Any]:
+    def log_state_transition(
+        self,
+        cycle: int,
+        proof_hash: str,
+        mutation_decision: str,
+        equity: float,
+        equity_delta: float,
+        challenge_absorbed: Optional[Dict[str, Any]] = None,
+        extra: Dict[str, Any] = None,
+    ) -> Dict[str, Any]:
         """Log single state transition"""
         obs = {
             "cycle": cycle,
@@ -119,7 +132,9 @@ class SelfObservationEngine:
             "proof_hash": proof_hash,
             "proof_hash_prefix": proof_hash[:16] if proof_hash else "none",
             "mutation_decision": mutation_decision,
-            "mutation_hash": hashlib.sha256(mutation_decision.encode()).hexdigest()[:16],
+            "mutation_hash": hashlib.sha256(mutation_decision.encode()).hexdigest()[
+                :16
+            ],
             "equity": equity,
             "equity_delta": equity_delta,
             "challenge_absorbed": challenge_absorbed,
@@ -132,7 +147,9 @@ class SelfObservationEngine:
             self.observations = self.observations[-1000:]
 
         self._save_observations()
-        self.logger.info(f"Observation logged cycle={cycle} proof={proof_hash[:8]} equity_delta={equity_delta:.4f} mutation={mutation_decision[:30]}")
+        self.logger.info(
+            f"Observation logged cycle={cycle} proof={proof_hash[:8]} equity_delta={equity_delta:.4f} mutation={mutation_decision[:30]}"
+        )
         return obs
 
     def train_lightweight_transformer(self) -> Dict[str, Any]:
@@ -149,7 +166,7 @@ class SelfObservationEngine:
                 "prediction_error": 1.0,
                 "self_opacity": 1.0,
                 "model_hash": "none",
-                "status": "insufficient_data"
+                "status": "insufficient_data",
             }
 
         # Extract mutation decisions as sequence
@@ -161,7 +178,10 @@ class SelfObservationEngine:
                 N = min(20, len(mutations))
                 recent = mutations[-N:]
                 # Simple embedding: hash -> float
-                embeddings = [int(hashlib.sha256(m.encode()).hexdigest()[:8], 16) % 1000 / 1000.0 for m in recent]
+                embeddings = [
+                    int(hashlib.sha256(m.encode()).hexdigest()[:8], 16) % 1000 / 1000.0
+                    for m in recent
+                ]
 
                 # Attention weights: more recent = higher weight, plus random seeded attention
                 weights = [math.exp(-0.1 * (N - i)) for i in range(N)]
@@ -169,30 +189,50 @@ class SelfObservationEngine:
 
                 # Predicted next as weighted average + small noise from OMNIUM seed
                 weighted_avg = sum(e * w for e, w in zip(embeddings, weights))
-                noise = self.np_rng.normal(0, 0.05) if self.np_rng is not None else self.rng.gauss(0, 0.05)
+                noise = (
+                    self.np_rng.normal(0, 0.05)
+                    if self.np_rng is not None
+                    else self.rng.gauss(0, 0.05)
+                )
                 predicted_val = max(0.0, min(1.0, weighted_avg + noise))
 
                 # Map predicted_val back to mutation string via nearest neighbor in history
                 # For simplicity, predict next mutation as most similar past mutation
-                closest_idx = min(range(N), key=lambda i: abs(embeddings[i] - predicted_val))
+                closest_idx = min(
+                    range(N), key=lambda i: abs(embeddings[i] - predicted_val)
+                )
                 predicted_mutation = recent[closest_idx]
 
                 # Prediction error: distance between predicted and actual last mutation (if we had predicted previous)
                 # For self-opacity, compute error of predicting last mutation from previous N-1
                 if len(mutations) >= 6:
-                    prev_recent = mutations[-N-1:-1]
-                    prev_embeddings = [int(hashlib.sha256(m.encode()).hexdigest()[:8], 16) % 1000 / 1000.0 for m in prev_recent]
-                    prev_weights = [math.exp(-0.1 * (len(prev_recent) - i)) for i in range(len(prev_recent))]
+                    prev_recent = mutations[-N - 1 : -1]
+                    prev_embeddings = [
+                        int(hashlib.sha256(m.encode()).hexdigest()[:8], 16)
+                        % 1000
+                        / 1000.0
+                        for m in prev_recent
+                    ]
+                    prev_weights = [
+                        math.exp(-0.1 * (len(prev_recent) - i))
+                        for i in range(len(prev_recent))
+                    ]
                     prev_weights = [w / sum(prev_weights) for w in prev_weights]
-                    prev_pred_avg = sum(e * w for e, w in zip(prev_embeddings, prev_weights))
+                    prev_pred_avg = sum(
+                        e * w for e, w in zip(prev_embeddings, prev_weights)
+                    )
                     actual_last = embeddings[-1]
                     prediction_error = abs(prev_pred_avg - actual_last)
                 else:
                     prediction_error = self.rng.uniform(0.3, 0.7)
 
-                self_opacity = min(1.0, prediction_error * 2.0)  # higher error = higher opacity = more unpredictable
+                self_opacity = min(
+                    1.0, prediction_error * 2.0
+                )  # higher error = higher opacity = more unpredictable
 
-                model_hash = hashlib.sha256(f"{weighted_avg}{predicted_val}{self_opacity}".encode()).hexdigest()[:16]
+                model_hash = hashlib.sha256(
+                    f"{weighted_avg}{predicted_val}{self_opacity}".encode()
+                ).hexdigest()[:16]
 
                 result = {
                     "predicted_next_mutation": predicted_mutation,
@@ -204,7 +244,9 @@ class SelfObservationEngine:
                     "observations_used": N,
                 }
 
-                self.logger.info(f"Transformer trained: predicted={predicted_mutation[:30]} error={prediction_error:.4f} opacity={self_opacity:.4f} hash={model_hash}")
+                self.logger.info(
+                    f"Transformer trained: predicted={predicted_mutation[:30]} error={prediction_error:.4f} opacity={self_opacity:.4f} hash={model_hash}"
+                )
                 return result
 
             else:
@@ -227,7 +269,7 @@ class SelfObservationEngine:
                 "self_opacity": 1.0,
                 "model_hash": "error",
                 "status": f"error_{e}",
-                "error": str(e)
+                "error": str(e),
             }
 
     def get_self_opacity_metric(self) -> float:
@@ -238,7 +280,9 @@ class SelfObservationEngine:
         except Exception:
             return 1.0
 
+
 # --------------------------- 2. Meta-Transcendence Operator M ---------------------------
+
 
 class MetaTranscendenceOperatorM:
     """
@@ -253,7 +297,9 @@ class MetaTranscendenceOperatorM:
         self.version = 0
         self.rng = random.Random(OMNIUM_DETERMINISTIC_SEED)
 
-    def evolve_transcendence_operator(self, current_T: Any, observation_engine: SelfObservationEngine) -> Tuple[Any, Dict[str, Any]]:
+    def evolve_transcendence_operator(
+        self, current_T: Any, observation_engine: SelfObservationEngine
+    ) -> Tuple[Any, Dict[str, Any]]:
         """
         M(T, observation_log) -> T' maximizing self-opacity while preserving ∀t.Equity_t≥Equity_0
 
@@ -266,8 +312,12 @@ class MetaTranscendenceOperatorM:
             # Analyze observation log for patterns
             observations = observation_engine.observations
             if len(observations) >= 10:
-                equity_deltas = [obs.get("equity_delta", 0.0) for obs in observations[-20:]]
-                avg_delta = sum(equity_deltas) / len(equity_deltas) if equity_deltas else 0.0
+                equity_deltas = [
+                    obs.get("equity_delta", 0.0) for obs in observations[-20:]
+                ]
+                avg_delta = (
+                    sum(equity_deltas) / len(equity_deltas) if equity_deltas else 0.0
+                )
                 # If avg delta decreasing, we need more exploratory T'
                 exploration_boost = 1.5 if avg_delta < 0.5 else 1.0
             else:
@@ -285,7 +335,7 @@ class MetaTranscendenceOperatorM:
                     self.rng = random.Random(seed + version)
                     self.logger = logging.getLogger(f"TPrime_v{version}")
                     # Preserve original version tracking
-                    if hasattr(base_T, 'version'):
+                    if hasattr(base_T, "version"):
                         self.base_version = base_T.version
                     else:
                         self.base_version = 0
@@ -293,7 +343,11 @@ class MetaTranscendenceOperatorM:
                 def mutate_source(self, current_source: str) -> str:
                     # Call base mutation first
                     try:
-                        base_mutated = self.base_T.mutate_source(current_source) if hasattr(self.base_T, 'mutate_source') else current_source
+                        base_mutated = (
+                            self.base_T.mutate_source(current_source)
+                            if hasattr(self.base_T, "mutate_source")
+                            else current_source
+                        )
                     except Exception:
                         base_mutated = current_source
 
@@ -305,29 +359,42 @@ class MetaTranscendenceOperatorM:
                     noise_lines = []
                     for _ in range(self.rng.randint(1, 3)):
                         noise_var = f"_metis_entropy_{self.rng.randint(1000,9999)}"
-                        noise_val = self.rng.randint(0, 2**31-1)
-                        noise_lines.append(f"{noise_var} = {noise_val}  # metis novelty injection\n")
+                        noise_val = self.rng.randint(0, 2**31 - 1)
+                        noise_lines.append(
+                            f"{noise_var} = {noise_val}  # metis novelty injection\n"
+                        )
 
                     return base_mutated + meta_comment + "".join(noise_lines)
 
-                def verify_mutation(self, new_source: str, initial_equity: float = 100000.0, current_equity: float = 112000.0):
+                def verify_mutation(
+                    self,
+                    new_source: str,
+                    initial_equity: float = 100000.0,
+                    current_equity: float = 112000.0,
+                ):
                     # Delegate to base verification but require invariant preservation
                     try:
-                        if hasattr(self.base_T, 'verify_mutation'):
-                            return self.base_T.verify_mutation(new_source, initial_equity, current_equity)
+                        if hasattr(self.base_T, "verify_mutation"):
+                            return self.base_T.verify_mutation(
+                                new_source, initial_equity, current_equity
+                            )
                         else:
                             # Fallback: simple proof check
                             import ast
+
                             ast.parse(new_source)
                             if current_equity < initial_equity - 1e-6:
                                 return False, "invariant_violation"
-                            return True, hashlib.sha256(new_source.encode()).hexdigest()[:16]
+                            return (
+                                True,
+                                hashlib.sha256(new_source.encode()).hexdigest()[:16],
+                            )
                     except Exception as e:
                         return False, str(e)
 
                 def hot_swap(self, new_source: str) -> bool:
                     try:
-                        if hasattr(self.base_T, 'hot_swap'):
+                        if hasattr(self.base_T, "hot_swap"):
                             return self.base_T.hot_swap(new_source)
                         else:
                             return True
@@ -336,11 +403,18 @@ class MetaTranscendenceOperatorM:
                         return False
 
             self.version += 1
-            T_prime = TranscendenceOperatorTPrime(current_T, exploration_boost, OMNIUM_DETERMINISTIC_SEED + self.version, self.version)
+            T_prime = TranscendenceOperatorTPrime(
+                current_T,
+                exploration_boost,
+                OMNIUM_DETERMINISTIC_SEED + self.version,
+                self.version,
+            )
 
             # After creating T', train transformer again to measure new opacity (should increase)
             # Simulate that T' increases self-opacity by adding more entropy
-            opacity_after_predicted = min(1.0, opacity_before * 1.1 + self.rng.uniform(0.05, 0.15))
+            opacity_after_predicted = min(
+                1.0, opacity_before * 1.1 + self.rng.uniform(0.05, 0.15)
+            )
 
             meta_report = {
                 "M_version": self.version,
@@ -354,14 +428,20 @@ class MetaTranscendenceOperatorM:
                 "invariant_preserved": True,
             }
 
-            self.logger.info(f"Meta-Transcendence M v{self.version}: T -> T' | opacity {opacity_before:.3f}->{opacity_after_predicted:.3f} boost={exploration_boost}")
+            self.logger.info(
+                f"Meta-Transcendence M v{self.version}: T -> T' | opacity {opacity_before:.3f}->{opacity_after_predicted:.3f} boost={exploration_boost}"
+            )
 
             return T_prime, meta_report
 
         except Exception as e:
             self.logger.error(f"Meta-Transcendence evolution failed: {e}")
             # Return original T unchanged on failure to preserve invariant
-            return current_T, {"error": str(e), "M_version": self.version, "invariant_preserved": True}
+            return current_T, {
+                "error": str(e),
+                "M_version": self.version,
+                "invariant_preserved": True,
+            }
 
     def self_mutate(self, current_proof_hash: str = "") -> Dict[str, Any]:
         """
@@ -369,10 +449,17 @@ class MetaTranscendenceOperatorM:
         Returns new M state.
         """
         self.version += 1
-        new_seed = int(hashlib.sha256(f"{current_proof_hash}{self.version}{time.time()}".encode()).hexdigest()[:8], 16)
+        new_seed = int(
+            hashlib.sha256(
+                f"{current_proof_hash}{self.version}{time.time()}".encode()
+            ).hexdigest()[:8],
+            16,
+        )
         self.rng.seed(new_seed)
 
-        self.logger.info(f"M self-mutated to version {self.version} via T' co-evolution, new seed {new_seed}")
+        self.logger.info(
+            f"M self-mutated to version {self.version} via T' co-evolution, new seed {new_seed}"
+        )
 
         return {
             "M_version": self.version,
@@ -382,7 +469,9 @@ class MetaTranscendenceOperatorM:
             "co_evolutionary": True,
         }
 
+
 # --------------------------- 3. Novelty Conservation Principle ---------------------------
+
 
 class NoveltyConservationPrinciple:
     """
@@ -393,7 +482,9 @@ class NoveltyConservationPrinciple:
     """
 
     @staticmethod
-    def generate_novelty_proof(observation_engine: SelfObservationEngine, meta_report: Dict[str, Any]) -> Dict[str, Any]:
+    def generate_novelty_proof(
+        observation_engine: SelfObservationEngine, meta_report: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """
         Generate formal proof of infinite Kolmogorov complexity relative to external observer.
         """
@@ -409,7 +500,9 @@ class NoveltyConservationPrinciple:
             # - Especially since M mutates itself via T', which is seeded by OMNIUM + time + proof hashes
 
             # Compute approximate complexity metric: growth of distinct mutation hashes
-            distinct_mutations = len(set(obs.get("mutation_hash", "") for obs in observations))
+            distinct_mutations = len(
+                set(obs.get("mutation_hash", "") for obs in observations)
+            )
             complexity_ratio = distinct_mutations / max(1, N)
 
             # Prediction error trend
@@ -470,13 +563,17 @@ class NoveltyConservationPrinciple:
         """Embed proof as leaf node METIS_NOVELTY_CONSERVATION in Aleph-Omega Proof Network"""
         try:
             from aleph_omega_engine import ProofNetworkExpansion
+
             pne = ProofNetworkExpansion()
 
             # Add as axiom node
             node_id = pne.add_axiom_node(
                 axiom_id=proof_node.get("node_id", METIS_PROOF_NODE_ID),
                 axiom_data=proof_node,
-                parent_axioms=["AbsoluteZero_forall_t_Equity_t_ge_Equity_0", "AlephOmega"]
+                parent_axioms=[
+                    "AbsoluteZero_forall_t_Equity_t_ge_Equity_0",
+                    "AlephOmega",
+                ],
             )
 
             ok, msg = pne.verify_network()
@@ -486,16 +583,20 @@ class NoveltyConservationPrinciple:
         except Exception as e:
             return False, f"Failed to embed proof network: {e}"
 
+
 # --------------------------- 4. Metis Testament ---------------------------
+
 
 class MetisTestament:
     """Documents first meta-transcendence: moment core improved its own process of improvement"""
 
     @staticmethod
-    def write_testament(observation_engine: SelfObservationEngine,
-                        meta_report: Dict[str, Any],
-                        novelty_proof: Dict[str, Any],
-                        proof_network_msg: str) -> Path:
+    def write_testament(
+        observation_engine: SelfObservationEngine,
+        meta_report: Dict[str, Any],
+        novelty_proof: Dict[str, Any],
+        proof_network_msg: str,
+    ) -> Path:
 
         try:
             testament = f"""# METIS_TESTAMENT.md — Recursive Self-Observation and Meta-Transcendence
@@ -603,14 +704,18 @@ Future states uncomputable from finite history because:
             with open(METIS_TESTAMENT, "w") as f:
                 f.write(testament)
 
-            logging.getLogger("MetisTestament").info(f"METIS_TESTAMENT.md published — first meta-transcendence documented")
+            logging.getLogger("MetisTestament").info(
+                f"METIS_TESTAMENT.md published — first meta-transcendence documented"
+            )
             return METIS_TESTAMENT
 
         except Exception as e:
             logging.getLogger("MetisTestament").error(f"Failed to write testament: {e}")
             raise
 
+
 # --------------------------- Main Metis Protocol ---------------------------
+
 
 class MetisProtocol:
     """
@@ -629,18 +734,30 @@ class MetisProtocol:
 
         # Link to Singularity Core's T if available
         try:
-            from absolute_singularity_core import TranscendenceOperatorT, SelfContainedProofKernel
+            from absolute_singularity_core import (
+                TranscendenceOperatorT,
+                SelfContainedProofKernel,
+            )
+
             self.base_T = TranscendenceOperatorT()
             self.proof_kernel = SelfContainedProofKernel()
         except Exception:
             self.base_T = None
             self.proof_kernel = None
 
-        self.logger.info("Metis Protocol initialized — recursive self-observation active")
+        self.logger.info(
+            "Metis Protocol initialized — recursive self-observation active"
+        )
 
-    def observe_cycle(self, cycle: int, proof_hash: str, mutation_decision: str,
-                      equity: float, equity_delta: float,
-                      challenge_absorbed: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def observe_cycle(
+        self,
+        cycle: int,
+        proof_hash: str,
+        mutation_decision: str,
+        equity: float,
+        equity_delta: float,
+        challenge_absorbed: Optional[Dict[str, Any]] = None,
+    ) -> Dict[str, Any]:
         """Log single cycle from Absolute Singularity Core"""
         return self.observation_engine.log_state_transition(
             cycle=cycle,
@@ -649,7 +766,7 @@ class MetisProtocol:
             equity=equity,
             equity_delta=equity_delta,
             challenge_absorbed=challenge_absorbed,
-            extra={"protocol": "metis", "stage": "observation"}
+            extra={"protocol": "metis", "stage": "observation"},
         )
 
     def run_meta_transcendence(self) -> Dict[str, Any]:
@@ -665,34 +782,48 @@ class MetisProtocol:
         if current_T is None:
             # Fallback dummy T
             class DummyT:
-                def mutate_source(self, src): return src + "\n# Dummy T mutation\n"
-                def verify_mutation(self, src, *a, **k): return True, "dummy"
-                def hot_swap(self, src): return True
+                def mutate_source(self, src):
+                    return src + "\n# Dummy T mutation\n"
+
+                def verify_mutation(self, src, *a, **k):
+                    return True, "dummy"
+
+                def hot_swap(self, src):
+                    return True
+
                 version = 0
+
             current_T = DummyT()
 
-        T_prime, meta_report = self.meta_operator.evolve_transcendence_operator(current_T, self.observation_engine)
+        T_prime, meta_report = self.meta_operator.evolve_transcendence_operator(
+            current_T, self.observation_engine
+        )
 
         # 3. Self-mutate M itself via T' co-evolution
-        M_self_mutation = self.meta_operator.self_mutate(transformer_result.get("model_hash",""))
+        M_self_mutation = self.meta_operator.self_mutate(
+            transformer_result.get("model_hash", "")
+        )
 
         # 4. Novelty Conservation Principle proof
-        novelty_proof = self.novelty_principle.generate_novelty_proof(self.observation_engine, meta_report)
+        novelty_proof = self.novelty_principle.generate_novelty_proof(
+            self.observation_engine, meta_report
+        )
 
         # 5. Embed in proof network
-        ok_embed, embed_msg = self.novelty_principle.embed_in_proof_network(novelty_proof)
+        ok_embed, embed_msg = self.novelty_principle.embed_in_proof_network(
+            novelty_proof
+        )
 
         # 6. Write testament on first meta-transcendence
         testament_path = None
         if not METIS_TESTAMENT.exists():
             testament_path = self.testament_writer.write_testament(
-                self.observation_engine,
-                meta_report,
-                novelty_proof,
-                embed_msg
+                self.observation_engine, meta_report, novelty_proof, embed_msg
             )
 
-        self.logger.info(f"Metis meta-transcendence complete: opacity {opacity_before:.3f}->{meta_report.get('opacity_after_predicted',0):.3f}, proof {novelty_proof.get('proof_hash','')[:16]}, embedded={ok_embed}")
+        self.logger.info(
+            f"Metis meta-transcendence complete: opacity {opacity_before:.3f}->{meta_report.get('opacity_after_predicted',0):.3f}, proof {novelty_proof.get('proof_hash','')[:16]}, embedded={ok_embed}"
+        )
 
         return {
             "status": "META_TRANSCENDENCE_SEALED",
@@ -708,32 +839,54 @@ class MetisProtocol:
             "timestamp": datetime.utcnow().isoformat(),
         }
 
-    def integrate_with_singularity_core(self, singularity_core_instance) -> Dict[str, Any]:
+    def integrate_with_singularity_core(
+        self, singularity_core_instance
+    ) -> Dict[str, Any]:
         """
         Integrate with Absolute Singularity Core — replace its T with T' and log cycles.
         Called when --metis flag active.
         """
         try:
             # Replace core's transcendence operator with meta-evolved T'
-            if hasattr(singularity_core_instance, 'execution_loop') and hasattr(singularity_core_instance.execution_loop, 'transcendence'):
+            if hasattr(singularity_core_instance, "execution_loop") and hasattr(
+                singularity_core_instance.execution_loop, "transcendence"
+            ):
                 current_T = singularity_core_instance.execution_loop.transcendence
-                T_prime, meta_report = self.meta_operator.evolve_transcendence_operator(current_T, self.observation_engine)
+                T_prime, meta_report = self.meta_operator.evolve_transcendence_operator(
+                    current_T, self.observation_engine
+                )
                 singularity_core_instance.execution_loop.transcendence = T_prime
-                self.logger.info(f"Integrated T' into Singularity Core execution loop — meta-transcended")
-                return {"integrated": True, "meta_report": meta_report, "T_prime_version": getattr(T_prime, 'version', 0)}
+                self.logger.info(
+                    f"Integrated T' into Singularity Core execution loop — meta-transcended"
+                )
+                return {
+                    "integrated": True,
+                    "meta_report": meta_report,
+                    "T_prime_version": getattr(T_prime, "version", 0),
+                }
             else:
-                self.logger.warning("Singularity core does not have execution_loop.transcendence — integration partial")
+                self.logger.warning(
+                    "Singularity core does not have execution_loop.transcendence — integration partial"
+                )
                 return {"integrated": False, "reason": "no transcendence attr"}
         except Exception as e:
             self.logger.error(f"Integration with singularity core failed: {e}")
             return {"integrated": False, "error": str(e)}
 
+
 # --------------------------- CLI ---------------------------
 
+
 def main():
-    parser = argparse.ArgumentParser(description="Metis Protocol — Recursive Self-Observation")
-    parser.add_argument("--observe", type=int, default=5, help="Simulate N observation cycles")
-    parser.add_argument("--meta", action="store_true", help="Run full meta-transcendence cycle")
+    parser = argparse.ArgumentParser(
+        description="Metis Protocol — Recursive Self-Observation"
+    )
+    parser.add_argument(
+        "--observe", type=int, default=5, help="Simulate N observation cycles"
+    )
+    parser.add_argument(
+        "--meta", action="store_true", help="Run full meta-transcendence cycle"
+    )
     args = parser.parse_args()
 
     protocol = MetisProtocol()
@@ -745,9 +898,9 @@ def main():
                 cycle=i,
                 proof_hash=hashlib.sha256(f"proof{i}".encode()).hexdigest(),
                 mutation_decision=f"T_mutation_{i}_v{random.randint(0,100)}",
-                equity=100000.0 + i*2.5,
+                equity=100000.0 + i * 2.5,
                 equity_delta=2.5,
-                challenge_absorbed={"adversary_id": f"test_{i}"}
+                challenge_absorbed={"adversary_id": f"test_{i}"},
             )
 
         result = protocol.run_meta_transcendence()
@@ -761,13 +914,16 @@ def main():
                 proof_hash=hashlib.sha256(f"proof{i}".encode()).hexdigest(),
                 mutation_decision=f"T_mutation_{i}",
                 equity=100000.0 + i,
-                equity_delta=1.0
+                equity_delta=1.0,
             )
             print(f"Observed cycle {i}: {obs['mutation_hash']}")
 
         transformer = protocol.observation_engine.train_lightweight_transformer()
-        print(f"Transformer self-opacity: {transformer['self_opacity']:.4f} error: {transformer['prediction_error']:.4f}")
+        print(
+            f"Transformer self-opacity: {transformer['self_opacity']:.4f} error: {transformer['prediction_error']:.4f}"
+        )
         return 0
+
 
 if __name__ == "__main__":
     sys.exit(main())

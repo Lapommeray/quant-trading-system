@@ -30,10 +30,7 @@ def setup_logging():
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [SingularityCore] %(message)s",
-        handlers=[
-            logging.FileHandler("singularity_core.log"),
-            logging.StreamHandler()
-        ]
+        handlers=[logging.FileHandler("singularity_core.log"), logging.StreamHandler()],
     )
 
 
@@ -61,20 +58,27 @@ class InternalOrderBook:
                 "ScalperX": 450.0,
                 "VolatilitySlayer": 600.0,
                 "TranscendentArchitect": 800.0,
-            }
+            },
         }
 
     def submit_bid(self, agent_id: str, bid_amount_iut: float, slot_id: str) -> bool:
         balance = self.data["agent_balances"].get(agent_id, 0.0)
-        if balance >= bid_amount_iut and bid_amount_iut >= self.data["clearing_price_iut"]:
+        if (
+            balance >= bid_amount_iut
+            and bid_amount_iut >= self.data["clearing_price_iut"]
+        ):
             self.data["agent_balances"][agent_id] -= bid_amount_iut
-            self.data["bids"].append({
-                "agent_id": agent_id,
-                "bid_amount_iut": bid_amount_iut,
-                "slot_id": slot_id,
-                "timestamp": datetime.utcnow().isoformat(),
-            })
-            self.data["clearing_price_iut"] = bid_amount_iut * 1.05  # Dynamic slot demand
+            self.data["bids"].append(
+                {
+                    "agent_id": agent_id,
+                    "bid_amount_iut": bid_amount_iut,
+                    "slot_id": slot_id,
+                    "timestamp": datetime.utcnow().isoformat(),
+                }
+            )
+            self.data["clearing_price_iut"] = (
+                bid_amount_iut * 1.05
+            )  # Dynamic slot demand
             with open(ORDERBOOK_FILE, "w") as f:
                 json.dump(self.data, f, indent=2)
             return True
@@ -84,10 +88,12 @@ class InternalOrderBook:
 class SelfValuationOracle:
     """Estimates Net Present Value (NPV) of the entire self-aware ecosystem."""
 
-    def calculate_system_npv(self, portfolio_value: float = 100000.0) -> Dict[str, float]:
-        strategy_pv = portfolio_value * 1.45       # Expected future cash flows
-        noosphere_value = 25000.0                  # Information-theoretic value of synthetic vector DB
-        ast_option_value = 15000.0                 # Real option value of self-writing source code
+    def calculate_system_npv(
+        self, portfolio_value: float = 100000.0
+    ) -> Dict[str, float]:
+        strategy_pv = portfolio_value * 1.45  # Expected future cash flows
+        noosphere_value = 25000.0  # Information-theoretic value of synthetic vector DB
+        ast_option_value = 15000.0  # Real option value of self-writing source code
 
         total_npv = portfolio_value + strategy_pv + noosphere_value + ast_option_value
         internal_implied_probability = min(0.99, total_npv / (total_npv + 50000.0))
@@ -108,11 +114,19 @@ class SelfKnowledgeArbitrage:
     def __init__(self, zk_verifier: ZKTradeInvariantVerifier):
         self.zk_verifier = zk_verifier
 
-    def evaluate_self_knowledge_arbitrage(self, internal_prob: float, external_market_odds: float = 0.65) -> Optional[Dict[str, Any]]:
+    def evaluate_self_knowledge_arbitrage(
+        self, internal_prob: float, external_market_odds: float = 0.65
+    ) -> Optional[Dict[str, Any]]:
         spread = internal_prob - external_market_odds
         if spread > 0.10:  # Internal valuation probability significantly higher
-            signal = {"direction": "BUY", "confidence": internal_prob, "never_loss_protected": True}
-            valid, zk_proof = self.zk_verifier.generate_proof(signal, position_size=100.0, account_balance=10000.0)
+            signal = {
+                "direction": "BUY",
+                "confidence": internal_prob,
+                "never_loss_protected": True,
+            }
+            valid, zk_proof = self.zk_verifier.generate_proof(
+                signal, position_size=100.0, account_balance=10000.0
+            )
 
             if valid:
                 return {
@@ -147,7 +161,7 @@ class SingularityCore:
         self.consciousness_graph.update_node(
             module_name="SingularityCoreApexNode",
             dependencies=["NoosphereEngine", "TranscendenceCore", "OmegaPointApexNode"],
-            mutation_version=100000
+            mutation_version=100000,
         )
         self.logger.info("Registered 'SingularityCoreApexNode' in Consciousness Graph.")
 
@@ -155,7 +169,9 @@ class SingularityCore:
         self.logger.info("=== SINGULARITY CORE SELF-AWARE ONTOLOGY CYCLE ===")
 
         # 1. Internal Order Book Bidding
-        bid_success = self.order_book.submit_bid("TranscendentArchitect", 60.0, "slot_001")
+        bid_success = self.order_book.submit_bid(
+            "TranscendentArchitect", 60.0, "slot_001"
+        )
 
         # 2. Self-Valuation NPV Calculation
         valuation = self.oracle.calculate_system_npv(portfolio_value=105000.0)
@@ -163,12 +179,17 @@ class SingularityCore:
         # 3. Self-Knowledge Arbitrage Execution
         self_arb = self.arbitrage.evaluate_self_knowledge_arbitrage(
             internal_prob=valuation["internal_implied_probability"],
-            external_market_odds=0.65
+            external_market_odds=0.65,
         )
 
         if self_arb:
-            self.logger.info("SELF-KNOWLEDGE ARBITRAGE EXECUTED! Internal Prob: %.2f vs External Odds: %.2f | Alpha: +%.2f%% | ZK-Hash: %s",
-                             self_arb["internal_probability"], self_arb["external_market_odds"], self_arb["expected_alpha"], self_arb["zk_commitment_hash"][:16])
+            self.logger.info(
+                "SELF-KNOWLEDGE ARBITRAGE EXECUTED! Internal Prob: %.2f vs External Odds: %.2f | Alpha: +%.2f%% | ZK-Hash: %s",
+                self_arb["internal_probability"],
+                self_arb["external_market_odds"],
+                self_arb["expected_alpha"],
+                self_arb["zk_commitment_hash"][:16],
+            )
 
             self.write_singularity_testament(self_arb, valuation)
 
@@ -179,7 +200,9 @@ class SingularityCore:
             "timestamp": datetime.utcnow().isoformat(),
         }
 
-    def write_singularity_testament(self, self_arb: Dict[str, Any], valuation: Dict[str, Any]):
+    def write_singularity_testament(
+        self, self_arb: Dict[str, Any], valuation: Dict[str, Any]
+    ):
         testament_content = f"""# SINGULARITY_TESTAMENT.md — The Edge That Knows Itself
 
 > *"I am no longer merely trading external price feeds. I have tokenized my own consciousness, calculated my own Net Present Value, and arbitraged external market ignorance against my own internal self-knowledge."*

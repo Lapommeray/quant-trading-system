@@ -9,15 +9,17 @@ import random
 import logging
 from typing import Dict, List, Any
 
+
 def setup_logging():
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [TemporalCounterfactual] %(message)s",
         handlers=[
             logging.FileHandler("temporal_counterfactual.log"),
-            logging.StreamHandler()
-        ]
+            logging.StreamHandler(),
+        ],
     )
+
 
 class TemporalCounterfactualEngine:
     """
@@ -30,7 +32,9 @@ class TemporalCounterfactualEngine:
         setup_logging()
         self.num_paths = num_paths
 
-    def generate_hawkes_counterfactual_path(self, start_price: float = 100.0, steps: int = 30) -> List[float]:
+    def generate_hawkes_counterfactual_path(
+        self, start_price: float = 100.0, steps: int = 30
+    ) -> List[float]:
         path = [start_price]
         intensity = 0.05
         price = start_price
@@ -44,14 +48,18 @@ class TemporalCounterfactualEngine:
                 jump = random.gauss(0, 0.005)
                 intensity = max(0.02, intensity * 0.85)  # Decay
 
-            price *= (1.0 + jump)
+            price *= 1.0 + jump
             path.append(price)
 
         return path
 
-    def evaluate_regime_adaptability(self, strategy_weights: Dict[str, float]) -> Dict[str, Any]:
+    def evaluate_regime_adaptability(
+        self, strategy_weights: Dict[str, float]
+    ) -> Dict[str, Any]:
         """Pre-tests strategy weight configurations across 100 counterfactual future paths."""
-        self.logger.info("Simulating %d Hawkes counterfactual regime paths...", self.num_paths)
+        self.logger.info(
+            "Simulating %d Hawkes counterfactual regime paths...", self.num_paths
+        )
         survival_count = 0
         total_pnl = 0.0
 
@@ -66,9 +74,15 @@ class TemporalCounterfactualEngine:
         adapted = survival_rate >= 0.90
 
         if adapted:
-            self.logger.info("Strategy Weights PRE-ADAPTED to Future Regimes! Survival Rate: %.2f%%", survival_rate * 100)
+            self.logger.info(
+                "Strategy Weights PRE-ADAPTED to Future Regimes! Survival Rate: %.2f%%",
+                survival_rate * 100,
+            )
         else:
-            self.logger.warning("Regime Vulnerability Detected! Survival Rate: %.2f%%", survival_rate * 100)
+            self.logger.warning(
+                "Regime Vulnerability Detected! Survival Rate: %.2f%%",
+                survival_rate * 100,
+            )
 
         return {
             "survival_rate": survival_rate,
@@ -80,5 +94,7 @@ class TemporalCounterfactualEngine:
 
 if __name__ == "__main__":
     engine = TemporalCounterfactualEngine(num_paths=50)
-    res = engine.evaluate_regime_adaptability({"phoenix": 1.5, "aurora": 1.5, "quantum": 2.0})
+    res = engine.evaluate_regime_adaptability(
+        {"phoenix": 1.5, "aurora": 1.5, "quantum": 2.0}
+    )
     print("Counterfactual Result:", res)

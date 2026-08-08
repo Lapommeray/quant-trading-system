@@ -8,6 +8,4 @@ AI market being that perceives intention rather than just price.
 
 from .conscious_intelligence_layer import ConsciousIntelligenceLayer
 
-__all__ = [
-    'ConsciousIntelligenceLayer'
-]
+__all__ = ["ConsciousIntelligenceLayer"]

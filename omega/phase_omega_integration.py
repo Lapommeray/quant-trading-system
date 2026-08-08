@@ -17,7 +17,9 @@ class PhaseOmegaIntegrator:
     def compute_master_signal(self, components: Sequence[float]) -> float:
         """Compute weighted score from 5 component values."""
         if len(components) != 5:
-            raise ValueError("Expected exactly 5 components: quantum, temporal, defense, biological, mind")
+            raise ValueError(
+                "Expected exactly 5 components: quantum, temporal, defense, biological, mind"
+            )
         q, t, d, b, m = components
         return (
             q * self.quantum_weight

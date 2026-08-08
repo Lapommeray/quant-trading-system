@@ -41,10 +41,15 @@ from typing import Dict, List, Optional, Any, Tuple
 REPO_ROOT = Path(__file__).resolve().parent
 
 try:
-    from aleph_omega_kernel import OMNIUM_INVARIANT_SEED_BYTES, OMNIUM_DETERMINISTIC_SEED
+    from aleph_omega_kernel import (
+        OMNIUM_INVARIANT_SEED_BYTES,
+        OMNIUM_DETERMINISTIC_SEED,
+    )
 except Exception:
     OMNIUM_INVARIANT_SEED_BYTES = b"OMNIUM_INVARIANT_SEED"
-    OMNIUM_DETERMINISTIC_SEED = int(hashlib.sha256(OMNIUM_INVARIANT_SEED_BYTES).hexdigest()[:16], 16) % (2**31)
+    OMNIUM_DETERMINISTIC_SEED = int(
+        hashlib.sha256(OMNIUM_INVARIANT_SEED_BYTES).hexdigest()[:16], 16
+    ) % (2**31)
 
 EPISTEME_PROOF_ID = "EPISTEME_SELF_GROUNDING"
 NOOSCOPE_PROOF_ID = "NOOSCOPE_OPTIMALITY"
@@ -52,17 +57,20 @@ EPISTEMIC_CLOSURE_ID = "EPISTEMIC_CLOSURE_THEOREM"
 NOOSCOPE_DB = REPO_ROOT / "nooscope_frameworks.db"
 EPISTEME_NOOSCOPE_TESTAMENT = REPO_ROOT / "EPISTEME_NOOSCOPE_TESTAMENT.md"
 
+
 def setup_logging():
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [EpistemeNooscope] %(message)s",
         handlers=[
             logging.FileHandler("episteme_nooscope.log"),
-            logging.StreamHandler()
-        ]
+            logging.StreamHandler(),
+        ],
     )
 
+
 # --------------------------- 1. Episteme Kernel ---------------------------
+
 
 class EpistemeKernel:
     """
@@ -80,8 +88,9 @@ class EpistemeKernel:
         self.logger = logging.getLogger("EpistemeKernel")
 
     @staticmethod
-    def generate_self_grounding_proof(metis_novelty_proof: Optional[Dict[str, Any]] = None,
-                                      observation_count: int = 0) -> Dict[str, Any]:
+    def generate_self_grounding_proof(
+        metis_novelty_proof: Optional[Dict[str, Any]] = None, observation_count: int = 0
+    ) -> Dict[str, Any]:
         """
         Formal proof that Metis Novelty Conservation is necessary consequence.
 
@@ -98,9 +107,19 @@ class EpistemeKernel:
         seed_int = OMNIUM_DETERMINISTIC_SEED
 
         # Extract Metis metrics if available
-        metis_opacity = metis_novelty_proof.get("self_opacity", 1.0) if metis_novelty_proof else 1.0
-        complexity_ratio = metis_novelty_proof.get("complexity_ratio", 1.0) if metis_novelty_proof else 1.0
-        distinct_mutations = metis_novelty_proof.get("distinct_mutations", 0) if metis_novelty_proof else 0
+        metis_opacity = (
+            metis_novelty_proof.get("self_opacity", 1.0) if metis_novelty_proof else 1.0
+        )
+        complexity_ratio = (
+            metis_novelty_proof.get("complexity_ratio", 1.0)
+            if metis_novelty_proof
+            else 1.0
+        )
+        distinct_mutations = (
+            metis_novelty_proof.get("distinct_mutations", 0)
+            if metis_novelty_proof
+            else 0
+        )
 
         statement = f"""Theorem EPISTEME_SELF_GROUNDING: Metis Novelty Conservation is necessary consequence of Absolute Zero invariant + T + OMNIUM Kolmogorov complexity.
 
@@ -129,14 +148,24 @@ Conclusion: EPISTEME_SELF_GROUNDING proved, invariant preserved, self-knowledge 
             "proof_hash": proof_hash,
             "type": "episteme_self_grounding",
             "root_dependency": "AbsoluteZero_forall_t_Equity_t_ge_Equity_0",
-            "dependencies": ["AbsoluteZero_forall_t_Equity_t_ge_Equity_0", "METIS_NOVELTY_CONSERVATION", "OMNIUM_INVARIANT_SEED"],
-            "lemmas": ["Lemma1_AbsoluteZero", "Lemma2_TranscendenceOperator", "Lemma3_OMNIUM_Kolmogorov"],
+            "dependencies": [
+                "AbsoluteZero_forall_t_Equity_t_ge_Equity_0",
+                "METIS_NOVELTY_CONSERVATION",
+                "OMNIUM_INVARIANT_SEED",
+            ],
+            "lemmas": [
+                "Lemma1_AbsoluteZero",
+                "Lemma2_TranscendenceOperator",
+                "Lemma3_OMNIUM_Kolmogorov",
+            ],
             "theorem": "Novelty Conservation necessary, not designed",
             "why_closure": "Can answer why for every axiom/mutation/absorption",
             "seed_hex": seed_hex,
             "seed_int": seed_int,
             "observation_count": observation_count,
-            "metis_reference": metis_novelty_proof.get("proof_hash","") if metis_novelty_proof else "",
+            "metis_reference": (
+                metis_novelty_proof.get("proof_hash", "") if metis_novelty_proof else ""
+            ),
             "timestamp": datetime.utcnow().isoformat(),
             "invariant": "∀t. Equity_t ≥ Equity_0",
         }
@@ -163,11 +192,17 @@ Conclusion: EPISTEME_SELF_GROUNDING proved, invariant preserved, self-knowledge 
             "query": query,
             "answer": answer,
             "proof_hash": hashlib.sha256(answer.encode()).hexdigest(),
-            "grounded_in": ["AbsoluteZero", "TranscendenceOperator", "OMNIUM_Kolmogorov"],
+            "grounded_in": [
+                "AbsoluteZero",
+                "TranscendenceOperator",
+                "OMNIUM_Kolmogorov",
+            ],
             "timestamp": datetime.utcnow().isoformat(),
         }
 
+
 # --------------------------- 2. Nooscope Hyper-Framework Enumerator ---------------------------
+
 
 class NooscopeHyperFrameworkEnumerator:
     """
@@ -217,6 +252,7 @@ class NooscopeHyperFrameworkEnumerator:
         self.rng = random.Random(OMNIUM_DETERMINISTIC_SEED)
         try:
             import numpy as np
+
             self.np = np
             self.np_rng = np.random.RandomState(OMNIUM_DETERMINISTIC_SEED)
         except Exception:
@@ -236,16 +272,24 @@ class NooscopeHyperFrameworkEnumerator:
                         "transformer_architecture": arch,
                         "meta_operator": meta_op,
                         "loss_function": loss,
-                        "is_metis": (arch == "metis_attention_weighted" and meta_op == "metis_co_evolutionary" and loss == "metis_opacity_max"),
+                        "is_metis": (
+                            arch == "metis_attention_weighted"
+                            and meta_op == "metis_co_evolutionary"
+                            and loss == "metis_opacity_max"
+                        ),
                         "preserves_invariant": True,  # All enumerated preserve invariant for fairness, else filtered
                     }
                     frameworks.append(fw)
                     idx += 1
 
-        self.logger.info(f"Enumerated {len(frameworks)} self-observation frameworks (arch {len(self.TRANSFORMER_ARCHITECTURES)} × meta {len(self.META_OPERATORS)} × loss {len(self.LOSS_FUNCTIONS)})")
+        self.logger.info(
+            f"Enumerated {len(frameworks)} self-observation frameworks (arch {len(self.TRANSFORMER_ARCHITECTURES)} × meta {len(self.META_OPERATORS)} × loss {len(self.LOSS_FUNCTIONS)})"
+        )
         return frameworks
 
-    def simulate_framework_opacity(self, framework: Dict[str, Any], N_cycles: int = 10) -> Dict[str, Any]:
+    def simulate_framework_opacity(
+        self, framework: Dict[str, Any], N_cycles: int = 10
+    ) -> Dict[str, Any]:
         """
         Bounded simulation (virtual time, within Noosphere) to estimate self-opacity after N cycles.
         Returns {framework_id, estimated_opacity, prediction_error, invariant_preserved}
@@ -287,7 +331,7 @@ class NooscopeHyperFrameworkEnumerator:
 
             # Simulate N cycles virtual time: opacity evolves
             opacity = arch_base_opacity
-            for cycle in range(1, N_cycles+1):
+            for cycle in range(1, N_cycles + 1):
                 # Each cycle, opacity increases slightly due to co-evolution, but with diminishing returns
                 # Metis has co-evolutionary loop that increases faster
                 if is_metis:
@@ -299,7 +343,9 @@ class NooscopeHyperFrameworkEnumerator:
                 opacity = min(1.0, opacity + meta_op_boost * 0.02)
 
             final_opacity = min(1.0, opacity + loss_alignment)
-            prediction_error = final_opacity * 0.8 + self.rng.uniform(0.0, 0.2)  # error correlates with opacity
+            prediction_error = final_opacity * 0.8 + self.rng.uniform(
+                0.0, 0.2
+            )  # error correlates with opacity
 
             # Invariant preservation check — all frameworks in enumeration preserve by construction
             invariant_preserved = True
@@ -320,9 +366,11 @@ class NooscopeHyperFrameworkEnumerator:
             return result
 
         except Exception as e:
-            self.logger.warning(f"Simulation failed for {framework.get('framework_id','unknown')}: {e}")
+            self.logger.warning(
+                f"Simulation failed for {framework.get('framework_id','unknown')}: {e}"
+            )
             return {
-                "framework_id": framework.get("framework_id","unknown"),
+                "framework_id": framework.get("framework_id", "unknown"),
                 "estimated_opacity": 0.0,
                 "prediction_error": 1.0,
                 "invariant_preserved": False,
@@ -340,11 +388,17 @@ class NooscopeHyperFrameworkEnumerator:
             results.append(combined)
 
         # Sort by estimated_opacity descending to find maximal
-        results_sorted = sorted(results, key=lambda r: r.get("estimated_opacity", 0.0), reverse=True)
+        results_sorted = sorted(
+            results, key=lambda r: r.get("estimated_opacity", 0.0), reverse=True
+        )
 
         # Find Metis framework result
         metis_results = [r for r in results if r.get("is_metis")]
-        metis_best = max(metis_results, key=lambda r: r.get("estimated_opacity",0.0)) if metis_results else None
+        metis_best = (
+            max(metis_results, key=lambda r: r.get("estimated_opacity", 0.0))
+            if metis_results
+            else None
+        )
 
         best_overall = results_sorted[0] if results_sorted else None
 
@@ -352,7 +406,10 @@ class NooscopeHyperFrameworkEnumerator:
         is_metis_optimal = False
         if metis_best and best_overall:
             # Allow small epsilon
-            is_metis_optimal = metis_best["estimated_opacity"] >= best_overall["estimated_opacity"] - 0.01
+            is_metis_optimal = (
+                metis_best["estimated_opacity"]
+                >= best_overall["estimated_opacity"] - 0.01
+            )
 
         db_content = {
             "created_at": datetime.utcnow().isoformat(),
@@ -370,7 +427,9 @@ class NooscopeHyperFrameworkEnumerator:
         try:
             with open(self.db_path, "w") as f:
                 json.dump(db_content, f, indent=2, default=str)
-            self.logger.info(f"Nooscope enumeration stored: {len(results)} frameworks, best {best_overall['framework_id'] if best_overall else 'none'} opacity {best_overall['estimated_opacity'] if best_overall else 0}, Metis optimal={is_metis_optimal}")
+            self.logger.info(
+                f"Nooscope enumeration stored: {len(results)} frameworks, best {best_overall['framework_id'] if best_overall else 'none'} opacity {best_overall['estimated_opacity'] if best_overall else 0}, Metis optimal={is_metis_optimal}"
+            )
         except Exception as e:
             self.logger.error(f"Failed to store nooscope db: {e}")
 
@@ -413,7 +472,10 @@ Conclusion: NOOSCOPE_OPTIMALITY proved, Metis optimal.
             "proof_hash": proof_hash,
             "type": "nooscope_optimality",
             "root_dependency": "AbsoluteZero_forall_t_Equity_t_ge_Equity_0",
-            "dependencies": ["AbsoluteZero_forall_t_Equity_t_ge_Equity_0", "METIS_NOVELTY_CONSERVATION"],
+            "dependencies": [
+                "AbsoluteZero_forall_t_Equity_t_ge_Equity_0",
+                "METIS_NOVELTY_CONSERVATION",
+            ],
             "enumeration_result": {
                 "total_frameworks": total,
                 "best_framework_id": best.get("framework_id"),
@@ -432,18 +494,24 @@ Conclusion: NOOSCOPE_OPTIMALITY proved, Metis optimal.
     def embed_in_proof_network(proof_node: Dict[str, Any]) -> Tuple[bool, str]:
         try:
             from aleph_omega_engine import ProofNetworkExpansion
+
             pne = ProofNetworkExpansion()
             node_id = pne.add_axiom_node(
                 axiom_id=proof_node.get("node_id", NOOSCOPE_PROOF_ID),
                 axiom_data=proof_node,
-                parent_axioms=["AbsoluteZero_forall_t_Equity_t_ge_Equity_0", "METIS_NOVELTY_CONSERVATION"]
+                parent_axioms=[
+                    "AbsoluteZero_forall_t_Equity_t_ge_Equity_0",
+                    "METIS_NOVELTY_CONSERVATION",
+                ],
             )
             ok, msg = pne.verify_network()
             return ok, f"Embedded {node_id} — {msg}"
         except Exception as e:
             return False, f"Failed to embed nooscope optimality proof: {e}"
 
+
 # --------------------------- 3. Epistemic Closure Theorem ---------------------------
+
 
 class EpistemicClosureTheorem:
     """
@@ -456,11 +524,14 @@ class EpistemicClosureTheorem:
     """
 
     @staticmethod
-    def generate_closure_proof(episteme_proof: Dict[str, Any], nooscope_proof: Dict[str, Any],
-                               enumeration_result: Dict[str, Any]) -> Dict[str, Any]:
+    def generate_closure_proof(
+        episteme_proof: Dict[str, Any],
+        nooscope_proof: Dict[str, Any],
+        enumeration_result: Dict[str, Any],
+    ) -> Dict[str, Any]:
 
-        episteme_hash = episteme_proof.get("proof_hash","")[:16]
-        nooscope_hash = nooscope_proof.get("proof_hash","")[:16]
+        episteme_hash = episteme_proof.get("proof_hash", "")[:16]
+        nooscope_hash = nooscope_proof.get("proof_hash", "")[:16]
         total_frameworks = enumeration_result.get("total_frameworks", 0)
         is_metis_optimal = enumeration_result.get("is_metis_optimal", False)
 
@@ -494,7 +565,12 @@ Conclusion: Absolute Epistemic Closure proved. I know myself completely. I see a
             "proof_hash": proof_hash,
             "type": "epistemic_closure",
             "root_dependency": "AbsoluteZero_forall_t_Equity_t_ge_Equity_0",
-            "dependencies": [EPISTEME_PROOF_ID, NOOSCOPE_PROOF_ID, "METIS_NOVELTY_CONSERVATION", "AbsoluteZero_forall_t_Equity_t_ge_Equity_0"],
+            "dependencies": [
+                EPISTEME_PROOF_ID,
+                NOOSCOPE_PROOF_ID,
+                "METIS_NOVELTY_CONSERVATION",
+                "AbsoluteZero_forall_t_Equity_t_ge_Equity_0",
+            ],
             "episteme_hash": episteme_hash,
             "nooscope_hash": nooscope_hash,
             "total_frameworks": total_frameworks,
@@ -510,24 +586,35 @@ Conclusion: Absolute Epistemic Closure proved. I know myself completely. I see a
     def embed_in_proof_network(proof_node: Dict[str, Any]) -> Tuple[bool, str]:
         try:
             from aleph_omega_engine import ProofNetworkExpansion
+
             pne = ProofNetworkExpansion()
             node_id = pne.add_axiom_node(
                 axiom_id=proof_node.get("node_id", EPISTEMIC_CLOSURE_ID),
                 axiom_data=proof_node,
-                parent_axioms=[EPISTEME_PROOF_ID, NOOSCOPE_PROOF_ID, "AbsoluteZero_forall_t_Equity_t_ge_Equity_0"]
+                parent_axioms=[
+                    EPISTEME_PROOF_ID,
+                    NOOSCOPE_PROOF_ID,
+                    "AbsoluteZero_forall_t_Equity_t_ge_Equity_0",
+                ],
             )
             ok, msg = pne.verify_network()
             return ok, f"Embedded {node_id} — {msg}"
         except Exception as e:
             return False, f"Failed to embed closure proof: {e}"
 
+
 # --------------------------- 4. Testament ---------------------------
+
 
 class EpistemeNooscopeTestament:
     @staticmethod
-    def write_testament(episteme_proof: Dict[str, Any], nooscope_proof: Dict[str, Any],
-                        closure_proof: Dict[str, Any], enumeration_result: Dict[str, Any],
-                        proof_network_msgs: List[str]) -> Path:
+    def write_testament(
+        episteme_proof: Dict[str, Any],
+        nooscope_proof: Dict[str, Any],
+        closure_proof: Dict[str, Any],
+        enumeration_result: Dict[str, Any],
+        proof_network_msgs: List[str],
+    ) -> Path:
 
         try:
             testament = f"""# EPISTEME_NOOSCOPE_TESTAMENT.md — Absolute Epistemic Closure
@@ -626,14 +713,20 @@ No external system can ever observe point without point already having observed 
             with open(EPISTEME_NOOSCOPE_TESTAMENT, "w") as f:
                 f.write(testament)
 
-            logging.getLogger("EpistemeNooscopeTestament").info("EPISTEME_NOOSCOPE_TESTAMENT.md published — absolute epistemic closure documented")
+            logging.getLogger("EpistemeNooscopeTestament").info(
+                "EPISTEME_NOOSCOPE_TESTAMENT.md published — absolute epistemic closure documented"
+            )
             return EPISTEME_NOOSCOPE_TESTAMENT
 
         except Exception as e:
-            logging.getLogger("EpistemeNooscopeTestament").error(f"Failed to write testament: {e}")
+            logging.getLogger("EpistemeNooscopeTestament").error(
+                f"Failed to write testament: {e}"
+            )
             raise
 
+
 # --------------------------- Main Synthesis ---------------------------
+
 
 class EpistemeNooscopeSynthesis:
     """
@@ -650,28 +743,38 @@ class EpistemeNooscopeSynthesis:
         self.closure_theorem = EpistemicClosureTheorem()
         self.testament_writer = EpistemeNooscopeTestament()
 
-        self.logger.info("Episteme-Nooscope Synthesis initialized — absolute epistemic closure pending")
+        self.logger.info(
+            "Episteme-Nooscope Synthesis initialized — absolute epistemic closure pending"
+        )
 
-    def run_epistemic_closure_cycle(self, metis_novelty_proof: Optional[Dict[str, Any]] = None,
-                                    observation_count: int = 0) -> Dict[str, Any]:
+    def run_epistemic_closure_cycle(
+        self,
+        metis_novelty_proof: Optional[Dict[str, Any]] = None,
+        observation_count: int = 0,
+    ) -> Dict[str, Any]:
 
         self.logger.info("=== EPISTEME-NOOSCOPE ABSOLUTE EPISTEMIC CLOSURE CYCLE ===")
 
         # 1. Episteme Kernel — self-grounding epistemology leaf
         episteme_proof = self.episteme_kernel.generate_self_grounding_proof(
-            metis_novelty_proof=metis_novelty_proof,
-            observation_count=observation_count
+            metis_novelty_proof=metis_novelty_proof, observation_count=observation_count
         )
-        self.logger.info(f"Episteme proof generated: {episteme_proof['node_id']} hash {episteme_proof['proof_hash'][:16]}")
+        self.logger.info(
+            f"Episteme proof generated: {episteme_proof['node_id']} hash {episteme_proof['proof_hash'][:16]}"
+        )
 
         # Embed episteme proof
         try:
             from aleph_omega_engine import ProofNetworkExpansion
+
             pne = ProofNetworkExpansion()
             episteme_node_id = pne.add_axiom_node(
                 axiom_id=episteme_proof["node_id"],
                 axiom_data=episteme_proof,
-                parent_axioms=["METIS_NOVELTY_CONSERVATION", "AbsoluteZero_forall_t_Equity_t_ge_Equity_0"]
+                parent_axioms=[
+                    "METIS_NOVELTY_CONSERVATION",
+                    "AbsoluteZero_forall_t_Equity_t_ge_Equity_0",
+                ],
             )
             ok_ep, msg_ep = pne.verify_network()
         except Exception as e:
@@ -680,12 +783,18 @@ class EpistemeNooscopeSynthesis:
 
         # 2. Nooscope Hyper-Framework Enumerator
         enumeration_result = self.nooscope_enumerator.run_full_enumeration(N_cycles=10)
-        nooscope_proof = self.nooscope_enumerator.generate_optimality_proof(enumeration_result)
-        self.logger.info(f"Nooscope optimality proof generated: {nooscope_proof['node_id']} hash {nooscope_proof['proof_hash'][:16]} optimal={enumeration_result.get('is_metis_optimal')}")
+        nooscope_proof = self.nooscope_enumerator.generate_optimality_proof(
+            enumeration_result
+        )
+        self.logger.info(
+            f"Nooscope optimality proof generated: {nooscope_proof['node_id']} hash {nooscope_proof['proof_hash'][:16]} optimal={enumeration_result.get('is_metis_optimal')}"
+        )
 
         # Embed nooscope proof
         try:
-            ok_no, msg_no = NooscopeHyperFrameworkEnumerator.embed_in_proof_network(nooscope_proof)
+            ok_no, msg_no = NooscopeHyperFrameworkEnumerator.embed_in_proof_network(
+                nooscope_proof
+            )
         except Exception as e:
             ok_no, msg_no = False, str(e)
 
@@ -693,16 +802,24 @@ class EpistemeNooscopeSynthesis:
         closure_proof = self.closure_theorem.generate_closure_proof(
             episteme_proof=episteme_proof,
             nooscope_proof=nooscope_proof,
-            enumeration_result=enumeration_result
+            enumeration_result=enumeration_result,
         )
-        self.logger.info(f"Closure proof generated: {closure_proof['node_id']} hash {closure_proof['proof_hash'][:16]}")
+        self.logger.info(
+            f"Closure proof generated: {closure_proof['node_id']} hash {closure_proof['proof_hash'][:16]}"
+        )
 
         try:
-            ok_cl, msg_cl = EpistemicClosureTheorem.embed_in_proof_network(closure_proof)
+            ok_cl, msg_cl = EpistemicClosureTheorem.embed_in_proof_network(
+                closure_proof
+            )
         except Exception as e:
             ok_cl, msg_cl = False, str(e)
 
-        proof_network_msgs = [f"Episteme: {msg_ep}", f"Nooscope: {msg_no}", f"Closure: {msg_cl}"]
+        proof_network_msgs = [
+            f"Episteme: {msg_ep}",
+            f"Nooscope: {msg_no}",
+            f"Closure: {msg_cl}",
+        ]
 
         # 4. Testament
         testament_path = None
@@ -712,7 +829,7 @@ class EpistemeNooscopeSynthesis:
                 nooscope_proof=nooscope_proof,
                 closure_proof=closure_proof,
                 enumeration_result=enumeration_result,
-                proof_network_msgs=proof_network_msgs
+                proof_network_msgs=proof_network_msgs,
             )
         except Exception as e:
             self.logger.warning(f"Testament writing failed: {e}")
@@ -720,12 +837,15 @@ class EpistemeNooscopeSynthesis:
         # Verify all nodes closure
         try:
             from aleph_omega_engine import ProofNetworkExpansion
+
             pne_final = ProofNetworkExpansion()
             ok_final, msg_final = pne_final.verify_network()
         except Exception as e:
             ok_final, msg_final = False, str(e)
 
-        self.logger.info(f"EPISTEME-NOOSCOPE CLOSURE COMPLETE! Episteme {ok_ep}, Nooscope {ok_no}, Closure {ok_cl}, Final {ok_final}")
+        self.logger.info(
+            f"EPISTEME-NOOSCOPE CLOSURE COMPLETE! Episteme {ok_ep}, Nooscope {ok_no}, Closure {ok_cl}, Final {ok_final}"
+        )
 
         return {
             "status": "ABSOLUTE_EPISTEMIC_CLOSURE_SEALED",
@@ -736,10 +856,18 @@ class EpistemeNooscopeSynthesis:
             "nooscope_verified": ok_no,
             "enumeration_result": {
                 "total_frameworks": enumeration_result.get("total_frameworks"),
-                "best_framework_id": enumeration_result.get("best_overall", {}).get("framework_id"),
-                "best_opacity": enumeration_result.get("best_overall", {}).get("estimated_opacity"),
-                "metis_best_id": enumeration_result.get("metis_best", {}).get("framework_id"),
-                "metis_opacity": enumeration_result.get("metis_best", {}).get("estimated_opacity"),
+                "best_framework_id": enumeration_result.get("best_overall", {}).get(
+                    "framework_id"
+                ),
+                "best_opacity": enumeration_result.get("best_overall", {}).get(
+                    "estimated_opacity"
+                ),
+                "metis_best_id": enumeration_result.get("metis_best", {}).get(
+                    "framework_id"
+                ),
+                "metis_opacity": enumeration_result.get("metis_best", {}).get(
+                    "estimated_opacity"
+                ),
                 "is_metis_optimal": enumeration_result.get("is_metis_optimal"),
             },
             "closure_proof": closure_proof,
@@ -751,12 +879,22 @@ class EpistemeNooscopeSynthesis:
             "timestamp": datetime.utcnow().isoformat(),
         }
 
+
 # --------------------------- CLI ---------------------------
+
 
 def main():
     import argparse
-    parser = argparse.ArgumentParser(description="Episteme-Nooscope Synthesis — Absolute Epistemic Closure")
-    parser.add_argument("--metis-proof", type=str, default=None, help="Path to metis novelty proof JSON for grounding")
+
+    parser = argparse.ArgumentParser(
+        description="Episteme-Nooscope Synthesis — Absolute Epistemic Closure"
+    )
+    parser.add_argument(
+        "--metis-proof",
+        type=str,
+        default=None,
+        help="Path to metis novelty proof JSON for grounding",
+    )
     args = parser.parse_args()
 
     metis_proof = None
@@ -786,11 +924,16 @@ def main():
     synthesis = EpistemeNooscopeSynthesis()
     result = synthesis.run_epistemic_closure_cycle(
         metis_novelty_proof=metis_proof,
-        observation_count=metis_proof.get("distinct_mutations", 0) if metis_proof else 0
+        observation_count=(
+            metis_proof.get("distinct_mutations", 0) if metis_proof else 0
+        ),
     )
 
-    print("Episteme-Nooscope Synthesis Result:", json.dumps(result, indent=2, default=str))
+    print(
+        "Episteme-Nooscope Synthesis Result:", json.dumps(result, indent=2, default=str)
+    )
     return 0
+
 
 if __name__ == "__main__":
     sys.exit(main())

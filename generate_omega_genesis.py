@@ -43,7 +43,7 @@ def generate_omega_genesis_artifacts():
             "CrossAssetNeuralArbiter",
             "DecentralizedSwarmPit",
             "AutonomousEvolutionDaemon",
-        ]
+        ],
     }
 
     report_path = Path("omega_genesis_report.json")

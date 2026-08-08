@@ -3,6 +3,7 @@ import os
 import subprocess
 from pathlib import Path
 
+
 def get_suggestions():
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
@@ -23,13 +24,16 @@ def get_suggestions():
         ".env",
         "config.json",
         "mt5_bridge.py",
-        "okx_live/"
+        "okx_live/",
     ]
 
     for f in repo.rglob("*.py"):
-        if any(part in f.parts for part in [".git", "tests", "testing", "__pycache__", ".venv"]):
+        if any(
+            part in f.parts
+            for part in [".git", "tests", "testing", "__pycache__", ".venv"]
+        ):
             continue
-        if any(f.match(prot) or prot.rstrip('/') in str(f) for prot in protected):
+        if any(f.match(prot) or prot.rstrip("/") in str(f) for prot in protected):
             continue
         try:
             sources.append(f"--- {f.relative_to(repo)} ---\n{f.read_text()}")
@@ -50,7 +54,7 @@ def get_suggestions():
         response = openai.ChatCompletion.create(
             model="gpt-4-turbo",
             messages=[{"role": "user", "content": prompt}],
-            temperature=0.3
+            temperature=0.3,
         )
         patch = response.choices[0].message.content.strip()
 

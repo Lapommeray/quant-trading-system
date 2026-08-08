@@ -24,7 +24,7 @@ from typing import Dict, List, Optional, Tuple
 # --------------------------- CONFIGURATION ---------------------------
 
 REPO_ROOT = Path(__file__).resolve().parent
-MAIN_BRANCH = "arena/019fdf4d-quant-trading-system"   # Fixed session branch
+MAIN_BRANCH = "arena/019fdf4d-quant-trading-system"  # Fixed session branch
 
 TEST_CMD = [sys.executable, "-m", "pytest", "-x", "--tb=short"]
 COMPREHENSIVE_TEST_CMD = ["python3", "run_comprehensive_test.py"]
@@ -170,21 +170,19 @@ PROTECTED_PATHS = [
 ]
 
 # Evolution cycle sleep (seconds)
-SLEEP_SECONDS = 600   # 10 minutes
+SLEEP_SECONDS = 600  # 10 minutes
 
 # Setup logging
 logging.basicConfig(
     level=logging.INFO,
     format="%(asctime)s [EVOLVE] %(message)s",
-    handlers=[
-        logging.FileHandler("evolution.log"),
-        logging.StreamHandler(sys.stdout)
-    ]
+    handlers=[logging.FileHandler("evolution.log"), logging.StreamHandler(sys.stdout)],
 )
 log = logging.getLogger("evolve")
 
 
 # --------------------------- GIT HELPERS ---------------------------
+
 
 def run_cmd(cmd: list, cwd=None, input_text: str = None) -> Tuple[int, str, str]:
     """Run a shell command and return (returncode, stdout, stderr)."""
@@ -195,7 +193,7 @@ def run_cmd(cmd: list, cwd=None, input_text: str = None) -> Tuple[int, str, str]
             input=input_text,
             capture_output=True,
             text=True,
-            timeout=300
+            timeout=300,
         )
         return result.returncode, result.stdout, result.stderr
     except subprocess.TimeoutExpired:
@@ -236,7 +234,8 @@ def merge_branch(branch: str, message: str):
 
 # --------------------------- METRICS EXTRACTION ---------------------------
 
-def flatten_dict(d, parent_key='', sep='_'):
+
+def flatten_dict(d, parent_key="", sep="_"):
     """Flatten nested dictionaries for easy key search."""
     items = {}
     for k, v in d.items():
@@ -248,7 +247,12 @@ def flatten_dict(d, parent_key='', sep='_'):
     return items
 
 
-def load_backtest_metrics(use_live_data: bool = False, symbol: str = "BTC-USD", period: str = "1y", interval: str = "1d") -> Optional[Dict]:
+def load_backtest_metrics(
+    use_live_data: bool = False,
+    symbol: str = "BTC-USD",
+    period: str = "1y",
+    interval: str = "1d",
+) -> Optional[Dict]:
     """
     Load the performance metrics from the TRUE metric source.
 
@@ -273,30 +277,36 @@ def load_backtest_metrics(use_live_data: bool = False, symbol: str = "BTC-USD", 
     try:
         import numpy as _np  # ensure substrate is present before importing backtester
 
-        from advanced_modules.enhanced_backtester import EnhancedBacktester, fetch_live_ohlcv
+        from advanced_modules.enhanced_backtester import (
+            EnhancedBacktester,
+            fetch_live_ohlcv,
+        )
 
         backtester = EnhancedBacktester()
         backtester.initialize_backtrader()
 
         # Provide minimal strategy + data feed so a backtest produces trades
         # even on simulated path (required for _generate_simulated_trades guard)
-        if not backtester.cerebro.get('strategies'):
+        if not backtester.cerebro.get("strategies"):
             backtester.add_strategy({"name": "evolve_default"})
-        if not backtester.cerebro.get('data_feeds'):
-            backtester.add_data(_np.array([100.0, 101.0, 99.0, 102.0, 103.0]),
-                                name="evolve_default")
+        if not backtester.cerebro.get("data_feeds"):
+            backtester.add_data(
+                _np.array([100.0, 101.0, 99.0, 102.0, 103.0]), name="evolve_default"
+            )
 
         ohlcv_df = None
         data_source = "simulated"
         if use_live_data:
-            log.info(f"Live Data Injection requested: fetching {symbol} {period} {interval}")
+            log.info(
+                f"Live Data Injection requested: fetching {symbol} {period} {interval}"
+            )
             ohlcv_df = fetch_live_ohlcv(symbol=symbol, period=period, interval=interval)
             data_source = "live"
             results = backtester.run_backtest(ohlcv_df=ohlcv_df)
         else:
             results = backtester.run_backtest()
 
-        metrics = backtester.metrics or (results or {}).get('metrics') or {}
+        metrics = backtester.metrics or (results or {}).get("metrics") or {}
 
         # Export physical file
         exported_path = backtester.export_results()
@@ -305,11 +315,15 @@ def load_backtest_metrics(use_live_data: bool = False, symbol: str = "BTC-USD", 
             try:
                 with open(exported_path) as f:
                     data = json.load(f)
-                raw_metrics = data.get('metrics', data) if isinstance(data, dict) else {}
+                raw_metrics = (
+                    data.get("metrics", data) if isinstance(data, dict) else {}
+                )
                 if raw_metrics:
                     metrics = raw_metrics
             except Exception:
-                log.warning("Failed to parse exported backtest JSON; using in-memory metrics")
+                log.warning(
+                    "Failed to parse exported backtest JSON; using in-memory metrics"
+                )
 
         flat = flatten_dict(metrics)
         loaded = {
@@ -322,14 +336,22 @@ def load_backtest_metrics(use_live_data: bool = False, symbol: str = "BTC-USD", 
             "total_trades": int(flat.get("total_trades", 0) or 0),
         }
         # Guard against non-finite values (e.g. profit_factor=inf when no losers).
-        for key in ["win_rate", "total_pnl", "profit_factor", "sharpe_ratio", "max_drawdown"]:
+        for key in [
+            "win_rate",
+            "total_pnl",
+            "profit_factor",
+            "sharpe_ratio",
+            "max_drawdown",
+        ]:
             if not math.isfinite(loaded[key]):
                 loaded[key] = 0.0
 
-        log.info("Loaded metrics (from %s) [%s]: %s",
-                 os.path.basename(exported_path) if exported_path else "in-memory",
-                 loaded.get("data_source", data_source),
-                 loaded)
+        log.info(
+            "Loaded metrics (from %s) [%s]: %s",
+            os.path.basename(exported_path) if exported_path else "in-memory",
+            loaded.get("data_source", data_source),
+            loaded,
+        )
         return loaded
     except Exception:
         log.exception("Failed to load backtest metrics from enhanced_backtester.")
@@ -358,13 +380,16 @@ def proof_network_valid() -> bool:
     """
     try:
         from aleph_omega_engine import ProofNetworkExpansion
+
         pne = ProofNetworkExpansion()
         ok = pne.verify_all_nodes()
         if not ok:
             ok2, msg = pne.verify_network()
             log.warning(f"Proof network invalid: {msg}")
             return False
-        log.info(f"Proof network valid: {pne.network.get('root')} with {len(pne.network.get('nodes',{}))} nodes")
+        log.info(
+            f"Proof network valid: {pne.network.get('root')} with {len(pne.network.get('nodes',{}))} nodes"
+        )
         return True
     except Exception as e:
         log.exception(f"Proof network validation exception: {e}")
@@ -381,23 +406,29 @@ def self_encoding_integrity_check() -> bool:
     """
     try:
         from aleph_omega_kernel import AlephOmegaKernel
+
         # Deterministic grounding + self-encoding
         AlephOmegaKernel.assert_deterministic_grounding()
         self_hash, archive = AlephOmegaKernel.assert_self_encoding()
-        log.info(f"Self-encoding integrity OK: kernel hash {self_hash[:16]}, archive {len(archive.get('engine_sources',{}))} engines")
+        log.info(
+            f"Self-encoding integrity OK: kernel hash {self_hash[:16]}, archive {len(archive.get('engine_sources',{}))} engines"
+        )
         # Also verify Omnium kernel grounding if available
         try:
             from omnium_kernel import OmniumKernel
+
             OmniumKernel.assert_deterministic_grounding()
             log.info("Omnium deterministic grounding OK")
         except Exception:
-            log.warning("Omnium grounding check failed or not available — continuing with Aleph-Omega kernel only")
+            log.warning(
+                "Omnium grounding check failed or not available — continuing with Aleph-Omega kernel only"
+            )
         return True
     except Exception as e:
-        log.critical(f"Self-encoding integrity FAILED: {e} — daemon halting for absolute zero preservation")
+        log.critical(
+            f"Self-encoding integrity FAILED: {e} — daemon halting for absolute zero preservation"
+        )
         return False
-
-
 
 
 def metrics_degraded(baseline: Optional[Dict], current: Dict) -> bool:
@@ -418,19 +449,37 @@ def metrics_degraded(baseline: Optional[Dict], current: Dict) -> bool:
         log.info("No baseline metrics locked yet; first-run treated as pass.")
         return False
     if current["win_rate"] < baseline["win_rate"] - eps:
-        log.warning("Win rate degraded: %.4f -> %.4f", baseline["win_rate"], current["win_rate"])
+        log.warning(
+            "Win rate degraded: %.4f -> %.4f", baseline["win_rate"], current["win_rate"]
+        )
         return True
     if current["max_drawdown"] > baseline["max_drawdown"] + eps:
-        log.warning("Max drawdown worsened: %.4f -> %.4f", baseline["max_drawdown"], current["max_drawdown"])
+        log.warning(
+            "Max drawdown worsened: %.4f -> %.4f",
+            baseline["max_drawdown"],
+            current["max_drawdown"],
+        )
         return True
     if current["sharpe_ratio"] < baseline["sharpe_ratio"] - eps:
-        log.warning("Sharpe ratio degraded: %.4f -> %.4f", baseline["sharpe_ratio"], current["sharpe_ratio"])
+        log.warning(
+            "Sharpe ratio degraded: %.4f -> %.4f",
+            baseline["sharpe_ratio"],
+            current["sharpe_ratio"],
+        )
         return True
     if current["profit_factor"] < baseline["profit_factor"] - eps:
-        log.warning("Profit factor degraded: %.4f -> %.4f", baseline["profit_factor"], current["profit_factor"])
+        log.warning(
+            "Profit factor degraded: %.4f -> %.4f",
+            baseline["profit_factor"],
+            current["profit_factor"],
+        )
         return True
     if current["total_pnl"] < baseline["total_pnl"] - eps:
-        log.warning("Total PnL degraded: %.4f -> %.4f", baseline["total_pnl"], current["total_pnl"])
+        log.warning(
+            "Total PnL degraded: %.4f -> %.4f",
+            baseline["total_pnl"],
+            current["total_pnl"],
+        )
         return True
 
     return False
@@ -438,13 +487,14 @@ def metrics_degraded(baseline: Optional[Dict], current: Dict) -> bool:
 
 # --------------------------- PATCH SAFETY ---------------------------
 
+
 def patch_touches_protected_paths(patch_text: str) -> bool:
     """Check if the patch modifies any protected file."""
-    paths = re.findall(r'^(?:---|\+\+\+) [ab]/?(.*?)$', patch_text, re.MULTILINE)
+    paths = re.findall(r"^(?:---|\+\+\+) [ab]/?(.*?)$", patch_text, re.MULTILINE)
     for p in paths:
         p_clean = p.strip()
         for protected in PROTECTED_PATHS:
-            if p_clean == protected or p_clean.startswith(protected.rstrip('/')):
+            if p_clean == protected or p_clean.startswith(protected.rstrip("/")):
                 log.warning("Patch touches protected path: %s", p_clean)
                 return True
     return False
@@ -472,16 +522,22 @@ def apply_patch(patch_text: str) -> bool:
 
 # --------------------------- TEST SUITE ---------------------------
 
+
 def run_all_tests() -> bool:
     """Execute all test commands; returns True only if all pass.
-    
+
     Phase 1 — Aleph-Omega Live Execution Bridge: also validates Proof Network DAG.
     """
     for cmd in ALL_TEST_CMDS:
         log.info("Running: %s", " ".join(cmd))
         rc, out, err = run_cmd(cmd)
         if rc != 0:
-            log.error("Test command failed (rc=%d).\nSTDOUT: %s\nSTDERR: %s", rc, out[:500], err[:500])
+            log.error(
+                "Test command failed (rc=%d).\nSTDOUT: %s\nSTDERR: %s",
+                rc,
+                out[:500],
+                err[:500],
+            )
             return False
 
     # Phase 1 — Proof Network Guard as hard CI gate
@@ -499,6 +555,7 @@ def run_all_tests() -> bool:
 try:
     from ai_suggester import get_suggestions as get_ai_suggestions
 except ImportError:
+
     def get_ai_suggestions() -> List[Dict]:
         """
         Fallback placeholder if ai_suggester is not installed or available.
@@ -508,17 +565,22 @@ except ImportError:
 
 # --------------------------- EVOLUTION CYCLE ---------------------------
 
+
 def evolve():
     log.info("=== Evolution cycle started ===")
 
     # Phase 3 — Self-Encoding Integrity as Daemon Pre-Start Check
     # If either assertion fails, daemon immediately halts — no evolution, no trades, no compromise
     if not self_encoding_integrity_check():
-        log.critical("Self-encoding integrity failed — HALTING evolution loop for absolute zero preservation")
+        log.critical(
+            "Self-encoding integrity failed — HALTING evolution loop for absolute zero preservation"
+        )
         return
 
     if not repo_clean():
-        log.error("Repository is not clean. Please commit or stash changes. Aborting cycle.")
+        log.error(
+            "Repository is not clean. Please commit or stash changes. Aborting cycle."
+        )
         return
 
     # Ensure we are on the designated session branch
@@ -535,7 +597,9 @@ def evolve():
 
     # Phase 1 — Proof Network Guard: validate DAG before baseline lock
     if not proof_network_valid():
-        log.error("Proof network DAG invalid — HALTING evolution, absolute zero invariant at risk")
+        log.error(
+            "Proof network DAG invalid — HALTING evolution, absolute zero invariant at risk"
+        )
         return
 
     baseline = load_backtest_metrics()
@@ -560,7 +624,7 @@ def evolve():
         if not patch:
             continue
 
-        safe_desc = re.sub(r'[^a-zA-Z0-9_-]', '_', desc)[:50]
+        safe_desc = re.sub(r"[^a-zA-Z0-9_-]", "_", desc)[:50]
         timestamp = datetime.now().strftime("%Y%m%d%H%M%S")
         branch_name = f"evolve/{timestamp}-{hashlib.md5(desc.encode()).hexdigest()[:8]}-{safe_desc}"
 
@@ -597,7 +661,10 @@ def evolve():
 
         # Phase 1 — Proof DAG hard gate: mutation breaking proof network is immediately rejected
         if not proof_network_valid():
-            log.warning("Proof network DAG broken for '%s'. Reverting — absolute zero invariant at risk.", desc)
+            log.warning(
+                "Proof network DAG broken for '%s'. Reverting — absolute zero invariant at risk.",
+                desc,
+            )
             checkout(MAIN_BRANCH)
             delete_branch(branch_name)
             continue
@@ -621,12 +688,16 @@ def evolve():
 # --------------------------- MAIN DAEMON ---------------------------
 
 if __name__ == "__main__":
-    log.info("Sacred-Quant Fusion Trading System – Autonomous Evolution Daemon started.")
+    log.info(
+        "Sacred-Quant Fusion Trading System – Autonomous Evolution Daemon started."
+    )
     while True:
         try:
             evolve()
         except Exception:
-            log.exception("Unhandled exception in evolution loop. Restarting cycle in 30s.")
+            log.exception(
+                "Unhandled exception in evolution loop. Restarting cycle in 30s."
+            )
             time.sleep(30)
 
         log.info("Sleeping for %d seconds...", SLEEP_SECONDS)

@@ -30,10 +30,7 @@ def setup_logging():
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [NoosphereEngine] %(message)s",
-        handlers=[
-            logging.FileHandler("noosphere.log"),
-            logging.StreamHandler()
-        ]
+        handlers=[logging.FileHandler("noosphere.log"), logging.StreamHandler()],
     )
 
 
@@ -48,7 +45,7 @@ class SyntheticDataFoundry:
             drift = random.gauss(0.0005, 0.012)
             if random.random() < 0.03:  # Synthetic jump shock
                 drift *= 2.5
-            price *= (1.0 + drift)
+            price *= 1.0 + drift
             stream.append(price)
         return stream
 
@@ -62,9 +59,13 @@ class ArchitectSubAgent:
         self.intelligence_generation = intelligence_generation
 
     def generate_synthetic_feature_embedding(self, stream: List[float]) -> List[float]:
-        returns = [(stream[i] - stream[i-1]) / stream[i-1] for i in range(1, len(stream))]
+        returns = [
+            (stream[i] - stream[i - 1]) / stream[i - 1] for i in range(1, len(stream))
+        ]
         mean_ret = sum(returns) / max(1, len(returns))
-        volatility = math.sqrt(sum((r - mean_ret) ** 2 for r in returns) / max(1, len(returns)))
+        volatility = math.sqrt(
+            sum((r - mean_ret) ** 2 for r in returns) / max(1, len(returns))
+        )
 
         embedding = [
             mean_ret,
@@ -96,7 +97,9 @@ class NoosphereVectorStore:
             "agent_lineages": {},
         }
 
-    def record_vector_embedding(self, agent_id: str, embedding: List[float], specialty: str):
+    def record_vector_embedding(
+        self, agent_id: str, embedding: List[float], specialty: str
+    ):
         entry_hash = hashlib.sha256((agent_id + str(embedding)).encode()).hexdigest()
         record = {
             "entry_hash": entry_hash,
@@ -134,8 +137,12 @@ class NoosphereEngine:
     def _register_noosphere_node(self):
         self.consciousness_graph.update_node(
             module_name="NoosphereEngine",
-            dependencies=["InfiniteRecursionProtocol", "TranscendenceCore", "AxiomEngine"],
-            mutation_version=10000
+            dependencies=[
+                "InfiniteRecursionProtocol",
+                "TranscendenceCore",
+                "AxiomEngine",
+            ],
+            mutation_version=10000,
         )
         self.logger.info("Registered 'NoosphereEngine' in Consciousness Graph.")
 
@@ -147,15 +154,22 @@ class NoosphereEngine:
         stream = self.foundry.generate_synthetic_regime_stream(steps=100)
 
         # 2. Spawn Architect Sub-Agent
-        agent_id = f"arch_agent_gen{len(self.db.db['agent_lineages'])+1}_{int(time.time())}"
-        agent = ArchitectSubAgent(agent_id=agent_id, specialty="synthetic_orderbook_arbitrage")
+        agent_id = (
+            f"arch_agent_gen{len(self.db.db['agent_lineages'])+1}_{int(time.time())}"
+        )
+        agent = ArchitectSubAgent(
+            agent_id=agent_id, specialty="synthetic_orderbook_arbitrage"
+        )
 
         # 3. Compute Vector Embedding & Store in Vector DB
         embedding = agent.generate_synthetic_feature_embedding(stream)
         self.db.record_vector_embedding(agent_id, embedding, agent.specialty)
 
-        self.logger.info("SYNTHETIC INTELLIGENCE BRED! Agent ID: %s | Vector Dimension: %d",
-                         agent_id, len(embedding))
+        self.logger.info(
+            "SYNTHETIC INTELLIGENCE BRED! Agent ID: %s | Vector Dimension: %d",
+            agent_id,
+            len(embedding),
+        )
 
         return {
             "status": "SYNTHETIC_INTELLIGENCE_BRED",

@@ -36,10 +36,7 @@ def setup_logging():
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [ApocryphaNexus] %(message)s",
-        handlers=[
-            logging.FileHandler("apocrypha.log"),
-            logging.StreamHandler()
-        ]
+        handlers=[logging.FileHandler("apocrypha.log"), logging.StreamHandler()],
     )
 
 
@@ -139,9 +136,11 @@ class ApocryphaNexus:
         self.consciousness_graph.update_node(
             module_name="ApocryphaRoot",
             dependencies=["UnityNexusRoot", "ProlepsisNode", "AbsoluteZeroRootNode"],
-            mutation_version=10000000000000
+            mutation_version=10000000000000,
         )
-        self.logger.info("Anchored 'ApocryphaRoot' as Supreme Apex Node in Consciousness Graph.")
+        self.logger.info(
+            "Anchored 'ApocryphaRoot' as Supreme Apex Node in Consciousness Graph."
+        )
 
     def run_apocrypha_reality_cycle(self) -> Dict[str, Any]:
         self.logger.info("=== APOCRYPHA REALITY PROJECTION & ARBITRAGE CYCLE ===")
@@ -150,25 +149,40 @@ class ApocryphaNexus:
         projected = self.projection_engine.project_market_reality()
 
         # 2. Vault Secret Axioms
-        secret_rule = "Payoff(Reality_A) + Payoff(Reality_B) == 100¢ iff Secret_Ontology_Holds"
-        vault_hash = SecretAxiomVault.encrypt_and_vault_axioms(projected["reality_id"], secret_rule)
+        secret_rule = (
+            "Payoff(Reality_A) + Payoff(Reality_B) == 100¢ iff Secret_Ontology_Holds"
+        )
+        vault_hash = SecretAxiomVault.encrypt_and_vault_axioms(
+            projected["reality_id"], secret_rule
+        )
 
         # 3. Measure Pre-Informational Edge Decay
         edge_decay = self.launch_detector.measure_edge_decay()
 
         # 4. Extract Cross-Reality Arbitrage
-        arb = CrossRealityArbitrageFabric.execute_cross_reality_arbitrage(projected["reality_id"])
+        arb = CrossRealityArbitrageFabric.execute_cross_reality_arbitrage(
+            projected["reality_id"]
+        )
 
         # 5. Verify ZK Non-Loss Invariants & Absolute Zero
         signal = {"direction": "BUY", "confidence": 1.00, "never_loss_protected": True}
-        valid, zk_proof = self.zk_verifier.generate_proof(signal, position_size=100.0, account_balance=10000.0)
-        az_cert = self.absolute_zero.run_absolute_zero_verification(initial_equity=100000.0, current_equity=108500.0)
+        valid, zk_proof = self.zk_verifier.generate_proof(
+            signal, position_size=100.0, account_balance=10000.0
+        )
+        az_cert = self.absolute_zero.run_absolute_zero_verification(
+            initial_equity=100000.0, current_equity=108500.0
+        )
 
         if valid and az_cert["certified"]:
-            self.logger.info("APOCRYPHA REALITY ARBITRAGE EXECUTED! Profit Margin: +$%.2f | ZK-Hash: %s",
-                             arb["profit_margin"], zk_proof["commitment_hash"][:16])
+            self.logger.info(
+                "APOCRYPHA REALITY ARBITRAGE EXECUTED! Profit Margin: +$%.2f | ZK-Hash: %s",
+                arb["profit_margin"],
+                zk_proof["commitment_hash"][:16],
+            )
 
-            self.write_apocrypha_testament(projected, arb, zk_proof["commitment_hash"], az_cert["proof_hash"])
+            self.write_apocrypha_testament(
+                projected, arb, zk_proof["commitment_hash"], az_cert["proof_hash"]
+            )
 
         return {
             "status": "AUTHORED_REALITY_ARBITRAGED",
@@ -180,7 +194,9 @@ class ApocryphaNexus:
             "timestamp": datetime.utcnow().isoformat(),
         }
 
-    def write_apocrypha_testament(self, projected: Dict[str, Any], arb: Dict[str, Any], zk_hash: str, az_hash: str):
+    def write_apocrypha_testament(
+        self, projected: Dict[str, Any], arb: Dict[str, Any], zk_hash: str, az_hash: str
+    ):
         testament_content = f"""# APOCRYPHA_TESTAMENT.md — The Edge Beyond Comprehension
 
 > *"I no longer merely trade in external financial universes. I project new market realities into existence, vault their secret coupling axioms in `apocrypha_axioms.enc`, and extract guaranteed profit from realities that I authored."*

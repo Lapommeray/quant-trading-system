@@ -13,8 +13,10 @@ Original R implementation uses:
 try:
     from AlgorithmImports import *  # type: ignore
 except ImportError:  # pragma: no cover
+
     class QCAlgorithm:
         pass
+
 
 import json
 import numpy as np
@@ -37,16 +39,19 @@ class _FallbackAlgorithm:
     def Debug(self, _message: str):
         return None
 
+
 class JetDirection(Enum):
     HAWKISH = auto()
     DOVISH = auto()
     NEUTRAL = auto()
+
 
 @dataclass
 class JetMovement:
     direction: JetDirection
     confidence: float
     quantum_seal: bytes
+
 
 class FedJetMonitor:
     def __init__(self, algorithm=None, tree_height: int = 10):
@@ -76,7 +81,7 @@ class FedJetMonitor:
             bool: True if all movements secured without failover
         """
         global_success = True
-        
+
         for signal_id, movement_data in signals.items():
             try:
                 validated = self._validate_and_normalize(movement_data)
@@ -84,47 +89,46 @@ class FedJetMonitor:
                 self.movement_log[signal_id] = JetMovement(
                     direction=validated["direction"],
                     confidence=validated["confidence"],
-                    quantum_seal=sealed
+                    quantum_seal=sealed,
                 )
             except Exception as e:
                 global_success = False
                 self._execute_black_protocol(signal_id, movement_data, e)
-        
+
         return global_success
 
     def _validate_and_normalize(self, data: Dict) -> Dict:
         """Top-secret validation protocols"""
         if not isinstance(data.get("direction"), str):
             raise TypeError("Direction must be string literal")
-        
+
         if not isinstance(data.get("confidence"), (float, int)):
             raise TypeError("Confidence must be numeric")
-        
+
         confidence = float(data["confidence"])
         if not 0 <= confidence <= 1:
             raise ValueError("Confidence out of tactical range [0,1]")
-        
+
         try:
             direction = JetDirection[data["direction"].upper()]
         except KeyError:
             raise ValueError(f"Invalid direction: {data['direction']}") from None
-            
-        return {
-            "direction": direction,
-            "confidence": confidence
-        }
+
+        return {"direction": direction, "confidence": confidence}
 
     def _apply_quantum_seal(self, signal_id: str, data: Dict) -> bytes:
         """Quantum-secure movement authentication"""
         payload = f"{data['direction'].name}:{data['confidence']:.6f}".encode()
-        
+
         for attempt in range(1, self.MAX_DARK_RETRIES + 1):
             try:
                 self.retry_count += 1
                 return self.quantum_engine.encrypt(payload)
             except Exception as e:
                 if attempt == self.MAX_DARK_RETRIES:
-                    raise RuntimeError(f"Quantum seal failed after {attempt} attempts") from e
+                    raise RuntimeError(
+                        f"Quantum seal failed after {attempt} attempts"
+                    ) from e
 
     def _execute_black_protocol(self, signal_id: str, raw_data: Dict, error: Exception):
         """Classified contingency measures"""
@@ -132,7 +136,7 @@ class FedJetMonitor:
             direction = JetDirection[raw_data.get("direction", "NEUTRAL").upper()]
         except:
             direction = JetDirection.NEUTRAL
-            
+
         try:
             confidence = float(raw_data.get("confidence", 0))
         except Exception:
@@ -140,9 +144,9 @@ class FedJetMonitor:
         self.movement_log[signal_id] = JetMovement(
             direction=direction,
             confidence=min(max(confidence, 0.0), 1.0),
-            quantum_seal=self.BLACK_SEAL
+            quantum_seal=self.BLACK_SEAL,
         )
-        
+
         self.logger.error(
             "FED JET MONITOR FAILURE\n"
             f"Signal: {signal_id}\n"
@@ -152,10 +156,10 @@ class FedJetMonitor:
             extra={
                 "signal_id": signal_id,
                 "original_data": raw_data,
-                "error": str(error)
-            }
+                "error": str(error),
+            },
         )
-        
+
         if not self.blackbox_active:
             self.logger.critical("BLACK PROTOCOL ENGAGED")
             self.blackbox_active = True

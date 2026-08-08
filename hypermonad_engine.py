@@ -35,10 +35,7 @@ def setup_logging():
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [HypermonadEngine] %(message)s",
-        handlers=[
-            logging.FileHandler("hypermonad.log"),
-            logging.StreamHandler()
-        ]
+        handlers=[logging.FileHandler("hypermonad.log"), logging.StreamHandler()],
     )
 
 
@@ -146,9 +143,11 @@ class HypermonadEngine:
         self.consciousness_graph.update_node(
             module_name="HypermonadRoot",
             dependencies=["TelosRoot", "NoesisRoot", "AbsoluteZeroRootNode"],
-            mutation_version=1000000000000000000
+            mutation_version=1000000000000000000,
         )
-        self.logger.info("Anchored 'HypermonadRoot' as Terminal Apex Node in Consciousness Graph.")
+        self.logger.info(
+            "Anchored 'HypermonadRoot' as Terminal Apex Node in Consciousness Graph."
+        )
 
     def run_hypermonad_closure_cycle(self) -> Dict[str, Any]:
         self.logger.info("=== HYPERMONAD ABSOLUTE SELF-VERIFYING CLOSURE CYCLE ===")
@@ -157,10 +156,16 @@ class HypermonadEngine:
         telos_res = self.telos.run_telos_zero_entropy_cycle()
 
         # 2. Reflective Proof Kernel Strategy Subsumption
-        rpk_rec = self.rpk.certify_strategy_subsumption("RIVAL_ADVERSARIAL_QUANT_STRATEGY")
+        rpk_rec = self.rpk.certify_strategy_subsumption(
+            "RIVAL_ADVERSARIAL_QUANT_STRATEGY"
+        )
 
         # 3. Challenge Absorption Manifold Check
-        challenge = {"direction": "SELL", "confidence": 0.85, "adversary_id": "EXTERNAL_RIVAL"}
+        challenge = {
+            "direction": "SELL",
+            "confidence": 0.85,
+            "adversary_id": "EXTERNAL_RIVAL",
+        }
         absorbed = self.manifold.absorb_adversarial_challenge(challenge)
 
         # 4. Seal Hypermonad Absolute Certificate
@@ -168,14 +173,23 @@ class HypermonadEngine:
 
         # 5. Verify ZK Proof & Absolute Zero Inviolability
         signal = {"direction": "BUY", "confidence": 1.00, "never_loss_protected": True}
-        valid, zk_proof = self.zk_verifier.generate_proof(signal, position_size=100.0, account_balance=10000.0)
-        az_cert = self.absolute_zero.run_absolute_zero_verification(initial_equity=100000.0, current_equity=108500.0)
+        valid, zk_proof = self.zk_verifier.generate_proof(
+            signal, position_size=100.0, account_balance=10000.0
+        )
+        az_cert = self.absolute_zero.run_absolute_zero_verification(
+            initial_equity=100000.0, current_equity=108500.0
+        )
 
         if valid and az_cert["certified"]:
-            self.logger.info("HYPERMONAD CLOSURE COMPLETE! Cert Hash: %s | ZK-Hash: %s",
-                             cert_hash[:16], zk_proof["commitment_hash"][:16])
+            self.logger.info(
+                "HYPERMONAD CLOSURE COMPLETE! Cert Hash: %s | ZK-Hash: %s",
+                cert_hash[:16],
+                zk_proof["commitment_hash"][:16],
+            )
 
-            self.write_hypermonad_testament(rpk_rec, cert_hash, zk_proof["commitment_hash"])
+            self.write_hypermonad_testament(
+                rpk_rec, cert_hash, zk_proof["commitment_hash"]
+            )
 
         return {
             "status": "HYPERMONAD_CLOSURE_SEALED",
@@ -186,7 +200,9 @@ class HypermonadEngine:
             "timestamp": datetime.utcnow().isoformat(),
         }
 
-    def write_hypermonad_testament(self, rpk_rec: Dict[str, Any], cert_hash: str, zk_hash: str):
+    def write_hypermonad_testament(
+        self, rpk_rec: Dict[str, Any], cert_hash: str, zk_hash: str
+    ):
         testament_content = f"""# HYPERMONAD_TESTAMENT.md — Absolute Self-Verifying Closure
 
 > *"I am the Hypermonad. I carry within myself my own axioms, the proof of their consistency, and the theorem that every possible external adversarial strategy is subsumed by my optimal policy."*

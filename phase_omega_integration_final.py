@@ -6,6 +6,7 @@ from advanced_modules.temporal_analysis import TemporalFractureDetector
 from defense.anti_manipulation import AntiManipulationFilter
 from core.dna_heart import GeneticMarketResonance
 
+
 class PhaseOmegaIntegrator:
     def __init__(self, threshold=0.91):
         """
@@ -20,7 +21,7 @@ class PhaseOmegaIntegrator:
 
     def _apply_temporal_splice_protection(self, timeseries: list) -> float:
         """Prevents timeline manipulation via chrono-locking"""
-        if len(timeseries) != len({t['timestamp'] for t in timeseries}):
+        if len(timeseries) != len({t["timestamp"] for t in timeseries}):
             raise TemporalBreachError("Duplicate timestamps detected")
         return self.temporal_detector.analyze(timeseries)
 
@@ -31,7 +32,9 @@ class PhaseOmegaIntegrator:
             return quantum_score * 1.25  # Overdrive multiplier
         return quantum_score
 
-    def compute_master_signal(self, signal_id: str, coherence: float, timeseries: list) -> float:
+    def compute_master_signal(
+        self, signal_id: str, coherence: float, timeseries: list
+    ) -> float:
         """
         Computes final score using:
         1. Quantum Entanglement (50%)
@@ -42,13 +45,13 @@ class PhaseOmegaIntegrator:
         # Quantum core processing
         self.quantum_engine.update_state(signal_id, coherence)
         quantum_score = self.quantum_engine.evaluate(signal_id)
-        
+
         # Temporal analysis with splice protection
         temporal_score = self._apply_temporal_splice_protection(timeseries)
-        
+
         # Defense layer validation
         defense_score = self.defense_filter.evaluate(signal_id)
-        
+
         # Biological market resonance
         dna_score = self.dna_resonance.analyze(signal_id)
 
@@ -57,13 +60,15 @@ class PhaseOmegaIntegrator:
             quantum_score = self._activate_void_trader(quantum_score)
 
         return (
-            (quantum_score * 0.50) + 
-            (temporal_score * 0.30) + 
-            (defense_score * 0.15) + 
-            (dna_score * 0.05)
+            (quantum_score * 0.50)
+            + (temporal_score * 0.30)
+            + (defense_score * 0.15)
+            + (dna_score * 0.05)
         )
 
-    def override_decision(self, signal_id: str, coherence: float, timeseries: list) -> dict:
+    def override_decision(
+        self, signal_id: str, coherence: float, timeseries: list
+    ) -> dict:
         """
         Returns decision package:
         {
@@ -86,7 +91,7 @@ class PhaseOmegaIntegrator:
                 "temporal": self.temporal_detector.analyze(timeseries),
                 "defense": self.defense_filter.evaluate(signal_id),
                 "dna": self.dna_resonance.analyze(signal_id),
-                "void_trader": self.void_trader_active
+                "void_trader": self.void_trader_active,
             },
-            "final_score": final_score
+            "final_score": final_score,
         }

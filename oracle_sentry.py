@@ -26,10 +26,7 @@ def setup_logging():
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [OracleSentry] %(message)s",
-        handlers=[
-            logging.FileHandler("oracle_sentry.log"),
-            logging.StreamHandler()
-        ]
+        handlers=[logging.FileHandler("oracle_sentry.log"), logging.StreamHandler()],
     )
 
 
@@ -51,10 +48,16 @@ class OracleSentryModel:
     def _sigmoid(self, z: float) -> float:
         return 1.0 / (1.0 + math.exp(-max(-15.0, min(15.0, z))))
 
-    def extract_features(self, signal: Dict[str, Any], market_data: Optional[Dict[str, Any]] = None) -> List[float]:
+    def extract_features(
+        self, signal: Dict[str, Any], market_data: Optional[Dict[str, Any]] = None
+    ) -> List[float]:
         """Convert signal dictionary and market conditions into normalized feature vector."""
         confidence = float(signal.get("confidence", 0.5))
-        direction = 1.0 if signal.get("direction") in ["up", "BUY", "LONG"] else (-1.0 if signal.get("direction") in ["down", "SELL", "SHORT"] else 0.0)
+        direction = (
+            1.0
+            if signal.get("direction") in ["up", "BUY", "LONG"]
+            else (-1.0 if signal.get("direction") in ["down", "SELL", "SHORT"] else 0.0)
+        )
 
         market_data = market_data or {}
         close = float(market_data.get("close", 50.0))
@@ -65,7 +68,14 @@ class OracleSentryModel:
         layers_passed = float(signal.get("layers_approved", 3)) / 6.0
         protected_flag = 1.0 if signal.get("never_loss_protected", True) else 0.0
 
-        return [confidence, direction, volatility, layers_passed, protected_flag, close / 100.0]
+        return [
+            confidence,
+            direction,
+            volatility,
+            layers_passed,
+            protected_flag,
+            close / 100.0,
+        ]
 
     def predict_block_probability(self, features: List[float]) -> float:
         """Apply temporal convolution attention and predict probability of safety rejection."""
@@ -86,7 +96,10 @@ class OracleSentryModel:
             for i in range(self.input_dim):
                 conv_features[i] += feat_vec[i] * w_step
 
-        dot_product = sum(conv_features[i] * self.weights[i] for i in range(self.input_dim)) + self.bias
+        dot_product = (
+            sum(conv_features[i] * self.weights[i] for i in range(self.input_dim))
+            + self.bias
+        )
         prob_blocked = self._sigmoid(dot_product)
         return float(prob_blocked)
 
@@ -133,7 +146,9 @@ class OracleSentry:
         for _ in range(20):
             self.model.update_online(feats, actual_blocked=False)
 
-    def evaluate_signal(self, signal: Dict[str, Any], market_data: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+    def evaluate_signal(
+        self, signal: Dict[str, Any], market_data: Optional[Dict[str, Any]] = None
+    ) -> Dict[str, Any]:
         """
         Predict 2 steps ahead if signal will be blocked by safety.
         Returns pre-trade score (0-100) and short-circuit status.
@@ -147,14 +162,16 @@ class OracleSentry:
         if should_short_circuit:
             self.logger.warning(
                 "PREDICTIVE SHORT-CIRCUIT TRIGGERED! Block Prob: %.2f | Pre-Trade Score: %d/100. Signal aborted early.",
-                block_prob, pre_trade_score
+                block_prob,
+                pre_trade_score,
             )
             reason = "ORACLE_SENTRY_DOOMED_SIGNAL_PREDICTION"
         else:
             reason = "AUTHORIZED_FOR_SAFETY_GOVERNANCE"
             self.logger.info(
                 "Oracle Sentry Approved | Pre-Trade Score: %d/100 | Predicted Block Prob: %.2f",
-                pre_trade_score, block_prob
+                pre_trade_score,
+                block_prob,
             )
 
         return {
@@ -168,11 +185,19 @@ class OracleSentry:
     def record_outcome(self, features: List[float], actual_blocked: bool):
         """Online streaming update after safety governance authorization attempt."""
         self.model.update_online(features, actual_blocked)
-        self.logger.info("Oracle Sentry updated online via streaming SGD (actual_blocked=%s)", actual_blocked)
+        self.logger.info(
+            "Oracle Sentry updated online via streaming SGD (actual_blocked=%s)",
+            actual_blocked,
+        )
 
 
 if __name__ == "__main__":
     sentry = OracleSentry()
-    test_sig = {"confidence": 0.85, "direction": "BUY", "layers_approved": 5, "never_loss_protected": True}
+    test_sig = {
+        "confidence": 0.85,
+        "direction": "BUY",
+        "layers_approved": 5,
+        "never_loss_protected": True,
+    }
     res = sentry.evaluate_signal(test_sig, {"close": 50.0, "high": 52.0, "low": 48.0})
     print("Evaluation Result:", res)

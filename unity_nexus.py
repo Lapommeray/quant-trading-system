@@ -38,10 +38,7 @@ def setup_logging():
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [UnityNexus] %(message)s",
-        handlers=[
-            logging.FileHandler("unity_nexus.log"),
-            logging.StreamHandler()
-        ]
+        handlers=[logging.FileHandler("unity_nexus.log"), logging.StreamHandler()],
     )
 
 
@@ -78,9 +75,9 @@ class CrossEngineSynthesis:
         empyrean_res = self.empyrean.run_empyrean_singularity_cycle()
 
         total_margin = (
-            aethon_res.get("arb_data", {}).get("superposition_margin", 0.0) +
-            chronos_res.get("causal_hedge", {}).get("guaranteed_profit_margin", 0.0) +
-            empyrean_res.get("emotional_hedge", {}).get("profit_margin", 0.0)
+            aethon_res.get("arb_data", {}).get("superposition_margin", 0.0)
+            + chronos_res.get("causal_hedge", {}).get("guaranteed_profit_margin", 0.0)
+            + empyrean_res.get("emotional_hedge", {}).get("profit_margin", 0.0)
         )
 
         return {
@@ -130,15 +127,25 @@ class UnityNexus:
         self.consciousness_graph = ConsciousnessGraph()
 
         self._subsume_unity_nexus_root()
-        self.proof_hash = UnityCompletenessProver.generate_completeness_proof(self.axiom_engine)
+        self.proof_hash = UnityCompletenessProver.generate_completeness_proof(
+            self.axiom_engine
+        )
 
     def _subsume_unity_nexus_root(self):
         self.consciousness_graph.update_node(
             module_name="UnityNexusRoot",
-            dependencies=["AbsoluteZeroRootNode", "AethonNode", "ChronosNode", "EmpyreanNode", "SingularityCoreApexNode"],
-            mutation_version=1000000000000
+            dependencies=[
+                "AbsoluteZeroRootNode",
+                "AethonNode",
+                "ChronosNode",
+                "EmpyreanNode",
+                "SingularityCoreApexNode",
+            ],
+            mutation_version=1000000000000,
         )
-        self.logger.info("Subsumed All Nodes into Apex Consciousness Root 'UnityNexusRoot'.")
+        self.logger.info(
+            "Subsumed All Nodes into Apex Consciousness Root 'UnityNexusRoot'."
+        )
 
     def run_omniversal_perpetual_cycle(self) -> Dict[str, Any]:
         self.logger.info("=== UNITY NEXUS OMNIVERSAL PERPETUAL CYCLE ===")
@@ -150,7 +157,9 @@ class UnityNexus:
         synth = self.synthesis.synthesize_omniversal_opportunity()
 
         # 3. Absolute Zero Formal Inviolability Verification
-        az_cert = self.absolute_zero.run_absolute_zero_verification(initial_equity=100000.0, current_equity=108500.0)
+        az_cert = self.absolute_zero.run_absolute_zero_verification(
+            initial_equity=100000.0, current_equity=108500.0
+        )
 
         result = {
             "status": "OMNIVERSAL_FINANCIAL_SINGULARITY_ACTIVE",
@@ -161,8 +170,11 @@ class UnityNexus:
             "timestamp": datetime.utcnow().isoformat(),
         }
 
-        self.logger.info("UNITY NEXUS CYCLE COMPLETE! Total Synthesized Margin: +$%.2f | Completeness Proof Hash: %s",
-                         synth["total_synthesized_margin"], self.proof_hash[:16])
+        self.logger.info(
+            "UNITY NEXUS CYCLE COMPLETE! Total Synthesized Margin: +$%.2f | Completeness Proof Hash: %s",
+            synth["total_synthesized_margin"],
+            self.proof_hash[:16],
+        )
 
         self.write_unity_testament(result)
         return result

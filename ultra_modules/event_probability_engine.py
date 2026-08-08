@@ -34,7 +34,9 @@ class EventProbabilityEngine:
         return (1 - entropy) * signal.get("magnitude", 1)
 
     def _aggregate_entropy(self, branches):
-        return sum([abs(hash(branch)) % 100 for branch in branches]) / (100.0 * len(branches))
+        return sum([abs(hash(branch)) % 100 for branch in branches]) / (
+            100.0 * len(branches)
+        )
 
     def _normalize_entropy(self, entropy):
         return max(0.0, min(1.0, 1.0 - abs(entropy - self.entropy_baseline)))

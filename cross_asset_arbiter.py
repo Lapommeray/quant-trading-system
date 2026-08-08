@@ -26,10 +26,7 @@ def setup_logging():
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [CrossAssetArbiter] %(message)s",
-        handlers=[
-            logging.FileHandler("cross_asset.log"),
-            logging.StreamHandler()
-        ]
+        handlers=[logging.FileHandler("cross_asset.log"), logging.StreamHandler()],
     )
 
 
@@ -63,11 +60,17 @@ class CrossAssetNeuralArbiter:
         kalshi_price = (m.get("yes_bid", 50) + m.get("yes_ask", 50)) / 2.0
 
         # OKX Crypto data (simulated/REST fallback)
-        okx_price = self.history["okx_btc"][-1] * (1.0 + (hash(str(time.time())) % 100 - 49) / 10000.0)
+        okx_price = self.history["okx_btc"][-1] * (
+            1.0 + (hash(str(time.time())) % 100 - 49) / 10000.0
+        )
 
         # MT5 FX / Gold data (simulated/REST fallback)
-        eurusd_price = self.history["mt5_eurusd"][-1] * (1.0 + (hash(str(time.time() + 1)) % 100 - 49) / 20000.0)
-        xauusd_price = self.history["mt5_xauusd"][-1] * (1.0 + (hash(str(time.time() + 2)) % 100 - 49) / 10000.0)
+        eurusd_price = self.history["mt5_eurusd"][-1] * (
+            1.0 + (hash(str(time.time() + 1)) % 100 - 49) / 20000.0
+        )
+        xauusd_price = self.history["mt5_xauusd"][-1] * (
+            1.0 + (hash(str(time.time() + 2)) % 100 - 49) / 10000.0
+        )
 
         # Update histories
         self.history["kalshi_15m"].append(kalshi_price)
@@ -90,9 +93,24 @@ class CrossAssetNeuralArbiter:
     def compute_latent_embedding(self, streams: Dict[str, Any]) -> List[float]:
         """Project multi-asset feeds into a unified normalized latent vector space."""
         # Vector features: Returns, relative volatilities, cross-ratios
-        btc_ret = (self.history["okx_btc"][-1] - self.history["okx_btc"][-2]) / self.history["okx_btc"][-2] if len(self.history["okx_btc"]) > 1 else 0.0
-        eur_ret = (self.history["mt5_eurusd"][-1] - self.history["mt5_eurusd"][-2]) / self.history["mt5_eurusd"][-2] if len(self.history["mt5_eurusd"]) > 1 else 0.0
-        gold_ret = (self.history["mt5_xauusd"][-1] - self.history["mt5_xauusd"][-2]) / self.history["mt5_xauusd"][-2] if len(self.history["mt5_xauusd"]) > 1 else 0.0
+        btc_ret = (
+            (self.history["okx_btc"][-1] - self.history["okx_btc"][-2])
+            / self.history["okx_btc"][-2]
+            if len(self.history["okx_btc"]) > 1
+            else 0.0
+        )
+        eur_ret = (
+            (self.history["mt5_eurusd"][-1] - self.history["mt5_eurusd"][-2])
+            / self.history["mt5_eurusd"][-2]
+            if len(self.history["mt5_eurusd"]) > 1
+            else 0.0
+        )
+        gold_ret = (
+            (self.history["mt5_xauusd"][-1] - self.history["mt5_xauusd"][-2])
+            / self.history["mt5_xauusd"][-2]
+            if len(self.history["mt5_xauusd"]) > 1
+            else 0.0
+        )
 
         kalshi_prob = streams["kalshi_15m"] / 100.0
 
@@ -146,7 +164,9 @@ class CrossAssetNeuralArbiter:
             return 3.50
 
         avg = sum(self.trade_returns) / len(self.trade_returns)
-        variance = sum((r - avg) ** 2 for r in self.trade_returns) / len(self.trade_returns)
+        variance = sum((r - avg) ** 2 for r in self.trade_returns) / len(
+            self.trade_returns
+        )
         std_dev = math.sqrt(variance) if variance > 1e-9 else 1e-6
 
         sharpe = (avg / std_dev) * math.sqrt(252 * 96)  # 15m bars / year
@@ -158,12 +178,20 @@ class CrossAssetNeuralArbiter:
         arb_analysis = self.detect_cross_asset_inefficiency(embedding)
 
         sharpe = self.calculate_rolling_sharpe()
-        self.logger.info("Current Rolling Sharpe: %.2f | Arb Signal: %s (Confidence: %.2f)",
-                         sharpe, arb_analysis["signal_type"], arb_analysis["confidence"])
+        self.logger.info(
+            "Current Rolling Sharpe: %.2f | Arb Signal: %s (Confidence: %.2f)",
+            sharpe,
+            arb_analysis["signal_type"],
+            arb_analysis["confidence"],
+        )
 
         # Sharpe Diary Gate
         if sharpe < self.target_sharpe:
-            self.logger.info("Gate locked: Sharpe %.2f < Target %.2f. Skipping execution.", sharpe, self.target_sharpe)
+            self.logger.info(
+                "Gate locked: Sharpe %.2f < Target %.2f. Skipping execution.",
+                sharpe,
+                self.target_sharpe,
+            )
             return None
 
         if arb_analysis["signal_type"] == "NEUTRAL":
@@ -179,14 +207,16 @@ class CrossAssetNeuralArbiter:
             "volume": [100.0] * len(self.history["kalshi_15m"]),
         }
 
-        never_loss_sig = self.never_loss_system.generate_signal(market_data, symbol="CROSS_ASSET_ARB")
+        never_loss_sig = self.never_loss_system.generate_signal(
+            market_data, symbol="CROSS_ASSET_ARB"
+        )
 
         authorized, message, _ = self.safety.authorize_trade(
             symbol="CROSS_ASSET_ARB",
             side="buy" if "BUY" in arb_analysis["signal_type"] else "sell",
             quantity=1.0,
             order_type="market",
-            trade_risk=0.01
+            trade_risk=0.01,
         )
 
         if not authorized:
@@ -205,8 +235,11 @@ class CrossAssetNeuralArbiter:
             "never_loss_signal": never_loss_sig,
         }
         self.sharpe_diary.append(entry)
-        self.logger.info("CROSS-ASSET SYNTHETIC ARBITRAGE AUTHORIZED: %s @ %.2f¢",
-                         arb_analysis["signal_type"], streams["kalshi_15m"])
+        self.logger.info(
+            "CROSS-ASSET SYNTHETIC ARBITRAGE AUTHORIZED: %s @ %.2f¢",
+            arb_analysis["signal_type"],
+            streams["kalshi_15m"],
+        )
         return entry
 
 

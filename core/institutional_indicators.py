@@ -13,15 +13,19 @@ from typing import Optional, Dict, Any, List
 
 try:
     from scipy.optimize import minimize
+
     SCIPY_AVAILABLE = True
 except ImportError:
     SCIPY_AVAILABLE = False
-    warnings.warn("scipy not available. HestonVolatility will have limited functionality.")
+    warnings.warn(
+        "scipy not available. HestonVolatility will have limited functionality."
+    )
 
 try:
     from sklearn.ensemble import GradientBoostingRegressor
     from sklearn.model_selection import TimeSeriesSplit
     from sklearn.preprocessing import StandardScaler
+
     SKLEARN_AVAILABLE = True
 except ImportError:
     SKLEARN_AVAILABLE = False
@@ -32,10 +36,14 @@ except ImportError:
 
 try:
     from hmmlearn import hmm
+
     HMM_AVAILABLE = True
 except ImportError:
     HMM_AVAILABLE = False
-    warnings.warn("hmmlearn not available. RegimeDetector will have limited functionality.")
+    warnings.warn(
+        "hmmlearn not available. RegimeDetector will have limited functionality."
+    )
+
 
 class HestonVolatility:
     """
@@ -59,7 +67,7 @@ class HestonVolatility:
     def __init__(self, lookback: int = 252, risk_free: float = 0.01):
         self.lookback = max(5, int(lookback))
         self.r = risk_free
-        self.logger = logging.getLogger('HestonVolatility')
+        self.logger = logging.getLogger("HestonVolatility")
 
     def heston_objective(self, params: np.ndarray, returns: np.ndarray) -> float:
         """Kept for API compatibility; not used by ``calculate``.
@@ -75,13 +83,24 @@ class HestonVolatility:
         for t in range(1, n):
             dt = 1.0 / 252.0
             # Proper Euler discretization of dv = kappa*(theta - v)dt + xi*sqrt(v)dW2
-            v[t] = np.abs(v[t-1] + kappa * (theta - v[t-1]) * dt + xi * np.sqrt(max(v[t-1], 1e-6) * dt) * returns[t-1])
+            v[t] = np.abs(
+                v[t - 1]
+                + kappa * (theta - v[t - 1]) * dt
+                + xi * np.sqrt(max(v[t - 1], 1e-6) * dt) * returns[t - 1]
+            )
             v[t] = max(v[t], 1e-6)
-            ll += -0.5 * (np.log(2 * np.pi) + np.log(v[t] * dt) + returns[t] ** 2 / (v[t] * dt))
+            ll += -0.5 * (
+                np.log(2 * np.pi) + np.log(v[t] * dt) + returns[t] ** 2 / (v[t] * dt)
+            )
         return -ll
 
-    def calculate(self, close_prices: pd.Series, high: Optional[pd.Series] = None,
-                  low: Optional[pd.Series] = None, open_: Optional[pd.Series] = None) -> pd.Series:
+    def calculate(
+        self,
+        close_prices: pd.Series,
+        high: Optional[pd.Series] = None,
+        low: Optional[pd.Series] = None,
+        open_: Optional[pd.Series] = None,
+    ) -> pd.Series:
         """Yang-Zhang realized volatility (annualized), drift independent.
 
         If only ``close_prices`` is provided the estimator degrades to
@@ -103,8 +122,11 @@ class HestonVolatility:
 
             var_open = log_o_c.rolling(self.lookback).var()
             var_close = log_c_o.rolling(self.lookback).var()
-            var_window = (log_h_o * (log_h_o - log_c_o) +
-                          log_l_o * (log_l_o - log_c_o)).rolling(self.lookback).sum()
+            var_window = (
+                (log_h_o * (log_h_o - log_c_o) + log_l_o * (log_l_o - log_c_o))
+                .rolling(self.lookback)
+                .sum()
+            )
             k = 0.34 / (1.34 + (self.lookback + 1) / (self.lookback - 1))
             var_yz = var_open + k * var_close + (1 - k) * var_window
             vol = var_yz.clip(lower=0).pow(0.5) * np.sqrt(252)
@@ -113,6 +135,7 @@ class HestonVolatility:
             vol = rets.rolling(self.lookback).std() * np.sqrt(252)
 
         return vol.replace([np.inf, -np.inf], np.nan).fillna(0.0)
+
 
 class ML_RSI:
     """
@@ -128,19 +151,22 @@ class ML_RSI:
     * Features are normalized with a rolling window (no future information).
     """
 
-    def __init__(self, window: int = 14, lookahead: int = 5, n_splits: int = 5,
-                 embargo: int = 3):
+    def __init__(
+        self, window: int = 14, lookahead: int = 5, n_splits: int = 5, embargo: int = 3
+    ):
         self.window = window
         self.lookahead = lookahead
         self.n_splits = n_splits
         self.embargo = embargo
-        self.logger = logging.getLogger('ML_RSI')
+        self.logger = logging.getLogger("ML_RSI")
 
         if SKLEARN_AVAILABLE and GradientBoostingRegressor is not None:
             self.model = GradientBoostingRegressor(n_estimators=100, random_state=42)
         else:
             self.model = None
-            self.logger.warning("scikit-learn not available, ML_RSI will use simple predictions")
+            self.logger.warning(
+                "scikit-learn not available, ML_RSI will use simple predictions"
+            )
 
     @staticmethod
     def _embargo_split(n: int, n_splits: int, embargo: int) -> List[tuple]:
@@ -181,12 +207,14 @@ class ML_RSI:
             r_hi = rsi_values.iloc[window_slice].max()
             r_span = (r_hi - r_lo) if r_hi > r_lo else 1e-9
 
-            features = np.array([
-                rsi_values.iloc[i],
-                prices.iloc[i] / prices.iloc[i - self.window] - 1.0,
-                (prices.iloc[i] - lo) / span,
-                (rsi_values.iloc[i] - r_lo) / r_span,
-            ])
+            features = np.array(
+                [
+                    rsi_values.iloc[i],
+                    prices.iloc[i] / prices.iloc[i - self.window] - 1.0,
+                    (prices.iloc[i] - lo) / span,
+                    (rsi_values.iloc[i] - r_lo) / r_span,
+                ]
+            )
             X_all.append(features)
             y_all.append(prices.iloc[i + self.lookahead] / prices.iloc[i] - 1.0)
 
@@ -197,7 +225,9 @@ class ML_RSI:
         scaler = StandardScaler() if StandardScaler is not None else None
         predictions = np.full(len(y), np.nan)
 
-        for train_idx, test_idx in self._embargo_split(len(y), self.n_splits, self.embargo):
+        for train_idx, test_idx in self._embargo_split(
+            len(y), self.n_splits, self.embargo
+        ):
             if len(train_idx) < max(20, self.window) or len(test_idx) == 0:
                 continue
             X_tr = X[train_idx]
@@ -212,8 +242,9 @@ class ML_RSI:
             predictions[test_idx] = self.model.predict(X_te_scaled)
 
         # Align predictions to the original index (NaN where no OOS prediction).
-        out.iloc[self.window: self.window + len(predictions)] = predictions
+        out.iloc[self.window : self.window + len(predictions)] = predictions
         return out.fillna(0.0)
+
 
 class OrderFlowImbalance:
     """
@@ -229,14 +260,18 @@ class OrderFlowImbalance:
 
     def __init__(self, window: int = 100):
         self.window = window
-        self.logger = logging.getLogger('OrderFlowImbalance')
+        self.logger = logging.getLogger("OrderFlowImbalance")
 
     @staticmethod
     def _lee_ready_side(df: pd.DataFrame) -> pd.Series:
         """Classify trade sides when 'side' is missing (Lee-Ready tick rule)."""
-        mid = (df['bid'] + df['ask']) / 2.0 if {'bid', 'ask'}.issubset(df.columns) else None
+        mid = (
+            (df["bid"] + df["ask"]) / 2.0
+            if {"bid", "ask"}.issubset(df.columns)
+            else None
+        )
         side = pd.Series(0, index=df.index, dtype=float)
-        price = df['price']
+        price = df["price"]
         if mid is not None:
             side[price > mid] = 1.0
             side[price < mid] = -1.0
@@ -260,26 +295,31 @@ class OrderFlowImbalance:
         if not isinstance(trades, pd.DataFrame):
             raise ValueError("Requires tick data DataFrame")
 
-        required_cols = ['price', 'quantity']
+        required_cols = ["price", "quantity"]
         if not all(col in trades.columns for col in required_cols):
             raise ValueError(f"DataFrame must contain columns: {required_cols}")
 
         frame = trades.copy()
-        if 'side' not in frame.columns:
-            frame['side'] = self._lee_ready_side(frame)
+        if "side" not in frame.columns:
+            frame["side"] = self._lee_ready_side(frame)
 
-        frame['dollar_volume'] = frame['price'] * frame['quantity']
+        frame["dollar_volume"] = frame["price"] * frame["quantity"]
 
         # Aligned columns on the FULL frame - no index holes.
-        frame['buy_vol'] = np.where(frame['side'] == 1, frame['dollar_volume'], 0.0)
-        frame['sell_vol'] = np.where(frame['side'] == -1, frame['dollar_volume'], 0.0)
+        frame["buy_vol"] = np.where(frame["side"] == 1, frame["dollar_volume"], 0.0)
+        frame["sell_vol"] = np.where(frame["side"] == -1, frame["dollar_volume"], 0.0)
 
-        buy_roll = pd.Series(frame['buy_vol'], index=frame.index).rolling(self.window).sum()
-        sell_roll = pd.Series(frame['sell_vol'], index=frame.index).rolling(self.window).sum()
+        buy_roll = (
+            pd.Series(frame["buy_vol"], index=frame.index).rolling(self.window).sum()
+        )
+        sell_roll = (
+            pd.Series(frame["sell_vol"], index=frame.index).rolling(self.window).sum()
+        )
 
         total = buy_roll + sell_roll
         imbalance = ((buy_roll - sell_roll) / total.replace(0, np.nan)).fillna(0.0)
         return imbalance
+
 
 class RegimeDetector:
     """
@@ -298,7 +338,7 @@ class RegimeDetector:
     def __init__(self, n_regimes: int = 3, lookback: int = 252):
         self.n_regimes = n_regimes
         self.lookback = lookback
-        self.logger = logging.getLogger('RegimeDetector')
+        self.logger = logging.getLogger("RegimeDetector")
 
     def _standardize(self, series: pd.Series) -> pd.Series:
         s = series.astype(float)
@@ -318,7 +358,9 @@ class RegimeDetector:
             raise ValueError("At least one indicator series is required")
 
         if not HMM_AVAILABLE:
-            self.logger.warning("HMM not available, returning simple volatility-ratio regimes")
+            self.logger.warning(
+                "HMM not available, returning simple volatility-ratio regimes"
+            )
             return self._simple_regime_detection(indicators[0])
 
         scaled = [self._standardize(ind) for ind in indicators]
@@ -334,7 +376,7 @@ class RegimeDetector:
                 random_state=42,
                 n_iter=50,
             )
-            model.fit(data[-self.lookback:])
+            model.fit(data[-self.lookback :])
             regimes = model.predict(data)
 
             result = pd.Series(np.nan, index=frame.index)

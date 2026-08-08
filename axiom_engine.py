@@ -28,10 +28,7 @@ def setup_logging():
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [AxiomEngine] %(message)s",
-        handlers=[
-            logging.FileHandler("axiom_engine.log"),
-            logging.StreamHandler()
-        ]
+        handlers=[logging.FileHandler("axiom_engine.log"), logging.StreamHandler()],
     )
 
 
@@ -65,7 +62,7 @@ DEFAULT_AXIOMS = [
         "premise": "For call binary options on the same underlying, ask price must be monotonically non-increasing with strike price.",
         "equation": "ask_k1 >= ask_k2 for k1 < k2",
         "category": "convexity_monotonicity",
-    }
+    },
 ]
 
 
@@ -85,16 +82,18 @@ class AutomatedTheoremProver:
         t1_proof = [
             "Axiom 1: YES + NO = 100¢ at settlement.",
             "Axiom 2: Credit = (YES_bid + NO_bid) - 100¢.",
-            "Deduction: If YES_bid + NO_bid > 100¢, selling both yields Credit > 0 and Settlement Cost = 100¢. Q.E.D."
+            "Deduction: If YES_bid + NO_bid > 100¢, selling both yields Credit > 0 and Settlement Cost = 100¢. Q.E.D.",
         ]
-        derived_theorems.append({
-            "theorem_id": t1_id,
-            "law": t1_law,
-            "proof_steps": t1_proof,
-            "proof_hash": hashlib.sha256("\n".join(t1_proof).encode()).hexdigest(),
-            "category": "binary_arbitrage",
-            "condition": "yes_bid + no_bid > 100",
-        })
+        derived_theorems.append(
+            {
+                "theorem_id": t1_id,
+                "law": t1_law,
+                "proof_steps": t1_proof,
+                "proof_hash": hashlib.sha256("\n".join(t1_proof).encode()).hexdigest(),
+                "category": "binary_arbitrage",
+                "condition": "yes_bid + no_bid > 100",
+            }
+        )
 
         # Theorem 2: Derived from Axiom 3 + Axiom 1
         t2_id = "THEOREM_2_KALSHI_OKX_LATENCY_ARBITRAGE"
@@ -102,16 +101,18 @@ class AutomatedTheoremProver:
         t2_proof = [
             "Axiom 3: Instantaneous spot price drift implies terminal settlement probability -> 1.0.",
             "Axiom 1: True terminal payoff = 100¢.",
-            "Deduction: Buying ask < 90¢ when delta=1.0 yields guaranteed expected profit > 10¢. Q.E.D."
+            "Deduction: Buying ask < 90¢ when delta=1.0 yields guaranteed expected profit > 10¢. Q.E.D.",
         ]
-        derived_theorems.append({
-            "theorem_id": t2_id,
-            "law": t2_law,
-            "proof_steps": t2_proof,
-            "proof_hash": hashlib.sha256("\n".join(t2_proof).encode()).hexdigest(),
-            "category": "latency_arbitrage",
-            "condition": "spot_drift > strike_threshold and ask < 90",
-        })
+        derived_theorems.append(
+            {
+                "theorem_id": t2_id,
+                "law": t2_law,
+                "proof_steps": t2_proof,
+                "proof_hash": hashlib.sha256("\n".join(t2_proof).encode()).hexdigest(),
+                "category": "latency_arbitrage",
+                "condition": "spot_drift > strike_threshold and ask < 90",
+            }
+        )
 
         return derived_theorems
 
@@ -171,7 +172,9 @@ class AxiomEngine:
         self.zk_verifier = ZKTradeInvariantVerifier(max_allowed_risk=0.02)
 
         self.derived_theorems = self.atp.derive_new_theorems()
-        self.compiled_law_scanners = [self.compiler.compile_theorem_to_function(t) for t in self.derived_theorems]
+        self.compiled_law_scanners = [
+            self.compiler.compile_theorem_to_function(t) for t in self.derived_theorems
+        ]
 
     def _load_or_initialize_axioms(self) -> List[Dict[str, Any]]:
         if AXIOMS_FILE.exists():
@@ -186,24 +189,33 @@ class AxiomEngine:
             json.dump(DEFAULT_AXIOMS, f, indent=2)
         return DEFAULT_AXIOMS
 
-    def certify_and_verify_deductive_law(self, theorem: Dict[str, Any]) -> Tuple[bool, str]:
+    def certify_and_verify_deductive_law(
+        self, theorem: Dict[str, Any]
+    ) -> Tuple[bool, str]:
         """Generate machine-checkable certificate and verify proof in ZK Verifier."""
         proof_text = "\n".join(theorem["proof_steps"])
         proof_hash = hashlib.sha256(proof_text.encode()).hexdigest()
 
         # Check with ZK Verifier
         signal = {"direction": "BUY", "confidence": 1.00, "never_loss_protected": True}
-        valid, zk_proof = self.zk_verifier.generate_proof(signal, position_size=100.0, account_balance=10000.0)
+        valid, zk_proof = self.zk_verifier.generate_proof(
+            signal, position_size=100.0, account_balance=10000.0
+        )
 
         if valid:
-            self.logger.info("DEDUCTIVE LAW CERTIFIED! Theorem: %s | Proof Hash: %s",
-                             theorem["theorem_id"], proof_hash[:16])
+            self.logger.info(
+                "DEDUCTIVE LAW CERTIFIED! Theorem: %s | Proof Hash: %s",
+                theorem["theorem_id"],
+                proof_hash[:16],
+            )
             return True, proof_hash
         else:
             self.logger.error("Deductive Law Certification Failed!")
             return False, ""
 
-    def evaluate_deductive_signals(self, market_data: Dict[str, Any]) -> List[Dict[str, Any]]:
+    def evaluate_deductive_signals(
+        self, market_data: Dict[str, Any]
+    ) -> List[Dict[str, Any]]:
         """Run all compiled deductive law scanners against live market orderbook data."""
         deductive_signals = []
         for idx, scanner in enumerate(self.compiled_law_scanners):
@@ -229,7 +241,9 @@ class AxiomEngine:
         with open(AXIOMS_FILE, "w") as f:
             json.dump(self.axioms, f, indent=2)
 
-        self.logger.info("ONTOLOGY EXPANDED! New Foundational Axiom Added: %s", candidate_axiom["id"])
+        self.logger.info(
+            "ONTOLOGY EXPANDED! New Foundational Axiom Added: %s", candidate_axiom["id"]
+        )
         # Re-derive theorems
         self.derived_theorems = self.atp.derive_new_theorems()
         return True

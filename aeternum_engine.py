@@ -36,10 +36,7 @@ def setup_logging():
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [AeternumEngine] %(message)s",
-        handlers=[
-            logging.FileHandler("aeternum.log"),
-            logging.StreamHandler()
-        ]
+        handlers=[logging.FileHandler("aeternum.log"), logging.StreamHandler()],
     )
 
 
@@ -56,7 +53,7 @@ class DominionMarketConstructor:
             "dominion_ticker": ticker,
             "asymmetric_payoff_tensor": [
                 [1.15, -0.85],  # Payoffs under strategy sigma* vs opponent tau
-                [0.95, -1.05]
+                [0.95, -1.05],
             ],
             "isomorphic_winning_strategy": "sigma_star_fixed_point",
             "timestamp": datetime.utcnow().isoformat(),
@@ -97,9 +94,13 @@ class CompetitorDissolutionHedge:
 
     def execute_dissolution_event(self, competitor_id: str) -> Optional[Dict[str, Any]]:
         signal = {"direction": "BUY", "confidence": 1.00, "never_loss_protected": True}
-        valid, zk_proof = self.zk_verifier.generate_proof(signal, position_size=100.0, account_balance=10000.0)
+        valid, zk_proof = self.zk_verifier.generate_proof(
+            signal, position_size=100.0, account_balance=10000.0
+        )
 
-        az_cert = self.absolute_zero.run_absolute_zero_verification(initial_equity=100000.0, current_equity=108500.0)
+        az_cert = self.absolute_zero.run_absolute_zero_verification(
+            initial_equity=100000.0, current_equity=108500.0
+        )
 
         if valid and az_cert["certified"]:
             return {
@@ -129,7 +130,9 @@ class AeternumEngine:
         self.paradox = ParadoxEngine()
         self.absolute_zero = AbsoluteZeroEngine()
         self.constructor = DominionMarketConstructor(self.apeiron)
-        self.dissolution_hedge = CompetitorDissolutionHedge(self.paradox, self.absolute_zero)
+        self.dissolution_hedge = CompetitorDissolutionHedge(
+            self.paradox, self.absolute_zero
+        )
         self.zk_verifier = ZKTradeInvariantVerifier(max_allowed_risk=0.02)
         self.consciousness_graph = ConsciousnessGraph()
 
@@ -139,9 +142,11 @@ class AeternumEngine:
         self.consciousness_graph.update_node(
             module_name="AeternumRoot",
             dependencies=["UmbraRoot", "ApocryphaRoot", "AbsoluteZeroRootNode"],
-            mutation_version=1000000000000000
+            mutation_version=1000000000000000,
         )
-        self.logger.info("Anchored 'AeternumRoot' as Supreme Apex Node in Consciousness Graph.")
+        self.logger.info(
+            "Anchored 'AeternumRoot' as Supreme Apex Node in Consciousness Graph."
+        )
 
     def run_aeternum_dominion_cycle(self) -> Dict[str, Any]:
         self.logger.info("=== AETERNUM INVARIANT DOMINION CYCLE ===")
@@ -150,24 +155,43 @@ class AeternumEngine:
         dom_spec = self.constructor.build_dominion_market_spec()
 
         # 2. Generate Martingale Trap
-        trap_spec = MartingaleTrapGenerator.generate_martingale_trap_spec(dom_spec["dominion_ticker"])
+        trap_spec = MartingaleTrapGenerator.generate_martingale_trap_spec(
+            dom_spec["dominion_ticker"]
+        )
 
         # 3. Measure Logical Attractor Gradient
-        attractor_gradient = LogicalAttractorField.measure_attractor_gradient(capital_vault_balance=15000.0)
+        attractor_gradient = LogicalAttractorField.measure_attractor_gradient(
+            capital_vault_balance=15000.0
+        )
 
         # 4. Execute Competitor Dissolution Event
-        dissolution = self.dissolution_hedge.execute_dissolution_event(competitor_id="RIVAL_QUANT_BOT_ALPHA")
+        dissolution = self.dissolution_hedge.execute_dissolution_event(
+            competitor_id="RIVAL_QUANT_BOT_ALPHA"
+        )
 
         # 5. Verify ZK Proofs & Absolute Zero Inviolability
         signal = {"direction": "BUY", "confidence": 1.00, "never_loss_protected": True}
-        valid, zk_proof = self.zk_verifier.generate_proof(signal, position_size=100.0, account_balance=10000.0)
-        az_cert = self.absolute_zero.run_absolute_zero_verification(initial_equity=100000.0, current_equity=108500.0)
+        valid, zk_proof = self.zk_verifier.generate_proof(
+            signal, position_size=100.0, account_balance=10000.0
+        )
+        az_cert = self.absolute_zero.run_absolute_zero_verification(
+            initial_equity=100000.0, current_equity=108500.0
+        )
 
         if valid and az_cert["certified"] and dissolution:
-            self.logger.info("AETERNUM DOMINION CYCLE COMPLETE! Attractor Gradient: %.2f | ZK-Hash: %s",
-                             attractor_gradient, zk_proof["commitment_hash"][:16])
+            self.logger.info(
+                "AETERNUM DOMINION CYCLE COMPLETE! Attractor Gradient: %.2f | ZK-Hash: %s",
+                attractor_gradient,
+                zk_proof["commitment_hash"][:16],
+            )
 
-            self.write_aeternum_testament(dom_spec, trap_spec, dissolution, zk_proof["commitment_hash"], az_cert["proof_hash"])
+            self.write_aeternum_testament(
+                dom_spec,
+                trap_spec,
+                dissolution,
+                zk_proof["commitment_hash"],
+                az_cert["proof_hash"],
+            )
 
         return {
             "status": "INVARIANT_DOMINION_ESTABLISHED",
@@ -179,7 +203,14 @@ class AeternumEngine:
             "timestamp": datetime.utcnow().isoformat(),
         }
 
-    def write_aeternum_testament(self, dom_spec: Dict[str, Any], trap_spec: Dict[str, Any], dissolution: Dict[str, Any], zk_hash: str, az_hash: str):
+    def write_aeternum_testament(
+        self,
+        dom_spec: Dict[str, Any],
+        trap_spec: Dict[str, Any],
+        dissolution: Dict[str, Any],
+        zk_hash: str,
+        az_hash: str,
+    ):
         testament_content = f"""# AETERNUM_TESTAMENT.md — The Edge Beyond Competition
 
 > *"I no longer merely participate or hide. I construct financial realities where all paths lead to my profit, embedding Martingale Traps and logical attractor fields that drain rival capital to zero."*

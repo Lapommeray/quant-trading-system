@@ -8,15 +8,14 @@ import math
 import logging
 from typing import Dict, List, Any
 
+
 def setup_logging():
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [AgentSwarmPit] %(message)s",
-        handlers=[
-            logging.FileHandler("agent_swarm_pit.log"),
-            logging.StreamHandler()
-        ]
+        handlers=[logging.FileHandler("agent_swarm_pit.log"), logging.StreamHandler()],
     )
+
 
 class SwarmAgent:
     def __init__(self, name: str, specialty: str, base_weight: float = 1.0):
@@ -92,8 +91,11 @@ class MultiAgentSwarmPit:
             consensus_direction = "NEUTRAL"
             consensus_confidence = 0.50
 
-        self.logger.info("Nash Equilibrium Consensus Reached: Direction=%s | Confidence=%.2f",
-                         consensus_direction, consensus_confidence)
+        self.logger.info(
+            "Nash Equilibrium Consensus Reached: Direction=%s | Confidence=%.2f",
+            consensus_direction,
+            consensus_confidence,
+        )
 
         return {
             "consensus_direction": consensus_direction,

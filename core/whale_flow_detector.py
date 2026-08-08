@@ -13,11 +13,13 @@ All data read in core data system before broker REST.
 Asset: BTCUSD, ETHUSD
 Publishes WHALE_FLOW event OPERATIONAL lane for OFI/CVD to consume instantly.
 """
+
 from core.base_module import BaseTradingModule, register_module, ModuleResult
 from core.event_bus import get_event_bus, EventPriority
 from core.data_ring import get_data_ring
 import time
 import math
+
 
 @register_module
 class WhaleFlowDetector(BaseTradingModule):
@@ -28,17 +30,20 @@ class WhaleFlowDetector(BaseTradingModule):
 
     def __init__(self, config=None, event_bus=None):
         super().__init__(config, event_bus)
-        self.config.setdefault("adaptive", {
-            "confidence_floor": 0.70,
-            "weight_multiplier": 1.0,
-            "lookback": 72,  # hours for zscore
-            "cooldown_seconds": 5.0,
-            "volatility_multiplier": 1.0,
-            "regime_affinity_multiplier": 1.0,
-            "inflow_threshold_btc": 5000,  # 5k BTC
-            "zscore_threshold": 2.5,
-            "stablecoin_threshold_m": 200
-        })
+        self.config.setdefault(
+            "adaptive",
+            {
+                "confidence_floor": 0.70,
+                "weight_multiplier": 1.0,
+                "lookback": 72,  # hours for zscore
+                "cooldown_seconds": 5.0,
+                "volatility_multiplier": 1.0,
+                "regime_affinity_multiplier": 1.0,
+                "inflow_threshold_btc": 5000,  # 5k BTC
+                "zscore_threshold": 2.5,
+                "stablecoin_threshold_m": 200,
+            },
+        )
         self.flow_history = []
         self.last_signal_ts = 0
         self.last_regime = "unknown"
@@ -69,9 +74,11 @@ class WhaleFlowDetector(BaseTradingModule):
         # Try real API if env var set
         try:
             import os
+
             api_key = os.getenv("CRYPTOQUANT_API_KEY")
             if api_key:
                 import requests
+
                 # Example real call (pseudo)
                 # r = requests.get("https://api.cryptoquant.com/v1/btc/exchange-flows", params={"window":"hour","limit":72}, headers={"Authorization": f"Bearer {api_key}"}, timeout=2)
                 # data = r.json()
@@ -87,8 +94,16 @@ class WhaleFlowDetector(BaseTradingModule):
             ticks = ring.latest(1000)
             if len(ticks) > 100:
                 # crude proxy: large sell qty vs buy qty indicates inflow (selling)
-                sell_qty = sum(t["qty"] for t in ticks if t["side"] == -1) if hasattr(ticks, '__iter__') else 0
-                buy_qty = sum(t["qty"] for t in ticks if t["side"] == 1) if hasattr(ticks, '__iter__') else 0
+                sell_qty = (
+                    sum(t["qty"] for t in ticks if t["side"] == -1)
+                    if hasattr(ticks, "__iter__")
+                    else 0
+                )
+                buy_qty = (
+                    sum(t["qty"] for t in ticks if t["side"] == 1)
+                    if hasattr(ticks, "__iter__")
+                    else 0
+                )
                 # Not real flow, so damp to zero for safety
                 netflow = (sell_qty - buy_qty) * 0.01  # damp
             else:
@@ -99,13 +114,16 @@ class WhaleFlowDetector(BaseTradingModule):
         # zscore vs history
         self.flow_history.append(netflow)
         if len(self.flow_history) > self.config["adaptive"]["lookback"]:
-            self.flow_history = self.flow_history[-self.config["adaptive"]["lookback"]:]
+            self.flow_history = self.flow_history[
+                -self.config["adaptive"]["lookback"] :
+            ]
 
         if len(self.flow_history) > 10:
             import numpy as np
+
             mean = float(np.mean(self.flow_history))
             std = float(np.std(self.flow_history))
-            z = (netflow - mean) / (std if std>1e-6 else 1)
+            z = (netflow - mean) / (std if std > 1e-6 else 1)
         else:
             z = 0.0
 
@@ -120,6 +138,7 @@ class WhaleFlowDetector(BaseTradingModule):
         """
         try:
             import os, requests
+
             # If we want real, but keep safe with timeout 2s, no key needed public
             # r = requests.get("https://www.deribit.com/api/v2/public/get_last_trades_by_currency", params={"currency":"BTC","kind":"option","count":100}, timeout=2)
             # trades = r.json().get("result", {}).get("trades", [])
@@ -136,7 +155,12 @@ class WhaleFlowDetector(BaseTradingModule):
         if "SPY" in symbol or "ES" in symbol:
             # For SPY, whale flow is options sweep >$1M via Polygon/UnusualWhales
             # TODO implement Polygon options sweep
-            return ModuleResult(self.module_name, "NEUTRAL", 0.0, {"reason": "spy_not_yet_options_sweep"})
+            return ModuleResult(
+                self.module_name,
+                "NEUTRAL",
+                0.0,
+                {"reason": "spy_not_yet_options_sweep"},
+            )
 
         netflow, z = self._fetch_exchange_netflow_mock(symbol)
 
@@ -151,22 +175,28 @@ class WhaleFlowDetector(BaseTradingModule):
         # Move WITH whale: SELL, not BUY like retail FOMO
         if (netflow > thr_btc or z > z_thr) and netflow > 0:
             signal = "SELL"
-            conf = min(1.0, abs(z)/3.0 * 0.9 if z>0 else 0.7)
+            conf = min(1.0, abs(z) / 3.0 * 0.9 if z > 0 else 0.7)
             flow_type = "distribution"
         # Accumulation: large outflow = whales withdrawing to cold storage, supply squeeze
         elif (abs(netflow) > thr_btc or z < -z_thr) and netflow < 0:
             signal = "BUY"
-            conf = min(1.0, abs(z)/3.0 * 0.9 if z<0 else 0.7)
+            conf = min(1.0, abs(z) / 3.0 * 0.9 if z < 0 else 0.7)
             flow_type = "accumulation"
 
         # Stablecoin flow check
         stable_flow = self._cached_stable.get("flow_m", 0)
         # If stable inflow large + accumulation, boost BUY conf
-        if flow_type == "accumulation" and stable_flow > self.config["adaptive"]["stablecoin_threshold_m"]:
-            conf = min(1.0, conf*1.2)
+        if (
+            flow_type == "accumulation"
+            and stable_flow > self.config["adaptive"]["stablecoin_threshold_m"]
+        ):
+            conf = min(1.0, conf * 1.2)
 
         # Cooldown
-        if time.time() - self.last_signal_ts < self.config["adaptive"]["cooldown_seconds"]:
+        if (
+            time.time() - self.last_signal_ts
+            < self.config["adaptive"]["cooldown_seconds"]
+        ):
             if signal != "NEUTRAL":
                 # still publish bias but not trade signal
                 pass
@@ -178,7 +208,7 @@ class WhaleFlowDetector(BaseTradingModule):
         if signal != "NEUTRAL":
             self.last_signal_ts = time.time()
 
-        latency = (time.time() - start)*1000
+        latency = (time.time() - start) * 1000
         self.record_success(latency)
 
         payload = {
@@ -187,12 +217,17 @@ class WhaleFlowDetector(BaseTradingModule):
             "zscore": float(z),
             "stable_flow_m": float(stable_flow),
             "symbol": symbol,
-            "regime": self.last_regime
+            "regime": self.last_regime,
         }
 
         # Publish WHALE_FLOW event OPERATIONAL lane (pre-broker, instant)
         try:
-            get_event_bus().publish("WHALE_FLOW", payload, source=self.module_name, priority=EventPriority.OPERATIONAL)
+            get_event_bus().publish(
+                "WHALE_FLOW",
+                payload,
+                source=self.module_name,
+                priority=EventPriority.OPERATIONAL,
+            )
         except:
             pass
 
@@ -201,12 +236,17 @@ class WhaleFlowDetector(BaseTradingModule):
             signal=signal,
             confidence=conf * self.config["adaptive"]["weight_multiplier"],
             features=payload,
-            latency_ms=latency
+            latency_ms=latency,
         )
 
         # Also publish as ALPHA_SIGNAL for consensus
         try:
-            get_event_bus().publish("ALPHA_SIGNAL", result.to_dict(), source=self.module_name, priority=EventPriority.OPERATIONAL)
+            get_event_bus().publish(
+                "ALPHA_SIGNAL",
+                result.to_dict(),
+                source=self.module_name,
+                priority=EventPriority.OPERATIONAL,
+            )
         except:
             pass
 
@@ -214,12 +254,16 @@ class WhaleFlowDetector(BaseTradingModule):
         return result
 
     def on_event(self, event_type, payload=None):
-        if hasattr(event_type, 'event_type'):
+        if hasattr(event_type, "event_type"):
             ev = event_type
             event_type = ev.event_type
             payload = ev.payload
         if event_type == "REGIME_CHANGE":
-            self.last_regime = payload.get("label", "unknown") if isinstance(payload, dict) else "unknown"
+            self.last_regime = (
+                payload.get("label", "unknown")
+                if isinstance(payload, dict)
+                else "unknown"
+            )
             if self.last_regime == "crash":
                 # In crash, increase threshold (need stronger proof of accumulation)
                 self.config["adaptive"]["inflow_threshold_btc"] = 8000
@@ -229,15 +273,27 @@ class WhaleFlowDetector(BaseTradingModule):
             return {"learned": False}
         pnl = outcome.get("pnl", 0)
         if pnl < 0:
-            self.config["adaptive"]["zscore_threshold"] = min(3.5, self.config["adaptive"]["zscore_threshold"] + 0.1)
-            self.config["adaptive"]["confidence_floor"] = min(0.85, self.config["adaptive"]["confidence_floor"] + 0.02)
-            return {"learned": True, "lesson": f"Whale flow loss {pnl:.4f}, raised z thr to {self.config['adaptive']['zscore_threshold']}"}
+            self.config["adaptive"]["zscore_threshold"] = min(
+                3.5, self.config["adaptive"]["zscore_threshold"] + 0.1
+            )
+            self.config["adaptive"]["confidence_floor"] = min(
+                0.85, self.config["adaptive"]["confidence_floor"] + 0.02
+            )
+            return {
+                "learned": True,
+                "lesson": f"Whale flow loss {pnl:.4f}, raised z thr to {self.config['adaptive']['zscore_threshold']}",
+            }
         else:
-            self.config["adaptive"]["confidence_floor"] = max(0.60, self.config["adaptive"]["confidence_floor"] - 0.005)
+            self.config["adaptive"]["confidence_floor"] = max(
+                0.60, self.config["adaptive"]["confidence_floor"] - 0.005
+            )
             return {"learned": True}
 
     def diagnose(self, context=None):
         stats = (context or {}).get("stats", {})
         if stats.get("win_rate", 0.5) < 0.45:
-            return {"issue": "low_win_rate", "params": {"zscore_threshold": 2.8, "confidence_floor": 0.75}}
+            return {
+                "issue": "low_win_rate",
+                "params": {"zscore_threshold": 2.8, "confidence_floor": 0.75},
+            }
         return {"issue": "none"}

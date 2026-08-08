@@ -4,8 +4,8 @@ Use ``python -m okx_live.runner`` for the canonical module entry point.  This
 script intentionally delegates to that runner and does not provide a paper or
 synthetic-data fallback.
 """
-from okx_live.runner import OKXLiveRunner, get_real_history, parse_args
 
+from okx_live.runner import OKXLiveRunner, get_real_history, parse_args
 
 if __name__ == "__main__":
     args = parse_args()

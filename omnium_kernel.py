@@ -47,7 +47,13 @@ DETERMINISTIC_BACKTEST_GROUNDING = {
     "seed_int": OMNIUM_DETERMINISTIC_SEED,
     "backtester_module": "advanced_modules.enhanced_backtester",
     "backtester_class": "EnhancedBacktester",
-    "metric_keys": ["win_rate", "total_pnl", "profit_factor", "sharpe_ratio", "max_drawdown"],
+    "metric_keys": [
+        "win_rate",
+        "total_pnl",
+        "profit_factor",
+        "sharpe_ratio",
+        "max_drawdown",
+    ],
     "invariant_form": "∀t. Equity_t ≥ Equity_0",
     "grounding": "deterministic_projection_pure_function_of_code",
     "live_injection": {
@@ -73,6 +79,7 @@ LIVE_EXTERNAL_GROUNDING = {
     "proof_extension": "omnium_final.proof includes LIVE_GROUNDING section",
 }
 
+
 class OmniumKernel:
     """Minimal self-encoding quine kernel maintaining forall t, Equity_t >= Equity_0.
 
@@ -95,7 +102,9 @@ class OmniumKernel:
         # Re-derive seed independently to prove immutability
         expected_hex = hashlib.sha256(OMNIUM_INVARIANT_SEED_BYTES).hexdigest()[:16]
         expected_int = int(expected_hex, 16) % (2**31)
-        assert OMNIUM_DETERMINISTIC_SEED == expected_int, "Deterministic seed has been tampered"
+        assert (
+            OMNIUM_DETERMINISTIC_SEED == expected_int
+        ), "Deterministic seed has been tampered"
         assert DETERMINISTIC_BACKTEST_GROUNDING["seed_int"] == expected_int
         assert DETERMINISTIC_BACKTEST_GROUNDING["metric_keys"] == [
             "win_rate",
@@ -109,7 +118,9 @@ class OmniumKernel:
         return DETERMINISTIC_BACKTEST_GROUNDING
 
     @staticmethod
-    def evaluate_universal_invariant(initial_equity: float, current_equity: float) -> Tuple[bool, str]:
+    def evaluate_universal_invariant(
+        initial_equity: float, current_equity: float
+    ) -> Tuple[bool, str]:
         # Deterministic Closure upgrade: ensure grounding is intact before sealing proof
         OmniumKernel.assert_deterministic_grounding()
 
@@ -146,6 +157,7 @@ TIMESTAMP: {datetime.utcnow().isoformat()}
 
         proof_hash = hashlib.sha256(proof_text.encode()).hexdigest()
         return True, proof_hash
+
 
 if __name__ == "__main__":
     kernel = OmniumKernel()

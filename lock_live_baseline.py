@@ -28,17 +28,29 @@ from datetime import datetime
 REPO_ROOT = Path(__file__).resolve().parent
 
 logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [LOCK_LIVE_BASELINE] %(message)s"
+    level=logging.INFO, format="%(asctime)s [LOCK_LIVE_BASELINE] %(message)s"
 )
 log = logging.getLogger("lock_live_baseline")
 
+
 def main():
-    parser = argparse.ArgumentParser(description="Lock live baseline for invariant grounding")
-    parser.add_argument("--symbol", default="BTC-USD", help="Ticker symbol for yfinance")
-    parser.add_argument("--period", default="1y", help="yfinance period (1y, 2y, max, etc.)")
-    parser.add_argument("--interval", default="1d", help="yfinance interval (1d, 1h, etc.)")
-    parser.add_argument("--output", default=str(REPO_ROOT / "live_baseline.json"), help="Output JSON path")
+    parser = argparse.ArgumentParser(
+        description="Lock live baseline for invariant grounding"
+    )
+    parser.add_argument(
+        "--symbol", default="BTC-USD", help="Ticker symbol for yfinance"
+    )
+    parser.add_argument(
+        "--period", default="1y", help="yfinance period (1y, 2y, max, etc.)"
+    )
+    parser.add_argument(
+        "--interval", default="1d", help="yfinance interval (1d, 1h, etc.)"
+    )
+    parser.add_argument(
+        "--output",
+        default=str(REPO_ROOT / "live_baseline.json"),
+        help="Output JSON path",
+    )
     args = parser.parse_args()
 
     try:
@@ -47,8 +59,15 @@ def main():
         log.error(f"Failed to import evolve.load_backtest_metrics: {e}")
         raise
 
-    log.info(f"Fetching live metrics for {args.symbol} {args.period} {args.interval} ...")
-    metrics = load_backtest_metrics(use_live_data=True, symbol=args.symbol, period=args.period, interval=args.interval)
+    log.info(
+        f"Fetching live metrics for {args.symbol} {args.period} {args.interval} ..."
+    )
+    metrics = load_backtest_metrics(
+        use_live_data=True,
+        symbol=args.symbol,
+        period=args.period,
+        interval=args.interval,
+    )
 
     if metrics is None:
         log.error("Failed to load live metrics; aborting baseline lock")
@@ -77,17 +96,30 @@ def main():
     # Also verify deterministic reproducibility of live path (with synthetic fallback it is deterministic,
     # with real yfinance it will vary with market, but size/tie-breaking remains seeded)
     try:
-        metrics2 = load_backtest_metrics(use_live_data=True, symbol=args.symbol, period=args.period, interval=args.interval)
+        metrics2 = load_backtest_metrics(
+            use_live_data=True,
+            symbol=args.symbol,
+            period=args.period,
+            interval=args.interval,
+        )
         if metrics == metrics2:
-            log.info("Live metrics bit-identical across two runs (deterministic fallback active)")
+            log.info(
+                "Live metrics bit-identical across two runs (deterministic fallback active)"
+            )
         else:
-            log.info("Live metrics vary across runs (real yfinance data — expected if market data changed, but internal RNG remains seeded)")
+            log.info(
+                "Live metrics vary across runs (real yfinance data — expected if market data changed, but internal RNG remains seeded)"
+            )
     except Exception:
         log.warning("Second verification run failed; ignoring")
 
     # Integrity note for evolve.py guard
-    log.info("Baseline ready. evolve.py metrics_degraded() will compare live candidates against this file.")
-    log.info("Simulated deterministic guard remains fast path; live path is authoritative for external grounding.")
+    log.info(
+        "Baseline ready. evolve.py metrics_degraded() will compare live candidates against this file."
+    )
+    log.info(
+        "Simulated deterministic guard remains fast path; live path is authoritative for external grounding."
+    )
     return 0
 
 

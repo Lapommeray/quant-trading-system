@@ -1,5 +1,6 @@
 # QUANTUM COHERENCE TRACKER (SHA3-512 HASHED)
 
+
 class QuantumCoherenceTracker:
     def __init__(self):
         self.coherence_score = 0.0
@@ -13,4 +14,6 @@ class QuantumCoherenceTracker:
 
     def _calculate_entanglement(self, *series):
         """Hidden quantum state analysis"""
-        return np.mean([np.corrcoef(s1, s2)[0, 1] for s1, s2 in combinations(series, 2)])
+        return np.mean(
+            [np.corrcoef(s1, s2)[0, 1] for s1, s2 in combinations(series, 2)]
+        )

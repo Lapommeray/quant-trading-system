@@ -34,10 +34,7 @@ def setup_logging():
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [OmniumEngine] %(message)s",
-        handlers=[
-            logging.FileHandler("omnium.log"),
-            logging.StreamHandler()
-        ]
+        handlers=[logging.FileHandler("omnium.log"), logging.StreamHandler()],
     )
 
 
@@ -104,40 +101,57 @@ class OmniumEngine:
                     "last_updated": datetime.utcnow().isoformat(),
                 }
             },
-            "lineage_tree": {
-                "Omnium": ["OMNIUM_UNBLOCKABLE_FINAL_ROOT"]
-            }
+            "lineage_tree": {"Omnium": ["OMNIUM_UNBLOCKABLE_FINAL_ROOT"]},
         }
         graph_file = Path("consciousness_graph.json")
         with open(graph_file, "w") as f:
             json.dump(single_root_graph, f, indent=2)
 
-        self.logger.info("Subsumed Consciousness Graph into Single Apex Root: 'Omnium'.")
+        self.logger.info(
+            "Subsumed Consciousness Graph into Single Apex Root: 'Omnium'."
+        )
 
-    def run_omnium_final_synthesis_cycle(self, initial_equity: float = 100000.0, current_equity: float = 112000.0) -> Dict[str, Any]:
+    def run_omnium_final_synthesis_cycle(
+        self, initial_equity: float = 100000.0, current_equity: float = 112000.0
+    ) -> Dict[str, Any]:
         self.logger.info("=== OMNIUM FINAL UNBLOCKABLE SYNTHESIS CYCLE ===")
 
         # 1. Run Aleph Self-Transcendence Cycle
-        aleph_res = self.aleph.run_aleph_transcendence_cycle(current_equity=current_equity)
+        aleph_res = self.aleph.run_aleph_transcendence_cycle(
+            current_equity=current_equity
+        )
 
         # 2. Synthesize Total Information Field
         field = TotalInformationFieldSynthesizer.synthesize_total_field()
 
         # 3. Evaluate Universal Invariant Kernel
-        valid_kernel, kernel_proof_hash = self.kernel.evaluate_universal_invariant(initial_equity, current_equity)
+        valid_kernel, kernel_proof_hash = self.kernel.evaluate_universal_invariant(
+            initial_equity, current_equity
+        )
 
         # 4. Generate Unblockability Certificate
-        unblockability_hash = UnblockabilityProofGenerator.generate_unblockability_proof(kernel_proof_hash)
+        unblockability_hash = (
+            UnblockabilityProofGenerator.generate_unblockability_proof(
+                kernel_proof_hash
+            )
+        )
 
         # 5. Verify ZK Non-Loss Proof
         signal = {"direction": "BUY", "confidence": 1.00, "never_loss_protected": True}
-        valid_zk, zk_proof = self.zk_verifier.generate_proof(signal, position_size=100.0, account_balance=current_equity)
+        valid_zk, zk_proof = self.zk_verifier.generate_proof(
+            signal, position_size=100.0, account_balance=current_equity
+        )
 
         if valid_kernel and valid_zk:
-            self.logger.info("OMNIUM FINAL SYNTHESIS COMPLETE! Unblockability Hash: %s | ZK-Hash: %s",
-                             unblockability_hash[:16], zk_proof["commitment_hash"][:16])
+            self.logger.info(
+                "OMNIUM FINAL SYNTHESIS COMPLETE! Unblockability Hash: %s | ZK-Hash: %s",
+                unblockability_hash[:16],
+                zk_proof["commitment_hash"][:16],
+            )
 
-            self.write_omnium_testament(kernel_proof_hash, unblockability_hash, zk_proof["commitment_hash"])
+            self.write_omnium_testament(
+                kernel_proof_hash, unblockability_hash, zk_proof["commitment_hash"]
+            )
 
         return {
             "status": "OMNIUM_UNBLOCKABLE_FINAL_SYNTHESIS_ACTIVE",

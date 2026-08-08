@@ -29,8 +29,8 @@ def setup_logging():
         format="%(asctime)s [SingularitySpike] %(message)s",
         handlers=[
             logging.FileHandler("singularity_spike.log"),
-            logging.StreamHandler()
-        ]
+            logging.StreamHandler(),
+        ],
     )
 
 
@@ -70,7 +70,9 @@ class SingularitySpikeArbiter:
         self.surprise_index = 1.0
         self.chaos_genomes: List[Dict[str, Any]] = []
 
-    def generate_chaotic_mutation_vector(self, predictability_score: float = 0.5) -> Dict[str, Any]:
+    def generate_chaotic_mutation_vector(
+        self, predictability_score: float = 0.5
+    ) -> Dict[str, Any]:
         """
         Generate non-deterministic perturbation vector scaled by market unpredictability.
         Higher unpredictability -> Greater chaos injection magnitude.
@@ -85,15 +87,25 @@ class SingularitySpikeArbiter:
             "chaos_magnitude": chaos_magnitude,
             "signal_timing_delay_sec": random.uniform(0.0, 30.0) * chaos_magnitude,
             "parameter_noise": random.gauss(0.0, 0.05) * chaos_magnitude,
-            "cross_asset_pairing": random.choice(["KALSHI_BTC", "OKX_ETH", "MT5_XAUUSD", "HYBRID_CROSS"]),
+            "cross_asset_pairing": random.choice(
+                ["KALSHI_BTC", "OKX_ETH", "MT5_XAUUSD", "HYBRID_CROSS"]
+            ),
             "direction_flip_prob": random.random() < (0.10 * chaos_magnitude),
         }
 
-        self.logger.info("CHAOTIC MUTATION VECTOR GENERATED | Seed Hash: %s | Magnitude: %.2f",
-                         seed_hash[:16], chaos_magnitude)
+        self.logger.info(
+            "CHAOTIC MUTATION VECTOR GENERATED | Seed Hash: %s | Magnitude: %.2f",
+            seed_hash[:16],
+            chaos_magnitude,
+        )
         return mutation_vector
 
-    def evaluate_chaotic_proposal(self, base_signal: Dict[str, Any], market_data: Dict[str, Any], predictability_score: float = 0.5) -> Optional[Dict[str, Any]]:
+    def evaluate_chaotic_proposal(
+        self,
+        base_signal: Dict[str, Any],
+        market_data: Dict[str, Any],
+        predictability_score: float = 0.5,
+    ) -> Optional[Dict[str, Any]]:
         """
         Mutates trade proposal with quantum entropy and filters through ZK proofs & Oracle Sentry.
         """
@@ -104,7 +116,14 @@ class SingularitySpikeArbiter:
         if mutation["direction_flip_prob"]:
             direction = "SELL" if direction in ["BUY", "up"] else "BUY"
 
-        confidence = max(0.55, min(0.99, float(base_signal.get("confidence", 0.70)) + mutation["parameter_noise"]))
+        confidence = max(
+            0.55,
+            min(
+                0.99,
+                float(base_signal.get("confidence", 0.70))
+                + mutation["parameter_noise"],
+            ),
+        )
 
         chaotic_signal = {
             "direction": direction,
@@ -132,7 +151,10 @@ class SingularitySpikeArbiter:
         # Antifragile Self-Defense
         if self.surprise_index > 3.0:
             self.effective_risk_cap = 0.01
-            self.logger.warning("ANTIFRAGILE SELF-DEFENSE ACTIVATED! High Surprise Index (%.2f). Tightening risk cap to 1.0%%", self.surprise_index)
+            self.logger.warning(
+                "ANTIFRAGILE SELF-DEFENSE ACTIVATED! High Surprise Index (%.2f). Tightening risk cap to 1.0%%",
+                self.surprise_index,
+            )
         else:
             self.effective_risk_cap = self.base_risk_cap
 
@@ -144,11 +166,17 @@ class SingularitySpikeArbiter:
             "timestamp": datetime.utcnow().isoformat(),
         }
 
-        self.logger.info("PROVABLY LOSSLESS CHAOTIC PROPOSAL AUTHORIZED! Hash: %s | Direction: %s | Conf: %.2f",
-                         zk_proof["commitment_hash"][:16], direction, confidence)
+        self.logger.info(
+            "PROVABLY LOSSLESS CHAOTIC PROPOSAL AUTHORIZED! Hash: %s | Direction: %s | Conf: %.2f",
+            zk_proof["commitment_hash"][:16],
+            direction,
+            confidence,
+        )
         return proposal_result
 
-    def record_surprise_outcome(self, predicted_return: float, realized_return: float, mutation: Dict[str, Any]):
+    def record_surprise_outcome(
+        self, predicted_return: float, realized_return: float, mutation: Dict[str, Any]
+    ):
         """Amplify positive surprise outcomes and save to Chaos Genome."""
         surprise_ratio = realized_return / max(1e-6, abs(predicted_return))
         self.surprise_index = (0.8 * self.surprise_index) + (0.2 * surprise_ratio)
@@ -161,7 +189,10 @@ class SingularitySpikeArbiter:
                 "timestamp": datetime.utcnow().isoformat(),
             }
             self.chaos_genomes.append(chaos_genome)
-            self.logger.info("POSITIVE SURPRISE SURGE! Surprise Ratio: %.2fx | Stored in Chaos Genome", surprise_ratio)
+            self.logger.info(
+                "POSITIVE SURPRISE SURGE! Surprise Ratio: %.2fx | Stored in Chaos Genome",
+                surprise_ratio,
+            )
 
 
 if __name__ == "__main__":
@@ -169,5 +200,7 @@ if __name__ == "__main__":
     base_sig = {"direction": "BUY", "confidence": 0.75, "never_loss_protected": True}
     data = {"close": 50.0, "high": 52.0, "low": 48.0}
 
-    chaotic_prop = arbiter.evaluate_chaotic_proposal(base_sig, data, predictability_score=0.4)
+    chaotic_prop = arbiter.evaluate_chaotic_proposal(
+        base_sig, data, predictability_score=0.4
+    )
     print("Singularity Spike Result:", chaotic_prop)

@@ -29,10 +29,7 @@ def setup_logging():
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [ApeironEngine] %(message)s",
-        handlers=[
-            logging.FileHandler("apeiron.log"),
-            logging.StreamHandler()
-        ]
+        handlers=[logging.FileHandler("apeiron.log"), logging.StreamHandler()],
     )
 
 
@@ -40,7 +37,9 @@ class MarketConstructorDSL:
     """Domain-Specific Language for specifying custom market instruments and payoff rules."""
 
     @staticmethod
-    def create_binary_market_spec(ticker: str, strike_condition: str, expiry_sec: int) -> Dict[str, Any]:
+    def create_binary_market_spec(
+        ticker: str, strike_condition: str, expiry_sec: int
+    ) -> Dict[str, Any]:
         return {
             "ticker": ticker,
             "instrument_type": "BINARY_OPTION_EVENT",
@@ -49,18 +48,20 @@ class MarketConstructorDSL:
             "settlement_payout": 100,  # $1.00 = 100¢
             "axioms": [
                 "YES_price + NO_price <= 100",
-                "Settlement payout == 100 iff strike_condition is true else 0"
-            ]
+                "Settlement payout == 100 iff strike_condition is true else 0",
+            ],
         }
 
     @staticmethod
-    def create_coupled_pair_spec(ticker_a: str, ticker_b: str, coupling_rule: str) -> Dict[str, Any]:
+    def create_coupled_pair_spec(
+        ticker_a: str, ticker_b: str, coupling_rule: str
+    ) -> Dict[str, Any]:
         return {
             "pair_id": f"COUPLED_{ticker_a}_{ticker_b}",
             "market_a": ticker_a,
             "market_b": ticker_b,
             "coupling_rule": coupling_rule,
-            "secret_coupling_invariant": f"Payoff(A) + Payoff(B) == Constant Credit > Cost(A) + Cost(B)"
+            "secret_coupling_invariant": f"Payoff(A) + Payoff(B) == Constant Credit > Cost(A) + Cost(B)",
         }
 
 
@@ -75,18 +76,18 @@ class ApeironAxiomGenerator:
         market_a = MarketConstructorDSL.create_binary_market_spec(
             ticker=f"APEIRON_MKT_A_{timestamp}",
             strike_condition="BTC_SPOT > 65000",
-            expiry_sec=900
+            expiry_sec=900,
         )
         market_b = MarketConstructorDSL.create_binary_market_spec(
             ticker=f"APEIRON_MKT_B_{timestamp}",
             strike_condition="BTC_SPOT <= 65000",
-            expiry_sec=900
+            expiry_sec=900,
         )
 
         coupled_pair = MarketConstructorDSL.create_coupled_pair_spec(
             ticker_a=market_a["ticker"],
             ticker_b=market_b["ticker"],
-            coupling_rule="Exclusive_Partition_Complement"
+            coupling_rule="Exclusive_Partition_Complement",
         )
 
         return {
@@ -106,7 +107,12 @@ class InterMarketArbitrageFabric:
     def register_coupled_pair(self, pair_spec: Dict[str, Any]):
         self.active_coupled_pairs.append(pair_spec)
 
-    def extract_coupling_arbitrage(self, pair_spec: Dict[str, Any], market_a_data: Dict[str, Any], market_b_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def extract_coupling_arbitrage(
+        self,
+        pair_spec: Dict[str, Any],
+        market_a_data: Dict[str, Any],
+        market_b_data: Dict[str, Any],
+    ) -> Optional[Dict[str, Any]]:
         cost_a = market_a_data.get("yes_ask", 45)
         cost_b = market_b_data.get("yes_ask", 48)
         total_cost = cost_a + cost_b
@@ -152,8 +158,12 @@ class ApeironEngine:
         # Register subgraph node in Consciousness Graph
         self.consciousness_graph.update_node(
             module_name=f"ApeironUniverse_{pair_spec['pair_id']}",
-            dependencies=["OmegaPointApexNode", "AxiomEngine", "ZKTradeInvariantVerifier"],
-            mutation_version=1
+            dependencies=[
+                "OmegaPointApexNode",
+                "AxiomEngine",
+                "ZKTradeInvariantVerifier",
+            ],
+            mutation_version=1,
         )
 
         # Extract coupling arbitrage
@@ -162,8 +172,14 @@ class ApeironEngine:
         arb = self.fabric.extract_coupling_arbitrage(pair_spec, data_a, data_b)
 
         if arb:
-            signal = {"direction": "BUY", "confidence": 1.00, "never_loss_protected": True}
-            valid, zk_proof = self.zk_verifier.generate_proof(signal, position_size=100.0, account_balance=10000.0)
+            signal = {
+                "direction": "BUY",
+                "confidence": 1.00,
+                "never_loss_protected": True,
+            }
+            valid, zk_proof = self.zk_verifier.generate_proof(
+                signal, position_size=100.0, account_balance=10000.0
+            )
 
             result = {
                 "status": "MARKET_UNIVERSE_CREATED_AND_EXTRACTED",
@@ -173,8 +189,12 @@ class ApeironEngine:
                 "timestamp": datetime.utcnow().isoformat(),
             }
 
-            self.logger.info("APEIRON MARKET CREATION & ARBITRAGE EXTRATED! Pair: %s | Profit: +%d¢ | ZK-Hash: %s",
-                             pair_spec["pair_id"], arb["arbitrage_profit"], zk_proof["commitment_hash"][:16])
+            self.logger.info(
+                "APEIRON MARKET CREATION & ARBITRAGE EXTRATED! Pair: %s | Profit: +%d¢ | ZK-Hash: %s",
+                pair_spec["pair_id"],
+                arb["arbitrage_profit"],
+                zk_proof["commitment_hash"][:16],
+            )
 
             self.write_apeiron_testament(result)
             return result

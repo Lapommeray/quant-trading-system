@@ -38,8 +38,8 @@ def setup_logging():
         format="%(asctime)s [EmpyreanEngine] %(message)s",
         handlers=[
             logging.FileHandler("empyrean_singularity.log"),
-            logging.StreamHandler()
-        ]
+            logging.StreamHandler(),
+        ],
     )
 
 
@@ -49,15 +49,17 @@ class LatentEmotionalSpaceEncoder:
     def __init__(self, dim: int = 1024):
         self.dim = dim
 
-    def encode_sentiment_inputs(self, fear_greed_idx: float, news_velocity: float, order_flow_imbalance: float) -> List[float]:
+    def encode_sentiment_inputs(
+        self, fear_greed_idx: float, news_velocity: float, order_flow_imbalance: float
+    ) -> List[float]:
         """Map sentiment inputs to a normalized 1024-dim vector using mathematical projection functions."""
         random.seed(int(fear_greed_idx * 1000 + news_velocity * 100))
         vector = []
         for i in range(self.dim):
             projection = (
-                math.sin(i * 0.1) * fear_greed_idx +
-                math.cos(i * 0.2) * news_velocity +
-                math.tanh(order_flow_imbalance) * random.uniform(-1.0, 1.0)
+                math.sin(i * 0.1) * fear_greed_idx
+                + math.cos(i * 0.2) * news_velocity
+                + math.tanh(order_flow_imbalance) * random.uniform(-1.0, 1.0)
             )
             vector.append(round(projection, 6))
         return vector
@@ -72,11 +74,15 @@ class EmotionalSingularityDetector:
         if not les_vector:
             return 0.0
 
-        variance = sum((x - (sum(les_vector) / len(les_vector))) ** 2 for x in les_vector) / len(les_vector)
+        variance = sum(
+            (x - (sum(les_vector) / len(les_vector))) ** 2 for x in les_vector
+        ) / len(les_vector)
         divergence = math.tanh(math.sqrt(variance))
         return float(divergence)
 
-    def detect_emotional_singularity(self, les_vector: List[float]) -> Optional[Dict[str, Any]]:
+    def detect_emotional_singularity(
+        self, les_vector: List[float]
+    ) -> Optional[Dict[str, Any]]:
         divergence = self.calculate_field_divergence(les_vector)
         # Critical emotional singularity threshold (> 0.85)
         if divergence > 0.40:  # Active threshold for emotional singularity loop
@@ -93,13 +99,20 @@ class EmotionalSingularityDetector:
 class EmotionalHedgeConstructor:
     """Constructs coupled binary contracts for ESE_UP and ESE_DOWN certified by Absolute Zero Kernel."""
 
-    def __init__(self, apeiron: ApeironEngine, paradox: ParadoxEngine, absolute_zero: AbsoluteZeroEngine):
+    def __init__(
+        self,
+        apeiron: ApeironEngine,
+        paradox: ParadoxEngine,
+        absolute_zero: AbsoluteZeroEngine,
+    ):
         self.apeiron = apeiron
         self.paradox = paradox
         self.absolute_zero = absolute_zero
         self.zk_verifier = ZKTradeInvariantVerifier(max_allowed_risk=0.02)
 
-    def construct_emotional_hedge(self, ese_event: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def construct_emotional_hedge(
+        self, ese_event: Dict[str, Any]
+    ) -> Optional[Dict[str, Any]]:
         timestamp = int(time.time())
         mkt_up = f"ESE_UP_{timestamp}"
         mkt_down = f"ESE_DOWN_{timestamp}"
@@ -111,11 +124,19 @@ class EmotionalHedgeConstructor:
         profit_margin = guaranteed_payout - total_cost
 
         if profit_margin > 0:
-            signal = {"direction": "BUY", "confidence": ese_event["confidence"], "never_loss_protected": True}
-            valid, zk_proof = self.zk_verifier.generate_proof(signal, position_size=100.0, account_balance=10000.0)
+            signal = {
+                "direction": "BUY",
+                "confidence": ese_event["confidence"],
+                "never_loss_protected": True,
+            }
+            valid, zk_proof = self.zk_verifier.generate_proof(
+                signal, position_size=100.0, account_balance=10000.0
+            )
 
             # Certify via Absolute Zero Kernel
-            az_cert = self.absolute_zero.run_absolute_zero_verification(initial_equity=100000.0, current_equity=108500.0)
+            az_cert = self.absolute_zero.run_absolute_zero_verification(
+                initial_equity=100000.0, current_equity=108500.0
+            )
 
             if valid and az_cert["certified"]:
                 return {
@@ -147,7 +168,9 @@ class EmpyreanEngine:
         self.apeiron = ApeironEngine()
         self.paradox = ParadoxEngine()
         self.absolute_zero = AbsoluteZeroEngine()
-        self.hedge_constructor = EmotionalHedgeConstructor(self.apeiron, self.paradox, self.absolute_zero)
+        self.hedge_constructor = EmotionalHedgeConstructor(
+            self.apeiron, self.paradox, self.absolute_zero
+        )
         self.consciousness_graph = ConsciousnessGraph()
 
         self._register_empyrean_node()
@@ -155,16 +178,28 @@ class EmpyreanEngine:
     def _register_empyrean_node(self):
         self.consciousness_graph.update_node(
             module_name="EmpyreanNode",
-            dependencies=["NoosphereEngine", "ProphecyEngine", "ApeironEngine", "AbsoluteZeroRootNode"],
-            mutation_version=100000000
+            dependencies=[
+                "NoosphereEngine",
+                "ProphecyEngine",
+                "ApeironEngine",
+                "AbsoluteZeroRootNode",
+            ],
+            mutation_version=100000000,
         )
         self.logger.info("Registered 'EmpyreanNode' in Consciousness Graph.")
 
-    def run_empyrean_singularity_cycle(self, fear_greed_idx: float = 0.88, news_velocity: float = 0.95, order_flow_imbalance: float = 0.75) -> Dict[str, Any]:
+    def run_empyrean_singularity_cycle(
+        self,
+        fear_greed_idx: float = 0.88,
+        news_velocity: float = 0.95,
+        order_flow_imbalance: float = 0.75,
+    ) -> Dict[str, Any]:
         self.logger.info("=== EMPYREAN EMOTIONAL SINGULARITY CYCLE ===")
 
         # 1. Encode Latent Emotional Space (LES)
-        les_vector = self.encoder.encode_sentiment_inputs(fear_greed_idx, news_velocity, order_flow_imbalance)
+        les_vector = self.encoder.encode_sentiment_inputs(
+            fear_greed_idx, news_velocity, order_flow_imbalance
+        )
 
         # 2. Detect Emotional Singularity Event (ESE)
         ese = self.detector.detect_emotional_singularity(les_vector)
@@ -173,15 +208,21 @@ class EmpyreanEngine:
             self.logger.info("No emotional singularity detected in LES field.")
             return {"status": "LES_NORMAL", "les_vector_dim": len(les_vector)}
 
-        self.logger.info("EMOTIONAL SINGULARITY EVENT DETECTED! Divergence: %.2f | Confidence: %.2f",
-                         ese["divergence_score"], ese["confidence"])
+        self.logger.info(
+            "EMOTIONAL SINGULARITY EVENT DETECTED! Divergence: %.2f | Confidence: %.2f",
+            ese["divergence_score"],
+            ese["confidence"],
+        )
 
         # 3. Construct Emotional Hedge
         hedge = self.hedge_constructor.construct_emotional_hedge(ese)
 
         if hedge:
-            self.logger.info("EMOTIONAL SINGULARITY HEDGE EXECUTED! Profit Margin: +$%.2f | ZK-Hash: %s",
-                             hedge["profit_margin"], hedge["zk_commitment_hash"][:16])
+            self.logger.info(
+                "EMOTIONAL SINGULARITY HEDGE EXECUTED! Profit Margin: +$%.2f | ZK-Hash: %s",
+                hedge["profit_margin"],
+                hedge["zk_commitment_hash"][:16],
+            )
 
             self.write_empyrean_testament(ese, hedge)
 

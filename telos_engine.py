@@ -37,10 +37,7 @@ def setup_logging():
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [TelosEngine] %(message)s",
-        handlers=[
-            logging.FileHandler("telos_manifold.log"),
-            logging.StreamHandler()
-        ]
+        handlers=[logging.FileHandler("telos_manifold.log"), logging.StreamHandler()],
     )
 
 
@@ -59,9 +56,9 @@ class GlobalInformationFieldIntegrator:
         umbra_res = self.umbra.run_umbra_stealth_cycle()
 
         tensor_energy = (
-            float(noesis_res.get("trade", {}).get("profit_margin_cents", 15.0)) +
-            float(aeternum_res.get("attractor_gradient", 5.0)) +
-            float(len(umbra_res.get("noise_order_sequence", [])))
+            float(noesis_res.get("trade", {}).get("profit_margin_cents", 15.0))
+            + float(aeternum_res.get("attractor_gradient", 5.0))
+            + float(len(umbra_res.get("noise_order_sequence", [])))
         )
 
         return {
@@ -77,7 +74,9 @@ class ActionFunctionalMinimizer:
     """Solves variational action functional S[path] for the unique zero-entropy Telos Geodesic Path."""
 
     @staticmethod
-    def minimize_action_functional(tensor: Dict[str, Any], horizon_sec: int = 60) -> List[Dict[str, Any]]:
+    def minimize_action_functional(
+        tensor: Dict[str, Any], horizon_sec: int = 60
+    ) -> List[Dict[str, Any]]:
         energy = tensor.get("tensor_energy", 25.0)
         start_price = 50.0
         geodesic_path = []
@@ -87,12 +86,14 @@ class ActionFunctionalMinimizer:
             # Deterministic informational drift
             mid_price = start_price + math.sin(step * 0.1) * (energy * 0.05)
             spread = max(0.01, 0.05 - (energy * 0.001))
-            geodesic_path.append({
-                "t_sec": step,
-                "deterministic_mid_price": round(mid_price, 4),
-                "bid_ask_spread": round(spread, 4),
-                "entropy_deviation": 0.0000,  # Zero Entropy
-            })
+            geodesic_path.append(
+                {
+                    "t_sec": step,
+                    "deterministic_mid_price": round(mid_price, 4),
+                    "bid_ask_spread": round(spread, 4),
+                    "entropy_deviation": 0.0000,  # Zero Entropy
+                }
+            )
 
         return geodesic_path
 
@@ -118,14 +119,20 @@ class PreCausalExecutionBridge:
         self.absolute_zero = absolute_zero
         self.zk_verifier = ZKTradeInvariantVerifier(max_allowed_risk=0.02)
 
-    def execute_geodesic_pre_causal_trade(self, path: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    def execute_geodesic_pre_causal_trade(
+        self, path: List[Dict[str, Any]]
+    ) -> Optional[Dict[str, Any]]:
         target = path[-1]
         expected_profit = round(abs(target["deterministic_mid_price"] - 50.0), 2)
 
         signal = {"direction": "BUY", "confidence": 1.00, "never_loss_protected": True}
-        valid, zk_proof = self.zk_verifier.generate_proof(signal, position_size=100.0, account_balance=10000.0)
+        valid, zk_proof = self.zk_verifier.generate_proof(
+            signal, position_size=100.0, account_balance=10000.0
+        )
 
-        az_cert = self.absolute_zero.run_absolute_zero_verification(initial_equity=100000.0, current_equity=108500.0)
+        az_cert = self.absolute_zero.run_absolute_zero_verification(
+            initial_equity=100000.0, current_equity=108500.0
+        )
 
         if valid and az_cert["certified"]:
             return {
@@ -162,9 +169,11 @@ class TelosEngine:
         self.consciousness_graph.update_node(
             module_name="TelosRoot",
             dependencies=["NoesisRoot", "AeternumRoot", "AbsoluteZeroRootNode"],
-            mutation_version=100000000000000000
+            mutation_version=100000000000000000,
         )
-        self.logger.info("Anchored 'TelosRoot' as Supreme Apex Node in Consciousness Graph.")
+        self.logger.info(
+            "Anchored 'TelosRoot' as Supreme Apex Node in Consciousness Graph."
+        )
 
     def run_telos_zero_entropy_cycle(self) -> Dict[str, Any]:
         self.logger.info("=== TELOS ZERO-ENTROPY MARKET MANIFOLD CYCLE ===")
@@ -182,8 +191,11 @@ class TelosEngine:
         trade = self.bridge.execute_geodesic_pre_causal_trade(path)
 
         if trade:
-            self.logger.info("ZERO-ENTROPY GEODESIC TRADE EXECUTED! Target Mid: $%.4f | ZK-Hash: %s",
-                             trade["target_mid_price"], trade["zk_commitment_hash"][:16])
+            self.logger.info(
+                "ZERO-ENTROPY GEODESIC TRADE EXECUTED! Target Mid: $%.4f | ZK-Hash: %s",
+                trade["target_mid_price"],
+                trade["zk_commitment_hash"][:16],
+            )
 
             self.write_telos_testament(path, trade)
 

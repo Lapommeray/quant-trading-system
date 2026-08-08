@@ -21,10 +21,7 @@ def setup_logging():
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [KalshiInvariantEngine] %(message)s",
-        handlers=[
-            logging.FileHandler("kalshi_invariant.log"),
-            logging.StreamHandler()
-        ]
+        handlers=[logging.FileHandler("kalshi_invariant.log"), logging.StreamHandler()],
     )
 
 
@@ -41,7 +38,9 @@ class KalshiInvariantEngine:
         self.client = KalshiClient()
         self.safety = SafetyGovernanceSystem()
 
-    def scan_complementary_arbitrage(self, market: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+    def scan_complementary_arbitrage(
+        self, market: Dict[str, Any]
+    ) -> Optional[Dict[str, Any]]:
         """
         Invariant 1: Complementary Arbitrage
         In a binary market, YES + NO = $1.00.
@@ -53,8 +52,13 @@ class KalshiInvariantEngine:
 
         if total_cost < 100:
             profit_margin = 100 - total_cost
-            self.logger.info("INVARIANT ARBITRAGE DETECTED! YES_ask: %d¢ + NO_ask: %d¢ = %d¢ (< 100¢). Margin: +%d¢/contract",
-                             yes_ask, no_ask, total_cost, profit_margin)
+            self.logger.info(
+                "INVARIANT ARBITRAGE DETECTED! YES_ask: %d¢ + NO_ask: %d¢ = %d¢ (< 100¢). Margin: +%d¢/contract",
+                yes_ask,
+                no_ask,
+                total_cost,
+                profit_margin,
+            )
             return {
                 "type": "COMPLEMENTARY_ARBITRAGE",
                 "ticker": market.get("ticker", "KX15MIN-UP"),
@@ -65,7 +69,9 @@ class KalshiInvariantEngine:
             }
         return None
 
-    def scan_exhaustive_strike_set_arbitrage(self, strike_set: List[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    def scan_exhaustive_strike_set_arbitrage(
+        self, strike_set: List[Dict[str, Any]]
+    ) -> Optional[Dict[str, Any]]:
         """
         Invariant 2: Exhaustive Strike Set Coverage
         In a mutually exclusive, collectively exhaustive set of N strikes, exactly one strike will settle YES ($1.00).
@@ -77,8 +83,12 @@ class KalshiInvariantEngine:
         total_cost = sum(m.get("yes_ask", 50) for m in strike_set)
         if total_cost < 100:
             profit_margin = 100 - total_cost
-            self.logger.info("EXHAUSTIVE STRIKE ARBITRAGE DETECTED! Total cost across %d strikes: %d¢ (< 100¢). Margin: +%d¢",
-                             len(strike_set), total_cost, profit_margin)
+            self.logger.info(
+                "EXHAUSTIVE STRIKE ARBITRAGE DETECTED! Total cost across %d strikes: %d¢ (< 100¢). Margin: +%d¢",
+                len(strike_set),
+                total_cost,
+                profit_margin,
+            )
             return {
                 "type": "EXHAUSTIVE_STRIKE_ARBITRAGE",
                 "num_strikes": len(strike_set),
@@ -87,7 +97,13 @@ class KalshiInvariantEngine:
             }
         return None
 
-    def scan_spot_latency_sniping(self, kalshi_market: Dict[str, Any], spot_price: float, strike_price: float, time_to_expiry_sec: float) -> Optional[Dict[str, Any]]:
+    def scan_spot_latency_sniping(
+        self,
+        kalshi_market: Dict[str, Any],
+        spot_price: float,
+        strike_price: float,
+        time_to_expiry_sec: float,
+    ) -> Optional[Dict[str, Any]]:
         """
         Invariant 3: Sub-Second Spot Exchange Latency Sniping
         When spot exchange price moves heavily beyond strike threshold near expiry,
@@ -101,8 +117,13 @@ class KalshiInvariantEngine:
 
         # Near expiry (< 180s) with large spot movement (> 0.2%)
         if time_to_expiry_sec < 180.0 and distance_pct > 0.002 and yes_ask < 90:
-            self.logger.info("LATENCY SNIPE DETECTED! Spot %.2f > Strike %.2f (Dist: +%.2f%%). Lagging YES_ask: %d¢ (True Val ~99¢)",
-                             spot_price, strike_price, distance_pct * 100, yes_ask)
+            self.logger.info(
+                "LATENCY SNIPE DETECTED! Spot %.2f > Strike %.2f (Dist: +%.2f%%). Lagging YES_ask: %d¢ (True Val ~99¢)",
+                spot_price,
+                strike_price,
+                distance_pct * 100,
+                yes_ask,
+            )
             return {
                 "type": "LATENCY_SPOT_SNIPE",
                 "ticker": kalshi_market.get("ticker", "KX15MIN-UP"),
@@ -112,8 +133,13 @@ class KalshiInvariantEngine:
                 "expected_profit": 100 - yes_ask,
             }
         elif time_to_expiry_sec < 180.0 and distance_pct < -0.002 and no_ask < 90:
-            self.logger.info("LATENCY SNIPE DETECTED! Spot %.2f < Strike %.2f (Dist: -%.2f%%). Lagging NO_ask: %d¢ (True Val ~99¢)",
-                             spot_price, strike_price, abs(distance_pct) * 100, no_ask)
+            self.logger.info(
+                "LATENCY SNIPE DETECTED! Spot %.2f < Strike %.2f (Dist: -%.2f%%). Lagging NO_ask: %d¢ (True Val ~99¢)",
+                spot_price,
+                strike_price,
+                abs(distance_pct) * 100,
+                no_ask,
+            )
             return {
                 "type": "LATENCY_SPOT_SNIPE",
                 "ticker": kalshi_market.get("ticker", "KX15MIN-UP"),
@@ -125,7 +151,12 @@ class KalshiInvariantEngine:
 
         return None
 
-    def evaluate_kalshi_invariants(self, spot_price: float = 65200.0, strike_price: float = 65000.0, time_to_expiry_sec: float = 120.0) -> List[Dict[str, Any]]:
+    def evaluate_kalshi_invariants(
+        self,
+        spot_price: float = 65200.0,
+        strike_price: float = 65000.0,
+        time_to_expiry_sec: float = 120.0,
+    ) -> List[Dict[str, Any]]:
         """Run full invariant scanner across all Kalshi orderbooks."""
         markets = self.client.get_markets().get("markets", [])
         opportunities = []
@@ -137,7 +168,9 @@ class KalshiInvariantEngine:
                 opportunities.append(comp_arb)
 
             # Check Invariant 3: Latency Sniping
-            snipe_arb = self.scan_spot_latency_sniping(m, spot_price, strike_price, time_to_expiry_sec)
+            snipe_arb = self.scan_spot_latency_sniping(
+                m, spot_price, strike_price, time_to_expiry_sec
+            )
             if snipe_arb:
                 opportunities.append(snipe_arb)
 
@@ -151,5 +184,7 @@ class KalshiInvariantEngine:
 
 if __name__ == "__main__":
     engine = KalshiInvariantEngine()
-    opps = engine.evaluate_kalshi_invariants(spot_price=65250.0, strike_price=65000.0, time_to_expiry_sec=90.0)
+    opps = engine.evaluate_kalshi_invariants(
+        spot_price=65250.0, strike_price=65000.0, time_to_expiry_sec=90.0
+    )
     print("Kalshi Invariant Opportunities Found:", opps)

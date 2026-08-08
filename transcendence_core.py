@@ -31,10 +31,7 @@ def setup_logging():
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [TranscendenceCore] %(message)s",
-        handlers=[
-            logging.FileHandler("transcendence.log"),
-            logging.StreamHandler()
-        ]
+        handlers=[logging.FileHandler("transcendence.log"), logging.StreamHandler()],
     )
 
 
@@ -70,7 +67,9 @@ class ConsciousnessGraph:
             "lineage_tree": {},
         }
 
-    def update_node(self, module_name: str, dependencies: List[str], mutation_version: int):
+    def update_node(
+        self, module_name: str, dependencies: List[str], mutation_version: int
+    ):
         self.graph_data["nodes"][module_name] = {
             "dependencies": dependencies,
             "mutation_version": mutation_version,
@@ -78,7 +77,9 @@ class ConsciousnessGraph:
         }
         if module_name not in self.graph_data["lineage_tree"]:
             self.graph_data["lineage_tree"][module_name] = []
-        self.graph_data["lineage_tree"][module_name].append(f"v{mutation_version}_{int(time.time())}")
+        self.graph_data["lineage_tree"][module_name].append(
+            f"v{mutation_version}_{int(time.time())}"
+        )
 
         with open(GRAPH_FILE, "w") as f:
             json.dump(self.graph_data, f, indent=2)
@@ -114,23 +115,34 @@ class TranscendenceCore:
             mutated_code = ast.unparse(mutated_tree)
             return True, mutated_code
         except Exception as e:
-            self.logger.error("AST Mutation Exception for %s: %s", filepath.name, str(e))
+            self.logger.error(
+                "AST Mutation Exception for %s: %s", filepath.name, str(e)
+            )
             return False, ""
 
-    def verify_equivalence_with_axioms(self, original_code: str, mutated_code: str) -> bool:
+    def verify_equivalence_with_axioms(
+        self, original_code: str, mutated_code: str
+    ) -> bool:
         """Prove behavioral equivalence and zero-loss invariant preservation using Axiom Engine."""
         # Check that basic syntax and invariants compile
         try:
             ast.parse(mutated_code)
             # Evaluate against Axiom Engine Theorems
-            signals = self.axiom_engine.evaluate_deductive_signals({"yes_bid": 55, "no_bid": 50, "yes_ask": 45, "no_ask": 48})
-            self.logger.info("AST Equivalence & ZK Proof Certified via Axiom Engine! Certified Laws: %d", len(signals))
+            signals = self.axiom_engine.evaluate_deductive_signals(
+                {"yes_bid": 55, "no_bid": 50, "yes_ask": 45, "no_ask": 48}
+            )
+            self.logger.info(
+                "AST Equivalence & ZK Proof Certified via Axiom Engine! Certified Laws: %d",
+                len(signals),
+            )
             return True
         except Exception as e:
             self.logger.error("Equivalence Verification Failed: %s", str(e))
             return False
 
-    def execute_hot_swap(self, module_name: str, filepath: Path, mutated_code: str) -> bool:
+    def execute_hot_swap(
+        self, module_name: str, filepath: Path, mutated_code: str
+    ) -> bool:
         """Capture snapshot, write mutated code to disk, and hot-swap module via importlib."""
         self.logger.info("INITIATING LIVE HOT-SWAP for module %s...", module_name)
 
@@ -149,13 +161,23 @@ class TranscendenceCore:
             self.consciousness_graph.update_node(
                 module_name=module_name,
                 dependencies=["zk_proof_verifier", "axiom_engine"],
-                mutation_version=len(self.consciousness_graph.graph_data["lineage_tree"].get(module_name, [])) + 1
+                mutation_version=len(
+                    self.consciousness_graph.graph_data["lineage_tree"].get(
+                        module_name, []
+                    )
+                )
+                + 1,
             )
 
-            self.logger.info("LIVE HOT-SWAP SUCCESSFUL! Module %s updated in-memory without downtime.", module_name)
+            self.logger.info(
+                "LIVE HOT-SWAP SUCCESSFUL! Module %s updated in-memory without downtime.",
+                module_name,
+            )
             return True
         except Exception as e:
-            self.logger.critical("Hot-Swap Execution Error: %s. Reverting to snapshot...", str(e))
+            self.logger.critical(
+                "Hot-Swap Execution Error: %s. Reverting to snapshot...", str(e)
+            )
             self.bootstrapper.rollback_snapshot(module_name, filepath)
             return False
 

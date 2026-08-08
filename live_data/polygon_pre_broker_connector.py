@@ -15,6 +15,7 @@ Move with market maker: SPY OFI at NBBO, ES lead 5-15ms, liquidation via TRF dar
 
 Move instantly: Pre-broker data hub reads exchange direct, not broker aggregated.
 """
+
 import time
 import threading
 import logging
@@ -25,21 +26,32 @@ logger = logging.getLogger("PolygonPreBroker")
 try:
     import websocket
     import orjson
+
     HAS_ORJSON = True
 except ImportError:
     import json as orjson
+
     HAS_ORJSON = False
     import websocket
 
 from core.data_ring import get_data_ring
 
+
 class PolygonPreBrokerConnector:
     """
     Pre-broker hub for SPY / S&P500
     """
+
     def __init__(self, api_key=None, symbols=None):
-        self.api_key = api_key or os.getenv("POLYGON_API_KEY") or os.getenv("POLYGON_KEY")
-        self.symbols = symbols or ["SPY", "QQQ", "AAPL", "MSFT"]  # S&P500 components + SPY
+        self.api_key = (
+            api_key or os.getenv("POLYGON_API_KEY") or os.getenv("POLYGON_KEY")
+        )
+        self.symbols = symbols or [
+            "SPY",
+            "QQQ",
+            "AAPL",
+            "MSFT",
+        ]  # S&P500 components + SPY
         self.ws_url = "wss://socket.polygon.io/stocks"
         self.ws = None
         self.running = False
@@ -55,12 +67,18 @@ class PolygonPreBrokerConnector:
         try:
             if HAS_ORJSON:
                 try:
-                    data = orjson.loads(message) if isinstance(message, (str, bytes, bytearray)) else message
+                    data = (
+                        orjson.loads(message)
+                        if isinstance(message, (str, bytes, bytearray))
+                        else message
+                    )
                 except:
                     import json
+
                     data = json.loads(message)
             else:
                 import json
+
                 data = json.loads(message)
 
             # Polygon stocks message is list of events
@@ -86,7 +104,7 @@ class PolygonPreBrokerConnector:
 
             self.last_message_ts = time.time()
             self.reconnect_attempts = 0
-            latency = (time.time() - start)*1000
+            latency = (time.time() - start) * 1000
             self.latency_history.append(latency)
             if len(self.latency_history) > 100:
                 self.latency_history = self.latency_history[-100:]
@@ -102,8 +120,8 @@ class PolygonPreBrokerConnector:
             # Polygon trade conditions: condition codes, exchange
             # For classification, use tick vs last quote
             q = self.last_quote.get(symbol, {})
-            bid = q.get("bid", price*0.999)
-            ask = q.get("ask", price*1.001)
+            bid = q.get("bid", price * 0.999)
+            ask = q.get("ask", price * 1.001)
             # Side classification via quote
             side = 0
             if price >= ask:
@@ -123,7 +141,7 @@ class PolygonPreBrokerConnector:
                 ask_size=float(q.get("ask_size", 100)),
                 price=price,
                 qty=size,
-                side=side
+                side=side,
             )
 
         except Exception as e:
@@ -142,7 +160,7 @@ class PolygonPreBrokerConnector:
                 "ask": ask_price,
                 "bid_size": bid_size,
                 "ask_size": ask_size,
-                "ts": time.time()
+                "ts": time.time(),
             }
 
             ring = get_data_ring(symbol)
@@ -152,9 +170,9 @@ class PolygonPreBrokerConnector:
                 ask=ask_price,
                 bid_size=bid_size,
                 ask_size=ask_size,
-                price=(bid_price+ask_price)/2,
+                price=(bid_price + ask_price) / 2,
                 qty=0,
-                side=0
+                side=0,
             )
 
             # Check for spoof: large quote size appearing then disappearing
@@ -178,17 +196,18 @@ class PolygonPreBrokerConnector:
             # If FMV deviates > 0.05% from mid, arbitrage signal
             q = self.last_quote.get(symbol, {})
             if q:
-                mid = (q.get("bid",0)+q.get("ask",0))/2
-                if mid>0:
-                    dev = abs(fmv-mid)/mid
+                mid = (q.get("bid", 0) + q.get("ask", 0)) / 2
+                if mid > 0:
+                    dev = abs(fmv - mid) / mid
                     if dev > 0.0005:  # 5 bps
                         try:
                             from core.event_bus import get_event_bus, EventPriority
+
                             get_event_bus().publish(
                                 "FMV_ARBITRAGE",
                                 {"symbol": symbol, "fmv": fmv, "mid": mid, "dev": dev},
                                 source="polygon_pre_broker",
-                                priority=EventPriority.OPERATIONAL
+                                priority=EventPriority.OPERATIONAL,
                             )
                         except:
                             pass
@@ -234,8 +253,10 @@ class PolygonPreBrokerConnector:
 
     def _reconnect(self):
         self.reconnect_attempts += 1
-        backoff = min(0.1 * (2 ** self.reconnect_attempts), 5.0)
-        logger.info(f"Polygon reconnect in {backoff}s attempt {self.reconnect_attempts}")
+        backoff = min(0.1 * (2**self.reconnect_attempts), 5.0)
+        logger.info(
+            f"Polygon reconnect in {backoff}s attempt {self.reconnect_attempts}"
+        )
         time.sleep(backoff)
         if self.running:
             self.start()
@@ -252,9 +273,11 @@ class PolygonPreBrokerConnector:
             on_message=self._on_message,
             on_error=self._on_error,
             on_close=self._on_close,
-            on_open=self._on_open
+            on_open=self._on_open,
         )
-        self.thread = threading.Thread(target=self.ws.run_forever, kwargs={"ping_interval":20, "ping_timeout":10})
+        self.thread = threading.Thread(
+            target=self.ws.run_forever, kwargs={"ping_interval": 20, "ping_timeout": 10}
+        )
         self.thread.daemon = True
         self.thread.start()
         logger.info("Polygon Pre-Broker started")
@@ -270,12 +293,13 @@ class PolygonPreBrokerConnector:
 
     def get_latency_stats(self):
         if not self.latency_history:
-            return {"p50":0,"p95":0}
+            return {"p50": 0, "p95": 0}
         import numpy as np
+
         arr = np.array(self.latency_history)
         return {
-            "p50": float(np.percentile(arr,50)),
-            "p95": float(np.percentile(arr,95)),
+            "p50": float(np.percentile(arr, 50)),
+            "p95": float(np.percentile(arr, 95)),
             "avg": float(np.mean(arr)),
-            "last_msg_age": time.time()-self.last_message_ts
+            "last_msg_age": time.time() - self.last_message_ts,
         }

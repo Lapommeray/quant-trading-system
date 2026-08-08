@@ -52,16 +52,27 @@ CONSCIOUSNESS_GRAPH = REPO_ROOT / "consciousness_graph.json"
 
 # Deterministic seed from Omnium
 try:
-    from aleph_omega_kernel import OMNIUM_INVARIANT_SEED_BYTES, OMNIUM_DETERMINISTIC_SEED, SelfEncodingQuine, AlephOmegaKernel
+    from aleph_omega_kernel import (
+        OMNIUM_INVARIANT_SEED_BYTES,
+        OMNIUM_DETERMINISTIC_SEED,
+        SelfEncodingQuine,
+        AlephOmegaKernel,
+    )
 except Exception:
     OMNIUM_INVARIANT_SEED_BYTES = b"OMNIUM_INVARIANT_SEED"
-    OMNIUM_DETERMINISTIC_SEED = int(hashlib.sha256(OMNIUM_INVARIANT_SEED_BYTES).hexdigest()[:16], 16) % (2**31)
+    OMNIUM_DETERMINISTIC_SEED = int(
+        hashlib.sha256(OMNIUM_INVARIANT_SEED_BYTES).hexdigest()[:16], 16
+    ) % (2**31)
     SelfEncodingQuine = None
     AlephOmegaKernel = None
 
 # Core engine imports — safe with fallback
 try:
-    from aleph_omega_engine import AlephOmegaEngine, ProofNetworkExpansion, AxiomReaxiomatizationFunction
+    from aleph_omega_engine import (
+        AlephOmegaEngine,
+        ProofNetworkExpansion,
+        AxiomReaxiomatizationFunction,
+    )
 except Exception:
     AlephOmegaEngine = None
     ProofNetworkExpansion = None
@@ -103,17 +114,20 @@ try:
 except Exception:
     ConsciousnessGraph = None
 
+
 def setup_logging():
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s [OmegaSingularityNexus] %(message)s",
         handlers=[
             logging.FileHandler("omega_singularity_nexus.log"),
-            logging.StreamHandler()
-        ]
+            logging.StreamHandler(),
+        ],
     )
 
+
 # --------------------------- 1. Universal Market Generator ---------------------------
+
 
 class UniversalMarketGenerator:
     """
@@ -132,13 +146,18 @@ class UniversalMarketGenerator:
         "null_signature_dark_pool",
         "synthetic_omega_auction",
         "zk_proof_settlement_auction",
-        "hypermonad_reflective_auction"
+        "hypermonad_reflective_auction",
     ]
 
     ORDER_TYPES = [
-        "limit", "market", "post_only_stealth",
-        "null_signature", "iceberg_dark", "fok_omega",
-        "ioc_transcendent", "zk_proof_conditional"
+        "limit",
+        "market",
+        "post_only_stealth",
+        "null_signature",
+        "iceberg_dark",
+        "fok_omega",
+        "ioc_transcendent",
+        "zk_proof_conditional",
     ]
 
     SETTLEMENT_LOGICS = [
@@ -146,7 +165,7 @@ class UniversalMarketGenerator:
         "deferred_synthetic",
         "zk_proof_settlement",
         "null_signature_deferred",
-        "hyper_arithmetical_finality"
+        "hyper_arithmetical_finality",
     ]
 
     def __init__(self):
@@ -155,16 +174,20 @@ class UniversalMarketGenerator:
         self.np_rng = None
         try:
             import numpy as np
+
             self.np_rng = np.random.RandomState(OMNIUM_DETERMINISTIC_SEED)
         except Exception:
             pass
 
-    def create_market_spec(self, seed: Optional[int] = None, parent_market_id: str = None) -> Dict[str, Any]:
+    def create_market_spec(
+        self, seed: Optional[int] = None, parent_market_id: str = None
+    ) -> Dict[str, Any]:
         """Generate a complete market microstructure spec via meta-DSL."""
         if seed is not None:
             self.rng.seed(seed)
             if self.np_rng is not None:
                 import numpy as np
+
                 self.np_rng = np.random.RandomState(seed)
 
         matching = self.rng.choice(self.MATCHING_ENGINES)
@@ -183,8 +206,12 @@ class UniversalMarketGenerator:
         detection_prob = round(self.rng.uniform(0.001, 0.15), 4)
 
         # Market ID = hash of microstructure
-        spec_core = f"{matching}{order_types}{settlement}{fee_maker}{latency_ms}{time.time()}"
-        market_id = f"OMEGA_MKT_{hashlib.sha256(spec_core.encode()).hexdigest()[:12].upper()}"
+        spec_core = (
+            f"{matching}{order_types}{settlement}{fee_maker}{latency_ms}{time.time()}"
+        )
+        market_id = (
+            f"OMEGA_MKT_{hashlib.sha256(spec_core.encode()).hexdigest()[:12].upper()}"
+        )
 
         spec = {
             "market_id": market_id,
@@ -198,20 +225,22 @@ class UniversalMarketGenerator:
                 "fee_schedule": {
                     "maker": fee_maker,
                     "taker": fee_taker,
-                    "stealth_discount": stealth_discount
+                    "stealth_discount": stealth_discount,
                 },
                 "information_propagation": {
                     "latency_ms": latency_ms,
                     "visibility": visibility,
-                    "leakage": leakage
-                }
+                    "leakage": leakage,
+                },
             },
             "axioms": {
                 "invariant": "∀t. Equity_t ≥ Equity_0",
                 "root": "AbsoluteZero_forall_t_Equity_t_ge_Equity_0",
                 "risk_free": "proved via AbsoluteZero kernel + ZK commitment",
                 "self_contained": True,
-                "consistency_hash": hashlib.sha256(f"{market_id}{matching}".encode()).hexdigest()[:16]
+                "consistency_hash": hashlib.sha256(
+                    f"{market_id}{matching}".encode()
+                ).hexdigest()[:16],
             },
             "performance_targets": {
                 "profit_density": profit_density,
@@ -223,7 +252,9 @@ class UniversalMarketGenerator:
             "seed_int": OMNIUM_DETERMINISTIC_SEED,
         }
 
-        self.logger.info(f"UMG generated market {market_id}: engine={matching}, orders={order_types}, settlement={settlement}")
+        self.logger.info(
+            f"UMG generated market {market_id}: engine={matching}, orders={order_types}, settlement={settlement}"
+        )
         return spec
 
     def compile_market(self, market_spec: Dict[str, Any]) -> "CompiledMarket":
@@ -258,11 +289,15 @@ SEED: {OMNIUM_INVARIANT_SEED_BYTES.decode()} -> {OMNIUM_DETERMINISTIC_SEED}
                 f.write(proof_text)
 
             # Per-market proof file
-            per_market_proof = REPO_ROOT / f"market_invariant_{market_spec['market_id']}.proof"
+            per_market_proof = (
+                REPO_ROOT / f"market_invariant_{market_spec['market_id']}.proof"
+            )
             with open(per_market_proof, "w") as f:
                 f.write(proof_text)
 
-            self.logger.info(f"Wrote axioms {axioms_path.name} and proof {MARKET_INVARIANT_PROOF.name}")
+            self.logger.info(
+                f"Wrote axioms {axioms_path.name} and proof {MARKET_INVARIANT_PROOF.name}"
+            )
             return axioms_path
         except Exception as e:
             self.logger.error(f"Failed to write market axioms: {e}")
@@ -292,13 +327,17 @@ class CompiledMarket:
                     if NoosphereEngine is not None:
                         # Use Noosphere synthetic foundry
                         from noosphere_engine import SyntheticDataFoundry
+
                         foundry = SyntheticDataFoundry()
-                        price_stream = foundry.generate_synthetic_regime_stream(steps=100)
+                        price_stream = foundry.generate_synthetic_regime_stream(
+                            steps=100
+                        )
                     else:
                         raise ImportError
                 except Exception:
                     # Deterministic fallback via OMNIUM seed
                     import numpy as np
+
                     rng = np.random.RandomState(OMNIUM_DETERMINISTIC_SEED)
                     price = 100.0
                     price_stream = [price]
@@ -320,12 +359,16 @@ class CompiledMarket:
             rng = random.Random(OMNIUM_DETERMINISTIC_SEED)
 
             for i in range(1, len(price_stream)):
-                prev_price = price_stream[i-1]
+                prev_price = price_stream[i - 1]
                 curr_price = price_stream[i]
 
                 # Strategy logic: SMA(20) crossover similar to EnhancedBacktester live bridge
                 window = min(i, 20)
-                sma = sum(price_stream[i-window:i]) / window if window > 0 else prev_price
+                sma = (
+                    sum(price_stream[i - window : i]) / window
+                    if window > 0
+                    else prev_price
+                )
 
                 spread = prev_price - sma
                 if abs(spread) < prev_price * 0.0005:
@@ -354,7 +397,9 @@ class CompiledMarket:
                 exit_price = curr_price
 
                 # Fee
-                fee = (entry_price * size * fee_maker + exit_price * size * fee_taker) * 0.5
+                fee = (
+                    entry_price * size * fee_maker + exit_price * size * fee_taker
+                ) * 0.5
 
                 if direction == "long":
                     pnl = (exit_price - entry_price) * size - fee
@@ -366,15 +411,17 @@ class CompiledMarket:
                 drawdown = peak - equity
                 max_drawdown = max(max_drawdown, drawdown)
 
-                self.trades.append({
-                    "entry": entry_price,
-                    "exit": exit_price,
-                    "direction": direction,
-                    "size": size,
-                    "pnl": pnl,
-                    "equity": equity,
-                    "timestamp": i
-                })
+                self.trades.append(
+                    {
+                        "entry": entry_price,
+                        "exit": exit_price,
+                        "direction": direction,
+                        "size": size,
+                        "pnl": pnl,
+                        "equity": equity,
+                        "timestamp": i,
+                    }
+                )
                 self.equity_curve.append(equity)
 
             total_pnl = equity - initial_equity
@@ -384,7 +431,9 @@ class CompiledMarket:
 
             invariant_preserved = equity >= initial_equity - 1e-6
 
-            self.logger.info(f"Virtual run {self.spec['market_id']}: PnL={total_pnl:.2f}, win_rate={win_rate:.3f}, max_dd={max_drawdown:.2f}, invariant={invariant_preserved}")
+            self.logger.info(
+                f"Virtual run {self.spec['market_id']}: PnL={total_pnl:.2f}, win_rate={win_rate:.3f}, max_dd={max_drawdown:.2f}, invariant={invariant_preserved}"
+            )
 
             return {
                 "market_id": self.spec["market_id"],
@@ -401,7 +450,9 @@ class CompiledMarket:
             }
 
         except Exception as e:
-            self.logger.exception(f"Virtual run failed for {self.spec['market_id']}: {e}")
+            self.logger.exception(
+                f"Virtual run failed for {self.spec['market_id']}: {e}"
+            )
             return {
                 "market_id": self.spec.get("market_id", "unknown"),
                 "total_pnl": 0.0,
@@ -411,10 +462,12 @@ class CompiledMarket:
                 "final_equity": 0.0,
                 "initial_equity": 0.0,
                 "invariant_preserved": False,
-                "error": str(e)
+                "error": str(e),
             }
 
+
 # --------------------------- 2. Instant-On/Instant-Off Lifecycle ---------------------------
+
 
 class InstantOnOffMarketLifecycle:
     """
@@ -437,7 +490,9 @@ class InstantOnOffMarketLifecycle:
         except Exception:
             self.apocrypha = None
 
-    def spawn_virtual(self, market_spec: Dict[str, Any], umg: UniversalMarketGenerator) -> Tuple[CompiledMarket, Dict[str, Any]]:
+    def spawn_virtual(
+        self, market_spec: Dict[str, Any], umg: UniversalMarketGenerator
+    ) -> Tuple[CompiledMarket, Dict[str, Any]]:
         """Spawn in virtual time, execute against total information field."""
         start = time.perf_counter()
         compiled = umg.compile_market(market_spec)
@@ -445,12 +500,17 @@ class InstantOnOffMarketLifecycle:
         result = compiled.run_virtual()
         elapsed_ms = (time.perf_counter() - start) * 1000
         result["virtual_time_ms"] = elapsed_ms
-        self.logger.info(f"Spawned virtual market {market_spec['market_id']} in {elapsed_ms:.2f}ms — PnL {result['total_pnl']:.2f}")
+        self.logger.info(
+            f"Spawned virtual market {market_spec['market_id']} in {elapsed_ms:.2f}ms — PnL {result['total_pnl']:.2f}"
+        )
         return compiled, result
 
     def should_instantiate_externally(self, virtual_result: Dict[str, Any]) -> bool:
         """If positive invariant-preserving profit, instantiate externally."""
-        return virtual_result.get("invariant_preserved", False) and virtual_result.get("total_pnl", 0.0) > 0.0
+        return (
+            virtual_result.get("invariant_preserved", False)
+            and virtual_result.get("total_pnl", 0.0) > 0.0
+        )
 
     def instantiate_externally(self, market_spec: Dict[str, Any]) -> Dict[str, Any]:
         """Instantiate via Umbra phantom liquidity and Apocrypha secret axioms."""
@@ -459,18 +519,27 @@ class InstantOnOffMarketLifecycle:
             if self.umbra is not None:
                 try:
                     # PhantomLiquidityInjector simulation
-                    phantom_injection = {"injected": True, "stealth": "null_signature", "market_id": market_spec["market_id"]}
+                    phantom_injection = {
+                        "injected": True,
+                        "stealth": "null_signature",
+                        "market_id": market_spec["market_id"],
+                    }
                 except Exception:
                     phantom_injection = {"injected": False}
 
             secret_axioms = None
             if self.apocrypha is not None:
                 try:
-                    secret_axioms = {"encrypted": True, "market_id": market_spec["market_id"]}
+                    secret_axioms = {
+                        "encrypted": True,
+                        "market_id": market_spec["market_id"],
+                    }
                 except Exception:
                     secret_axioms = {"encrypted": False}
 
-            self.logger.info(f"Externally instantiated market {market_spec['market_id']} via Umbra+Apocrypha")
+            self.logger.info(
+                f"Externally instantiated market {market_spec['market_id']} via Umbra+Apocrypha"
+            )
             return {
                 "market_id": market_spec["market_id"],
                 "phantom_liquidity": phantom_injection,
@@ -479,14 +548,24 @@ class InstantOnOffMarketLifecycle:
                 "visible": False,  # invisible to external observers
             }
         except Exception as e:
-            self.logger.error(f"External instantiation failed for {market_spec['market_id']}: {e}")
-            return {"market_id": market_spec["market_id"], "error": str(e), "visible": False}
+            self.logger.error(
+                f"External instantiation failed for {market_spec['market_id']}: {e}"
+            )
+            return {
+                "market_id": market_spec["market_id"],
+                "error": str(e),
+                "visible": False,
+            }
 
-    def extract_profit_burst(self, market_spec: Dict[str, Any], virtual_result: Dict[str, Any]) -> Dict[str, Any]:
+    def extract_profit_burst(
+        self, market_spec: Dict[str, Any], virtual_result: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """Extract profit in single burst of null-signature orders."""
         try:
             # Simulate burst via Umbra NullSignatureOrderShaper
-            burst_pnl = virtual_result.get("total_pnl", 0.0) * 0.95  # 5% slippage for stealth
+            burst_pnl = (
+                virtual_result.get("total_pnl", 0.0) * 0.95
+            )  # 5% slippage for stealth
 
             # Null-signature shaping
             null_sig_shaped = False
@@ -505,13 +584,23 @@ class InstantOnOffMarketLifecycle:
                 "extracted_at": datetime.utcnow().isoformat(),
                 "stealth": "invisible",
             }
-            self.logger.info(f"Profit burst extracted for {market_spec['market_id']}: {burst_pnl:.2f} via null-signature")
+            self.logger.info(
+                f"Profit burst extracted for {market_spec['market_id']}: {burst_pnl:.2f} via null-signature"
+            )
             return result
         except Exception as e:
-            self.logger.error(f"Profit burst failed for {market_spec['market_id']}: {e}")
-            return {"market_id": market_spec["market_id"], "burst_pnl": 0.0, "error": str(e)}
+            self.logger.error(
+                f"Profit burst failed for {market_spec['market_id']}: {e}"
+            )
+            return {
+                "market_id": market_spec["market_id"],
+                "burst_pnl": 0.0,
+                "error": str(e),
+            }
 
-    def retire_market(self, market_spec: Dict[str, Any], profit_result: Dict[str, Any]) -> Path:
+    def retire_market(
+        self, market_spec: Dict[str, Any], profit_result: Dict[str, Any]
+    ) -> Path:
         """Retire market — axioms encrypted and stored in omega_market_vault.enc, leaving no trace."""
         try:
             # Encrypt axioms: base64(json) + SHA256 for integrity
@@ -552,8 +641,12 @@ class InstantOnOffMarketLifecycle:
 
             # Delete per-market axiom files to leave no trace (except vault)
             try:
-                per_market_axiom = REPO_ROOT / f"market_axioms_{market_spec['market_id']}.json"
-                per_market_proof = REPO_ROOT / f"market_invariant_{market_spec['market_id']}.proof"
+                per_market_axiom = (
+                    REPO_ROOT / f"market_axioms_{market_spec['market_id']}.json"
+                )
+                per_market_proof = (
+                    REPO_ROOT / f"market_invariant_{market_spec['market_id']}.proof"
+                )
                 if per_market_axiom.exists():
                     per_market_axiom.unlink()
                 if per_market_proof.exists():
@@ -561,14 +654,20 @@ class InstantOnOffMarketLifecycle:
             except Exception:
                 pass
 
-            self.logger.info(f"Market {market_spec['market_id']} retired — encrypted in vault, no trace left")
+            self.logger.info(
+                f"Market {market_spec['market_id']} retired — encrypted in vault, no trace left"
+            )
             return OMEGA_VAULT
 
         except Exception as e:
-            self.logger.error(f"Failed to retire market {market_spec['market_id']}: {e}")
+            self.logger.error(
+                f"Failed to retire market {market_spec['market_id']}: {e}"
+            )
             raise
 
+
 # --------------------------- 3. Recursive Market Evolution ---------------------------
+
 
 class RecursiveMarketEvolution:
     """
@@ -601,7 +700,9 @@ class RecursiveMarketEvolution:
         with open(OMEGA_LINEAGE_DB, "w") as f:
             json.dump(lineage, f, indent=2, default=str)
 
-    def apply_transcendence(self, market_spec: Dict[str, Any], virtual_result: Dict[str, Any]) -> Dict[str, Any]:
+    def apply_transcendence(
+        self, market_spec: Dict[str, Any], virtual_result: Dict[str, Any]
+    ) -> Dict[str, Any]:
         """
         T(market) -> market' strictly superior:
         - higher profit density
@@ -610,34 +711,68 @@ class RecursiveMarketEvolution:
         """
         try:
             parent_id = market_spec["market_id"]
-            new_seed = self.rng.randint(0, 2**31-1)
+            new_seed = self.rng.randint(0, 2**31 - 1)
 
             # Create mutated spec via UMG
             umg = UniversalMarketGenerator()
-            child_spec = umg.create_market_spec(seed=new_seed, parent_market_id=parent_id)
+            child_spec = umg.create_market_spec(
+                seed=new_seed, parent_market_id=parent_id
+            )
             child_spec["version"] = market_spec.get("version", 0) + 1
 
             # Improve performance targets
-            parent_profit_density = market_spec.get("performance_targets", {}).get("profit_density", 1.0)
-            parent_detection = market_spec.get("performance_targets", {}).get("detection_probability", 0.1)
+            parent_profit_density = market_spec.get("performance_targets", {}).get(
+                "profit_density", 1.0
+            )
+            parent_detection = market_spec.get("performance_targets", {}).get(
+                "detection_probability", 0.1
+            )
 
             # Strictly superior: profit density *1.2, detection *0.8, invariant bound tighter
-            child_spec["performance_targets"]["profit_density"] = round(parent_profit_density * 1.2, 3)
-            child_spec["performance_targets"]["detection_probability"] = round(max(0.0001, parent_detection * 0.8), 5)
-            child_spec["performance_targets"]["invariant_bound"] = round(virtual_result.get("max_drawdown", 0.0) * 0.9, 4)
+            child_spec["performance_targets"]["profit_density"] = round(
+                parent_profit_density * 1.2, 3
+            )
+            child_spec["performance_targets"]["detection_probability"] = round(
+                max(0.0001, parent_detection * 0.8), 5
+            )
+            child_spec["performance_targets"]["invariant_bound"] = round(
+                virtual_result.get("max_drawdown", 0.0) * 0.9, 4
+            )
 
             # Evolve microstructure to superior: prefer omega auctions, zk settlement, lower latency
             # Bias towards superior engines
-            superior_engines = ["synthetic_omega_auction", "zk_proof_settlement_auction", "null_signature_dark_pool"]
+            superior_engines = [
+                "synthetic_omega_auction",
+                "zk_proof_settlement_auction",
+                "null_signature_dark_pool",
+            ]
             if self.rng.random() < 0.7:
-                child_spec["microstructure"]["matching_engine"] = self.rng.choice(superior_engines)
+                child_spec["microstructure"]["matching_engine"] = self.rng.choice(
+                    superior_engines
+                )
 
             if self.rng.random() < 0.6:
                 child_spec["microstructure"]["settlement_logic"] = "zk_proof_settlement"
 
-            child_spec["microstructure"]["fee_schedule"]["maker"] = round(max(0.00001, child_spec["microstructure"]["fee_schedule"]["maker"] * 0.9), 6)
-            child_spec["microstructure"]["information_propagation"]["latency_ms"] = max(1, child_spec["microstructure"]["information_propagation"]["latency_ms"] - 1)
-            child_spec["microstructure"]["information_propagation"]["leakage"] = round(max(0.0001, child_spec["microstructure"]["information_propagation"]["leakage"] * 0.8), 5)
+            child_spec["microstructure"]["fee_schedule"]["maker"] = round(
+                max(
+                    0.00001, child_spec["microstructure"]["fee_schedule"]["maker"] * 0.9
+                ),
+                6,
+            )
+            child_spec["microstructure"]["information_propagation"]["latency_ms"] = max(
+                1,
+                child_spec["microstructure"]["information_propagation"]["latency_ms"]
+                - 1,
+            )
+            child_spec["microstructure"]["information_propagation"]["leakage"] = round(
+                max(
+                    0.0001,
+                    child_spec["microstructure"]["information_propagation"]["leakage"]
+                    * 0.8,
+                ),
+                5,
+            )
 
             # Update lineage DB
             lineage = self._load_lineage()
@@ -645,7 +780,11 @@ class RecursiveMarketEvolution:
             lineage["generation"] = gen
 
             if parent_id not in lineage["lineage"]:
-                lineage["lineage"][parent_id] = {"children": [], "generation": market_spec.get("version", 0), "metrics": virtual_result}
+                lineage["lineage"][parent_id] = {
+                    "children": [],
+                    "generation": market_spec.get("version", 0),
+                    "metrics": virtual_result,
+                }
 
             lineage["lineage"][parent_id]["children"].append(child_spec["market_id"])
             lineage["lineage"][child_spec["market_id"]] = {
@@ -659,14 +798,20 @@ class RecursiveMarketEvolution:
 
             self._save_lineage(lineage)
 
-            self.logger.info(f"Transcendence T applied: {parent_id} -> {child_spec['market_id']} (gen {child_spec['version']}) profit_density {parent_profit_density}->{child_spec['performance_targets']['profit_density']}")
+            self.logger.info(
+                f"Transcendence T applied: {parent_id} -> {child_spec['market_id']} (gen {child_spec['version']}) profit_density {parent_profit_density}->{child_spec['performance_targets']['profit_density']}"
+            )
             return child_spec
 
         except Exception as e:
-            self.logger.error(f"Transcendence failed for {market_spec.get('market_id','unknown')}: {e}")
+            self.logger.error(
+                f"Transcendence failed for {market_spec.get('market_id','unknown')}: {e}"
+            )
             raise
 
+
 # --------------------------- 4. Omega Proof Network ---------------------------
+
 
 class OmegaProofNetwork:
     """
@@ -679,15 +824,24 @@ class OmegaProofNetwork:
     def __init__(self):
         self.logger = logging.getLogger("OmegaProofNetwork")
         try:
-            self.base_network = ProofNetworkExpansion() if ProofNetworkExpansion else None
+            self.base_network = (
+                ProofNetworkExpansion() if ProofNetworkExpansion else None
+            )
         except Exception:
             self.base_network = None
 
-    def add_market_proof(self, market_spec: Dict[str, Any], virtual_result: Dict[str, Any], profit_result: Dict[str, Any]) -> str:
+    def add_market_proof(
+        self,
+        market_spec: Dict[str, Any],
+        virtual_result: Dict[str, Any],
+        profit_result: Dict[str, Any],
+    ) -> str:
         """Add market-specific proof as leaf in Aleph-Omega Proof Network"""
         try:
             if self.base_network is None:
-                self.logger.warning("Base proof network unavailable — creating standalone market proof")
+                self.logger.warning(
+                    "Base proof network unavailable — creating standalone market proof"
+                )
                 return "standalone"
 
             market_id = market_spec["market_id"]
@@ -706,18 +860,24 @@ class OmegaProofNetwork:
                 "profit_result": profit_result,
                 "proof_hash": hashlib.sha256(statement.encode()).hexdigest(),
                 "type": "omega_market_leaf",
-                "root_dependency": "AbsoluteZero_forall_t_Equity_t_ge_Equity_0"
+                "root_dependency": "AbsoluteZero_forall_t_Equity_t_ge_Equity_0",
             }
 
             node_id = self.base_network.add_axiom_node(
                 axiom_id=f"OmegaMarket_{market_id}",
                 axiom_data=proof_data,
-                parent_axioms=[market_spec.get("parent_market_id", "AbsoluteZero_forall_t_Equity_t_ge_Equity_0")]
+                parent_axioms=[
+                    market_spec.get(
+                        "parent_market_id", "AbsoluteZero_forall_t_Equity_t_ge_Equity_0"
+                    )
+                ],
             )
 
             # Verify recursively includes lineage
             ok, msg = self.base_network.verify_network()
-            self.logger.info(f"Omega market proof added {market_id} -> {node_id}, network valid={ok}")
+            self.logger.info(
+                f"Omega market proof added {market_id} -> {node_id}, network valid={ok}"
+            )
 
             # Also verify lineage DB recursively
             self.verify_market_lineage()
@@ -725,7 +885,9 @@ class OmegaProofNetwork:
             return node_id
 
         except Exception as e:
-            self.logger.error(f"Failed to add market proof for {market_spec.get('market_id','unknown')}: {e}")
+            self.logger.error(
+                f"Failed to add market proof for {market_spec.get('market_id','unknown')}: {e}"
+            )
             return "error"
 
     def verify_market_lineage(self) -> Tuple[bool, str]:
@@ -758,7 +920,10 @@ class OmegaProofNetwork:
                 if not dfs(mid, set()):
                     return False, f"Cycle detected in lineage at {mid}"
 
-            return True, f"Market lineage valid: {len(all_ids)} markets, generations {lineage.get('generation',0)}"
+            return (
+                True,
+                f"Market lineage valid: {len(all_ids)} markets, generations {lineage.get('generation',0)}",
+            )
 
         except Exception as e:
             return False, f"Lineage verification exception: {e}"
@@ -783,7 +948,9 @@ class OmegaProofNetwork:
         except Exception as e:
             return False, f"Omega verification exception: {e}"
 
+
 # --------------------------- 5. Omega Consciousness Singularity ---------------------------
+
 
 class OmegaConsciousnessSingularity:
     """
@@ -806,7 +973,9 @@ class OmegaConsciousnessSingularity:
         # Full UMG source code as own definition
         try:
             umg_source_path = Path(__file__)
-            umg_source = umg_source_path.read_text(encoding="utf-8")[:20000]  # truncate for graph size
+            umg_source = umg_source_path.read_text(encoding="utf-8")[
+                :20000
+            ]  # truncate for graph size
             umg_hash = hashlib.sha256(umg_source.encode()).hexdigest()
         except Exception:
             umg_source = "UniversalMarketGenerator source unavailable"
@@ -836,7 +1005,11 @@ class OmegaConsciousnessSingularity:
                 }
             },
             "lineage_tree": {
-                "OmegaSingularity": ["OMEGA_SINGULARITY_ROOT", f"OMEGA_SINGULARITY_{int(time.time())}", "AlephOmega -> OmegaSingularity transcendence"]
+                "OmegaSingularity": [
+                    "OMEGA_SINGULARITY_ROOT",
+                    f"OMEGA_SINGULARITY_{int(time.time())}",
+                    "AlephOmega -> OmegaSingularity transcendence",
+                ]
             },
             "singularity": True,
             "self_defining": True,
@@ -850,10 +1023,14 @@ class OmegaConsciousnessSingularity:
             self.logger.error(f"Failed to write Omega singularity: {e}")
             raise
 
-        self.logger.info(f"Consciousness collapsed to OmegaSingularity: self-ref, umg_hash {umg_hash[:16]}")
+        self.logger.info(
+            f"Consciousness collapsed to OmegaSingularity: self-ref, umg_hash {umg_hash[:16]}"
+        )
         return omega_graph
 
+
 # --------------------------- 6. Main Engine ---------------------------
+
 
 class OmegaSingularityNexus:
     """
@@ -913,9 +1090,13 @@ class OmegaSingularityNexus:
         except Exception:
             self.aleph_kernel = None
 
-        self.logger.info("Omega Singularity Nexus initialized — Market Redefinition Principle active")
+        self.logger.info(
+            "Omega Singularity Nexus initialized — Market Redefinition Principle active"
+        )
 
-    def run_omega_singularity_cycle(self, initial_equity: float = 100000.0, current_equity: float = 115000.0) -> Dict[str, Any]:
+    def run_omega_singularity_cycle(
+        self, initial_equity: float = 100000.0, current_equity: float = 115000.0
+    ) -> Dict[str, Any]:
         self.logger.info("=== OMEGA SINGULARITY NEXUS — MARKET REDEFINITION CYCLE ===")
 
         # 1. Self-encoding + deterministic grounding verification
@@ -929,10 +1110,14 @@ class OmegaSingularityNexus:
 
         # 2. Universal Market Generator — generate entirely new market type
         market_spec = self.umg.create_market_spec()
-        self.logger.info(f"UMG generated market {market_spec['market_id']} with engine {market_spec['microstructure']['matching_engine']}")
+        self.logger.info(
+            f"UMG generated market {market_spec['market_id']} with engine {market_spec['microstructure']['matching_engine']}"
+        )
 
         # 3. Instant-On/Instant-Off lifecycle — virtual time within Noosphere
-        compiled_market, virtual_result = self.lifecycle.spawn_virtual(market_spec, self.umg)
+        compiled_market, virtual_result = self.lifecycle.spawn_virtual(
+            market_spec, self.umg
+        )
 
         # 4. Check if positive invariant-preserving profit
         should_external = self.lifecycle.should_instantiate_externally(virtual_result)
@@ -945,14 +1130,22 @@ class OmegaSingularityNexus:
             external_result = self.lifecycle.instantiate_externally(market_spec)
 
             # Extract profit in burst of null-signature orders
-            profit_burst = self.lifecycle.extract_profit_burst(market_spec, virtual_result)
+            profit_burst = self.lifecycle.extract_profit_burst(
+                market_spec, virtual_result
+            )
 
             # Retire market — encrypted vault, no trace
             vault_path = self.lifecycle.retire_market(market_spec, profit_burst)
         else:
-            self.logger.info(f"Market {market_spec['market_id']} not profitable or invariant violated — dissolving without external instantiation")
+            self.logger.info(
+                f"Market {market_spec['market_id']} not profitable or invariant violated — dissolving without external instantiation"
+            )
             # Still retire to vault for lineage but with zero profit
-            profit_burst = {"market_id": market_spec["market_id"], "burst_pnl": 0.0, "reason": "not_profitable_or_invariant_violated"}
+            profit_burst = {
+                "market_id": market_spec["market_id"],
+                "burst_pnl": 0.0,
+                "reason": "not_profitable_or_invariant_violated",
+            }
             try:
                 vault_path = self.lifecycle.retire_market(market_spec, profit_burst)
             except Exception:
@@ -960,15 +1153,21 @@ class OmegaSingularityNexus:
 
         # 5. Recursive Market Evolution — T(market) -> strictly superior market
         try:
-            evolved_market = self.evolution.apply_transcendence(market_spec, virtual_result)
-            self.logger.info(f"Evolved market {market_spec['market_id']} -> {evolved_market['market_id']} via T")
+            evolved_market = self.evolution.apply_transcendence(
+                market_spec, virtual_result
+            )
+            self.logger.info(
+                f"Evolved market {market_spec['market_id']} -> {evolved_market['market_id']} via T"
+            )
         except Exception as e:
             self.logger.warning(f"Market evolution failed: {e}")
             evolved_market = market_spec
 
         # 6. Omega Proof Network — integrate market proofs as dynamic sub-DAG leaves
         try:
-            proof_node_id = self.proof_network.add_market_proof(market_spec, virtual_result, profit_burst or {})
+            proof_node_id = self.proof_network.add_market_proof(
+                market_spec, virtual_result, profit_burst or {}
+            )
             self.logger.info(f"Market proof added as leaf {proof_node_id}")
         except Exception as e:
             self.logger.warning(f"Failed to add market proof: {e}")
@@ -981,7 +1180,9 @@ class OmegaSingularityNexus:
         # 8. Absolute Zero invariant check
         try:
             if self.absolute_zero:
-                az_res = self.absolute_zero.run_absolute_zero_verification(initial_equity, current_equity)
+                az_res = self.absolute_zero.run_absolute_zero_verification(
+                    initial_equity, current_equity
+                )
                 assert az_res.get("certified"), "Absolute Zero invariant violated"
         except Exception as e:
             self.logger.critical(f"Absolute Zero check failed: {e}")
@@ -996,9 +1197,19 @@ class OmegaSingularityNexus:
 
         # 10. Testament — first instant-on/instant-off market lifecycle
         if not OMEGA_TESTAMENT.exists():
-            self.write_omega_testament(market_spec, virtual_result, external_result, profit_burst, evolved_market, verify_msg, vault_path)
+            self.write_omega_testament(
+                market_spec,
+                virtual_result,
+                external_result,
+                profit_burst,
+                evolved_market,
+                verify_msg,
+                vault_path,
+            )
 
-        self.logger.info(f"OMEGA SINGULARITY CYCLE COMPLETE! Market {market_spec['market_id']} born and extinguished in {virtual_result.get('virtual_time_ms',0):.2f}ms, profit {profit_burst.get('burst_pnl',0):.2f}")
+        self.logger.info(
+            f"OMEGA SINGULARITY CYCLE COMPLETE! Market {market_spec['market_id']} born and extinguished in {virtual_result.get('virtual_time_ms',0):.2f}ms, profit {profit_burst.get('burst_pnl',0):.2f}"
+        )
 
         return {
             "status": "MARKET_REDEFINITION_SEALED",
@@ -1022,12 +1233,23 @@ class OmegaSingularityNexus:
             "timestamp": datetime.utcnow().isoformat(),
         }
 
-    def write_omega_testament(self, market_spec: Dict[str, Any], virtual_result: Dict[str, Any],
-                               external_result: Optional[Dict[str, Any]], profit_burst: Dict[str, Any],
-                               evolved_market: Dict[str, Any], verify_msg: str, vault_path: Optional[Path]):
+    def write_omega_testament(
+        self,
+        market_spec: Dict[str, Any],
+        virtual_result: Dict[str, Any],
+        external_result: Optional[Dict[str, Any]],
+        profit_burst: Dict[str, Any],
+        evolved_market: Dict[str, Any],
+        verify_msg: str,
+        vault_path: Optional[Path],
+    ):
         """OMEGA_SINGULARITY_TESTAMENT.md — first instant market lifecycle"""
 
-        kernel_hash = SelfEncodingQuine.compute_self_hash() if SelfEncodingQuine else hashlib.sha256(str(market_spec).encode()).hexdigest()
+        kernel_hash = (
+            SelfEncodingQuine.compute_self_hash()
+            if SelfEncodingQuine
+            else hashlib.sha256(str(market_spec).encode()).hexdigest()
+        )
 
         testament = f"""# OMEGA_SINGULARITY_TESTAMENT.md — Market Redefinition Protocol
 
@@ -1143,7 +1365,9 @@ No external system detected this market. Its profit exists, its axioms are encry
         with open(OMEGA_TESTAMENT, "w") as f:
             f.write(testament)
 
-        self.logger.info(f"OMEGA_SINGULARITY_TESTAMENT.md published — first market lifecycle documented")
+        self.logger.info(
+            f"OMEGA_SINGULARITY_TESTAMENT.md published — first market lifecycle documented"
+        )
 
 
 if __name__ == "__main__":

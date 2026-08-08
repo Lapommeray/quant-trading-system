@@ -26,8 +26,8 @@ def setup_logging():
         format="%(asctime)s [MetaOrderRouter] %(message)s",
         handlers=[
             logging.FileHandler("meta_order_router.log"),
-            logging.StreamHandler()
-        ]
+            logging.StreamHandler(),
+        ],
     )
 
 
@@ -56,33 +56,49 @@ class MetaOrderRouter:
 
         # Step 1: Multi-Stream Data & Swarm Pit Consensus
         streams = self.arbiter.fetch_streams()
-        swarm_consensus = self.swarm_pit.compute_nash_consensus({"prices": self.arbiter.history["kalshi_15m"]})
+        swarm_consensus = self.swarm_pit.compute_nash_consensus(
+            {"prices": self.arbiter.history["kalshi_15m"]}
+        )
 
         # Step 2: Cross-Asset Inefficiency Detection
         embedding = self.arbiter.compute_latent_embedding(streams)
         arb_analysis = self.arbiter.detect_cross_asset_inefficiency(embedding)
 
         signal = {
-            "direction": arb_analysis["signal_type"] if arb_analysis["signal_type"] != "NEUTRAL" else swarm_consensus["consensus_direction"],
-            "confidence": max(arb_analysis["confidence"], swarm_consensus["consensus_confidence"]),
+            "direction": (
+                arb_analysis["signal_type"]
+                if arb_analysis["signal_type"] != "NEUTRAL"
+                else swarm_consensus["consensus_direction"]
+            ),
+            "confidence": max(
+                arb_analysis["confidence"], swarm_consensus["consensus_confidence"]
+            ),
             "layers_approved": 6,
             "never_loss_protected": True,
         }
 
         if signal["direction"] == "NEUTRAL" or signal["confidence"] < 0.55:
-            self.logger.info("Signal direction is NEUTRAL or confidence < 0.55. Skipping routing.")
+            self.logger.info(
+                "Signal direction is NEUTRAL or confidence < 0.55. Skipping routing."
+            )
             return None
 
         # Step 3: Predictive Oracle Sentry Check (2 steps ahead)
-        oracle_eval = self.oracle.evaluate_signal(signal, market_data={"close": streams["kalshi_15m"]})
+        oracle_eval = self.oracle.evaluate_signal(
+            signal, market_data={"close": streams["kalshi_15m"]}
+        )
         if oracle_eval["short_circuited"]:
             self.logger.warning("Order Aborted by Oracle Sentry Short-Circuit!")
             return None
 
         # Step 4: Temporal Counterfactual Pre-Adaptation Test
-        regime_eval = self.temporal_engine.evaluate_regime_adaptability({"phoenix": 1.5, "aurora": 1.5})
+        regime_eval = self.temporal_engine.evaluate_regime_adaptability(
+            {"phoenix": 1.5, "aurora": 1.5}
+        )
         if not regime_eval["pre_adapted"]:
-            self.logger.warning("Order Aborted: Failed Temporal Counterfactual Pre-Adaptation Test!")
+            self.logger.warning(
+                "Order Aborted: Failed Temporal Counterfactual Pre-Adaptation Test!"
+            )
             return None
 
         # Step 5: Cryptographic ZK-Proof Non-Loss Verification
@@ -92,7 +108,9 @@ class MetaOrderRouter:
         )
 
         if not zk_valid:
-            self.logger.error("Order Aborted: ZK Cryptographic Proof Invariant Violation!")
+            self.logger.error(
+                "Order Aborted: ZK Cryptographic Proof Invariant Violation!"
+            )
             return None
 
         # Step 6: Final Order Execution Payload
@@ -107,8 +125,11 @@ class MetaOrderRouter:
             "streams": streams,
         }
 
-        self.logger.info("OPTIMAL META-ORDER AUTHORIZED WITH ZK-PROOF! Hash: %s | Score: %d/100",
-                         zk_proof["commitment_hash"][:16], oracle_eval["pre_trade_score"])
+        self.logger.info(
+            "OPTIMAL META-ORDER AUTHORIZED WITH ZK-PROOF! Hash: %s | Score: %d/100",
+            zk_proof["commitment_hash"][:16],
+            oracle_eval["pre_trade_score"],
+        )
         return order_payload
 
 

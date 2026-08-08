@@ -1,5 +1,6 @@
 from ultra_modules.event_probability_engine import EventProbabilityEngine
 
+
 class MultiversalRiskSplit:
     def __init__(self, branch_data, entropy_baseline):
         self.engine = EventProbabilityEngine(branch_data, entropy_baseline)
