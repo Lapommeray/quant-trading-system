@@ -157,6 +157,9 @@ PROTECTED_PATHS = [
     "hypermonad_certificate.proof",
     "HYPERMONAD_TESTAMENT.md",
     "hypermonad.log",
+    "aleph_engine.py",
+    "ALEPH_TESTAMENT.md",
+    "aleph.log",
 ]
 
 # Evolution cycle sleep (seconds)
