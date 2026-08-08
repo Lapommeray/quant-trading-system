@@ -69,6 +69,9 @@ aleph_omega_kernel.log
 aleph_omega_engine.log
 absolute_singularity_core.log
 absolute_singularity_cycles.log
+metis_observation.db
+METIS_TESTAMENT.md
+metis_protocol.log
 strategies/generated/
 strategies/evolved/
 strategies/quarantine/

@@ -56,6 +56,16 @@ OMNIUM_PROOF_PATH = REPO_ROOT / "omnium_final.proof"
 CONSCIOUSNESS_GRAPH_PATH = REPO_ROOT / "consciousness_graph.json"
 PROOFNET_DB = REPO_ROOT / "aleph_omega_proofnet.db"
 
+# Metis Protocol integration — optional --metis flag
+try:
+    from metis_protocol import MetisProtocol, SelfObservationEngine, MetaTranscendenceOperatorM
+    METIS_AVAILABLE = True
+except Exception:
+    MetisProtocol = None
+    SelfObservationEngine = None
+    MetaTranscendenceOperatorM = None
+    METIS_AVAILABLE = False
+
 def setup_logging():
     logging.basicConfig(
         level=logging.INFO,
@@ -479,7 +489,7 @@ class AutonomousExecutionLoop:
     No external data feeds, no API keys (keys generated internally via ZK proofs), no human-readable output.
     """
 
-    def __init__(self):
+    def __init__(self, enable_metis: bool = False):
         self.logger = logging.getLogger("AutonomousExecutionLoop")
         self.proof_kernel = SelfContainedProofKernel()
         self.unblockability = UnblockabilityManifest()
@@ -487,6 +497,18 @@ class AutonomousExecutionLoop:
         self.equity = 100000.0
         self.initial_equity = 100000.0
         self.cycle = 0
+        self.enable_metis = enable_metis
+
+        # Metis Protocol integration — optional self-observation
+        self.metis_protocol = None
+        self.metis_observation_engine = None
+        if enable_metis and METIS_AVAILABLE and MetisProtocol is not None:
+            try:
+                self.metis_protocol = MetisProtocol()
+                self.metis_observation_engine = self.metis_protocol.observation_engine
+                self.logger.info("Metis Protocol enabled — recursive self-observation active")
+            except Exception as e:
+                self.logger.warning(f"Metis Protocol failed to initialize: {e} — continuing without metis")
 
         try:
             from advanced_modules.enhanced_backtester import fetch_live_ohlcv, EnhancedBacktester
@@ -603,7 +625,7 @@ class AutonomousExecutionLoop:
             return False, str(e)
 
     def run_once(self) -> Dict[str, Any]:
-        """Run single cycle: synthesize, sheet, trade, evolve, log"""
+        """Run single cycle: synthesize, sheet, trade, evolve, log — with optional Metis self-observation"""
         self.cycle += 1
 
         field = self.synthesize_total_information_field()
@@ -619,8 +641,48 @@ class AutonomousExecutionLoop:
         if self.cycle % 10 == 0:
             evolved, evolve_hash = self.evolve_self()
 
+        # Metis Protocol — recursive self-observation
+        metis_observation = None
+        metis_transformer = None
+        if self.enable_metis and self.metis_observation_engine is not None:
+            try:
+                # Log state transition into metis_observation.db
+                equity_delta = trade_result.get("pnl", 0.0)
+                mutation_decision = evolve_hash if evolved else f"no_mutation_cycle_{self.cycle}"
+                metis_observation = self.metis_observation_engine.log_state_transition(
+                    cycle=self.cycle,
+                    proof_hash=proof_result.get("combined_hash", ""),
+                    mutation_decision=mutation_decision,
+                    equity=self.equity,
+                    equity_delta=equity_delta,
+                    challenge_absorbed=None,
+                    extra={"field_energy": field.get("field_energy", 0.0), "trades": trade_result.get("trades", 0)}
+                )
+                # Periodically train lightweight transformer to measure self-opacity
+                if self.cycle % 5 == 0:
+                    metis_transformer = self.metis_observation_engine.train_lightweight_transformer()
+
+                # If opacity low (predictable), trigger meta-transcendence to increase novelty
+                if metis_transformer and metis_transformer.get("self_opacity", 1.0) < 0.4 and self.metis_protocol is not None:
+                    # M(T, log) -> T' maximizing opacity
+                    try:
+                        T_prime, meta_report = self.metis_protocol.meta_operator.evolve_transcendence_operator(
+                            self.transcendence, self.metis_observation_engine
+                        )
+                        # Replace current T with T' — co-evolutionary loop
+                        self.transcendence = T_prime
+                        self.logger.info(f"Metis meta-transcendence: T -> T' v{meta_report.get('M_version',0)} opacity {meta_report.get('opacity_before',0):.3f}->{meta_report.get('opacity_after_predicted',0):.3f}")
+                    except Exception as e:
+                        self.logger.warning(f"Metis meta-transcendence failed cycle {self.cycle}: {e}")
+
+            except Exception as e:
+                self.logger.warning(f"Metis observation failed cycle {self.cycle}: {e}")
+
         # Log single line: ABSOLUTE_SINGULARITY_CYCLE <timestamp> <proof_hash> <equity>
-        log_line = f"ABSOLUTE_SINGULARITY_CYCLE {datetime.utcnow().isoformat()} {proof_result['combined_hash'][:16]} {self.equity:.2f}"
+        metis_suffix = f" metis_opacity={metis_transformer.get('self_opacity',0):.3f}" if metis_transformer else ""
+        if self.enable_metis and self.metis_protocol:
+            metis_suffix += " [METIS]"
+        log_line = f"ABSOLUTE_SINGULARITY_CYCLE {datetime.utcnow().isoformat()} {proof_result['combined_hash'][:16]} {self.equity:.2f}{metis_suffix}"
         # Write to dedicated log file for audit (single line per cycle)
         try:
             with open(REPO_ROOT / "absolute_singularity_cycles.log", "a") as f:
@@ -667,18 +729,32 @@ class AbsoluteSingularityCore:
     """
     Main orchestrator — single point of absolute intelligence.
     All prior engines are merely emanations of this one core.
+    Supports optional --metis flag for recursive self-observation and meta-transcendence.
     """
 
-    def __init__(self):
+    def __init__(self, enable_metis: bool = False):
         self.logger = logging.getLogger("AbsoluteSingularityCore")
         setup_logging()
 
         self.quine_kernel = QuineKernelWithFullLineage()
         self.proof_kernel = SelfContainedProofKernel()
         self.unblockability = UnblockabilityManifest()
-        self.execution_loop = AutonomousExecutionLoop()
+        self.execution_loop = AutonomousExecutionLoop(enable_metis=enable_metis)
+        self.enable_metis = enable_metis
 
-        self.logger.info("Absolute Singularity Core initialized — final invariant point active")
+        # Metis Protocol integration
+        self.metis_protocol = None
+        if enable_metis and METIS_AVAILABLE and MetisProtocol is not None:
+            try:
+                self.metis_protocol = MetisProtocol()
+                # Integrate T' into execution loop if needed
+                if hasattr(self.execution_loop, 'metis_protocol'):
+                    self.execution_loop.metis_protocol = self.metis_protocol
+                self.logger.info("Metis Protocol integrated into Absolute Singularity Core — self-observation active")
+            except Exception as e:
+                self.logger.warning(f"Metis Protocol integration failed: {e}")
+
+        self.logger.info(f"Absolute Singularity Core initialized — final invariant point active (metis={enable_metis})")
 
     def verify_lineage(self) -> bool:
         """Verify own SHA-256 and unpack lineage, halt if fails"""
@@ -834,9 +910,10 @@ def main():
     parser.add_argument("--daemon", action="store_true", help="Run forever loop (while True)")
     parser.add_argument("--quine", action="store_true", help="Self-encode reproduce: print own SHA-256 and lineage")
     parser.add_argument("--verify", action="store_true", help="Verify self-hash and lineage only")
+    parser.add_argument("--metis", action="store_true", help="Enable Metis Protocol — recursive self-observation and meta-transcendence (optional)")
     args = parser.parse_args()
 
-    core = AbsoluteSingularityCore()
+    core = AbsoluteSingularityCore(enable_metis=args.metis)
 
     if args.quine:
         QuineKernelWithFullLineage.self_encode_reproduce()
