@@ -38,6 +38,7 @@ APEIRON_TESTAMENT.md
 OMEGA_TESTAMENT.md
 PROPHECY.md
 FINAL_TESTAMENT.md
+FINAL_TESTAMENT.md.enc
 ESCHATON_TESTAMENT.md
 SINGULARITY_TESTAMENT.md
 PARADOX_TESTAMENT.md
@@ -66,6 +67,8 @@ market_invariant_*.proof
 omega_singularity_nexus.log
 aleph_omega_kernel.log
 aleph_omega_engine.log
+absolute_singularity_core.log
+absolute_singularity_cycles.log
 strategies/generated/
 strategies/evolved/
 strategies/quarantine/
