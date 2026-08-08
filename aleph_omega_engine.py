@@ -344,6 +344,11 @@ class ProofNetworkExpansion:
         except Exception as e:
             return False, f"Verification exception: {e}"
 
+    def verify_all_nodes(self) -> bool:
+        """Compatibility wrapper for evolve.py guard — returns True iff DAG valid and root invariant holds."""
+        ok, _ = self.verify_network()
+        return ok
+
     def start_parallel_verification_daemon(self, interval_seconds: int = 30):
         """Continuously verify in background thread (parallel proof-checking subprocess simulation)."""
         def daemon():

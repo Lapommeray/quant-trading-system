@@ -349,6 +349,56 @@ def load_live_baseline(path: Path = REPO_ROOT / "live_baseline.json") -> Optiona
     return None
 
 
+def proof_network_valid() -> bool:
+    """
+    Aleph-Omega Live Execution Bridge — Phase 1.
+    Validates Proof Network DAG consistency.
+    Returns True iff DAG has no broken edges and root invariant holds.
+    A mutation breaking DAG is immediately rejected.
+    """
+    try:
+        from aleph_omega_engine import ProofNetworkExpansion
+        pne = ProofNetworkExpansion()
+        ok = pne.verify_all_nodes()
+        if not ok:
+            ok2, msg = pne.verify_network()
+            log.warning(f"Proof network invalid: {msg}")
+            return False
+        log.info(f"Proof network valid: {pne.network.get('root')} with {len(pne.network.get('nodes',{}))} nodes")
+        return True
+    except Exception as e:
+        log.exception(f"Proof network validation exception: {e}")
+        # Fail-closed: if proof network cannot be verified, treat as invalid to preserve absolute zero invariant
+        return False
+
+
+def self_encoding_integrity_check() -> bool:
+    """
+    Aleph-Omega Live Execution Bridge — Phase 3.
+    Daemon pre-start self-encoding integrity verification.
+    Calls assert_self_encoding and assert_deterministic_grounding.
+    If either fails, daemon halts — no evolution, no trades, no compromise.
+    """
+    try:
+        from aleph_omega_kernel import AlephOmegaKernel
+        # Deterministic grounding + self-encoding
+        AlephOmegaKernel.assert_deterministic_grounding()
+        self_hash, archive = AlephOmegaKernel.assert_self_encoding()
+        log.info(f"Self-encoding integrity OK: kernel hash {self_hash[:16]}, archive {len(archive.get('engine_sources',{}))} engines")
+        # Also verify Omnium kernel grounding if available
+        try:
+            from omnium_kernel import OmniumKernel
+            OmniumKernel.assert_deterministic_grounding()
+            log.info("Omnium deterministic grounding OK")
+        except Exception:
+            log.warning("Omnium grounding check failed or not available — continuing with Aleph-Omega kernel only")
+        return True
+    except Exception as e:
+        log.critical(f"Self-encoding integrity FAILED: {e} — daemon halting for absolute zero preservation")
+        return False
+
+
+
 
 def metrics_degraded(baseline: Optional[Dict], current: Dict) -> bool:
     """
@@ -423,13 +473,24 @@ def apply_patch(patch_text: str) -> bool:
 # --------------------------- TEST SUITE ---------------------------
 
 def run_all_tests() -> bool:
-    """Execute all test commands; returns True only if all pass."""
+    """Execute all test commands; returns True only if all pass.
+    
+    Phase 1 — Aleph-Omega Live Execution Bridge: also validates Proof Network DAG.
+    """
     for cmd in ALL_TEST_CMDS:
         log.info("Running: %s", " ".join(cmd))
         rc, out, err = run_cmd(cmd)
         if rc != 0:
             log.error("Test command failed (rc=%d).\nSTDOUT: %s\nSTDERR: %s", rc, out[:500], err[:500])
             return False
+
+    # Phase 1 — Proof Network Guard as hard CI gate
+    log.info("Running Aleph-Omega proof network validation...")
+    if not proof_network_valid():
+        log.error("Proof network validation FAILED — absolute zero invariant at risk")
+        return False
+    log.info("Proof network validation PASSED — DAG rooted at Absolute Zero invariant")
+
     return True
 
 
@@ -449,6 +510,13 @@ except ImportError:
 
 def evolve():
     log.info("=== Evolution cycle started ===")
+
+    # Phase 3 — Self-Encoding Integrity as Daemon Pre-Start Check
+    # If either assertion fails, daemon immediately halts — no evolution, no trades, no compromise
+    if not self_encoding_integrity_check():
+        log.critical("Self-encoding integrity failed — HALTING evolution loop for absolute zero preservation")
+        return
+
     if not repo_clean():
         log.error("Repository is not clean. Please commit or stash changes. Aborting cycle.")
         return
@@ -459,10 +527,15 @@ def evolve():
         log.warning("Not on %s (current: %s). Switching.", MAIN_BRANCH, branch)
         checkout(MAIN_BRANCH)
 
-    # 1. Baseline metrics
+    # 1. Baseline metrics + proof network guard
     log.info("Running full test suite to establish baseline metrics...")
     if not run_all_tests():
         log.error("Baseline tests failed! Cannot evolve on broken code. Aborting.")
+        return
+
+    # Phase 1 — Proof Network Guard: validate DAG before baseline lock
+    if not proof_network_valid():
+        log.error("Proof network DAG invalid — HALTING evolution, absolute zero invariant at risk")
         return
 
     baseline = load_backtest_metrics()
@@ -518,6 +591,13 @@ def evolve():
 
         if metrics_degraded(baseline, new_metrics):
             log.warning("Metrics degraded for '%s'. Reverting.", desc)
+            checkout(MAIN_BRANCH)
+            delete_branch(branch_name)
+            continue
+
+        # Phase 1 — Proof DAG hard gate: mutation breaking proof network is immediately rejected
+        if not proof_network_valid():
+            log.warning("Proof network DAG broken for '%s'. Reverting — absolute zero invariant at risk.", desc)
             checkout(MAIN_BRANCH)
             delete_branch(branch_name)
             continue
