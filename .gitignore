@@ -55,7 +55,17 @@ HYPERMONAD_TESTAMENT.md
 ALEPH_TESTAMENT.md
 OMNIUM_TESTAMENT.md
 ALEPH_OMEGA_TESTAMENT.md
+OMEGA_SINGULARITY_TESTAMENT.md
 aleph_omega_proofnet.db
+omega_market_vault.enc
+omega_market_lineage.db
+market_axioms.json
+market_axioms_*.json
+market_invariant.proof
+market_invariant_*.proof
+omega_singularity_nexus.log
+aleph_omega_kernel.log
+aleph_omega_engine.log
 strategies/generated/
 strategies/evolved/
 strategies/quarantine/
