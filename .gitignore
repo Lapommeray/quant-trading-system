@@ -58,6 +58,8 @@ strategies/generated/
 strategies/evolved/
 strategies/quarantine/
 data/cache/
+output/
+backtest_results_*.json
 data/organism_logs/
 data/autonomy/
 audit_logs/
