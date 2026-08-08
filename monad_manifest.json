@@ -1,0 +1,24 @@
+{
+  "manifest_hash": "8b47fd9b059e12fde4e8ac50ae2b4191de8f28091e129626497e804097e100eb",
+  "payload": {
+    "axiom_id": "AXIOM_ZERO_TAUTOLOGY",
+    "digests": {
+      "induction_digest": "15a9d2317b134e13a9bf1271681429c74d73c4aaaca202408f84c1617e48f81f",
+      "proof_hash": "933a06298731303eba44aca1f3e7d216b31c0eb25a9f382815915c886e3b4bf0",
+      "tautology_digest": "d859daab36473e0606c6e6617726d5511457d81e5f5f73b4256d323e24f1e22c"
+    },
+    "invariant": "forall t. Equity_t >= Equity_0",
+    "monad_id": "MONAD_STANDALONE_ARTIFACT",
+    "seed": 339834188,
+    "supersedes": [
+      "AbsoluteZero_forall_t_Equity_t_ge_Equity_0",
+      "AXIOM_GENERATION",
+      "EPISTEMIC_CLOSURE_THEOREM",
+      "METIS_NOVELTY_CONSERVATION",
+      "OMEGA_SINGULARITY_NEXUS",
+      "ABSOLUTE_SINGULARITY_CORE",
+      "ONTOS_TERMINAL_OBJECT",
+      "AUTARKES_INERT_LOGICAL_CONSTANT"
+    ]
+  }
+}
