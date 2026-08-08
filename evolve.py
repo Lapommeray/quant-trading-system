@@ -131,6 +131,10 @@ PROTECTED_PATHS = [
     "UNITY_TESTAMENT.md",
     "unity_completeness.proof",
     "unity_nexus.log",
+    "prolepsis_engine.py",
+    "prolepsis_entropy.db",
+    "PROLEPSIS_TESTAMENT.md",
+    "prolepsis_entropy.log",
 ]
 
 # Evolution cycle sleep (seconds)
