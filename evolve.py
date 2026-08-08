@@ -139,6 +139,9 @@ PROTECTED_PATHS = [
     "apocrypha_axioms.enc",
     "APOCRYPHA_TESTAMENT.md",
     "apocrypha.log",
+    "umbra_protocol.py",
+    "UMBRA_TESTAMENT.md",
+    "umbra.log",
 ]
 
 # Evolution cycle sleep (seconds)
