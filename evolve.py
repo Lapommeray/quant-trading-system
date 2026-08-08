@@ -148,6 +148,10 @@ PROTECTED_PATHS = [
     "noesis_engine.py",
     "NOESIS_TESTAMENT.md",
     "noesis.log",
+    "telos_engine.py",
+    "telos_sheet.db",
+    "TELOS_TESTAMENT.md",
+    "telos_manifold.log",
 ]
 
 # Evolution cycle sleep (seconds)

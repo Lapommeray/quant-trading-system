@@ -25,6 +25,7 @@ internal_order_book.json
 paradox_register.json
 empyrean_les.json
 prolepsis_entropy.db
+telos_sheet.db
 apocrypha_axioms.enc
 seed_next_universe.enc
 absolute_zero_certificate.proof
@@ -45,6 +46,7 @@ APOCRYPHA_TESTAMENT.md
 UMBRA_TESTAMENT.md
 AETERNUM_TESTAMENT.md
 NOESIS_TESTAMENT.md
+TELOS_TESTAMENT.md
 strategies/generated/
 strategies/evolved/
 strategies/quarantine/
