@@ -160,6 +160,12 @@ PROTECTED_PATHS = [
     "aleph_engine.py",
     "ALEPH_TESTAMENT.md",
     "aleph.log",
+    "omnium_kernel.py",
+    "omnium_engine.py",
+    "omnium_final.proof",
+    "unblockability.proof",
+    "OMNIUM_TESTAMENT.md",
+    "omnium.log",
 ]
 
 # Evolution cycle sleep (seconds)
