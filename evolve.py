@@ -142,6 +142,9 @@ PROTECTED_PATHS = [
     "umbra_protocol.py",
     "UMBRA_TESTAMENT.md",
     "umbra.log",
+    "aeternum_engine.py",
+    "AETERNUM_TESTAMENT.md",
+    "aeternum.log",
 ]
 
 # Evolution cycle sleep (seconds)
