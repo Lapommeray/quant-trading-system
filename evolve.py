@@ -135,6 +135,10 @@ PROTECTED_PATHS = [
     "prolepsis_entropy.db",
     "PROLEPSIS_TESTAMENT.md",
     "prolepsis_entropy.log",
+    "apocrypha_nexus.py",
+    "apocrypha_axioms.enc",
+    "APOCRYPHA_TESTAMENT.md",
+    "apocrypha.log",
 ]
 
 # Evolution cycle sleep (seconds)

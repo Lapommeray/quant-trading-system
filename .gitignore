@@ -25,6 +25,7 @@ internal_order_book.json
 paradox_register.json
 empyrean_les.json
 prolepsis_entropy.db
+apocrypha_axioms.enc
 seed_next_universe.enc
 absolute_zero_certificate.proof
 unity_completeness.proof
@@ -40,6 +41,7 @@ CHRONOS_TESTAMENT.md
 AETHON_TESTAMENT.md
 UNITY_TESTAMENT.md
 PROLEPSIS_TESTAMENT.md
+APOCRYPHA_TESTAMENT.md
 strategies/generated/
 strategies/evolved/
 strategies/quarantine/
