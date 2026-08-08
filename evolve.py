@@ -119,11 +119,18 @@ PROTECTED_PATHS = [
     "absolute_zero.log",
     "empyrean_engine.py",
     "empyrean_les.json",
-    "EMPYREAN_TESTAMENT.md",
+    "EMPRIEAN_TESTAMENT.md",
     "empyrean_singularity.log",
     "chronos_engine.py",
     "CHRONOS_TESTAMENT.md",
     "chronos_lattice.log",
+    "aethon_engine.py",
+    "AETHON_TESTAMENT.md",
+    "aethon_superposition.log",
+    "unity_nexus.py",
+    "UNITY_TESTAMENT.md",
+    "unity_completeness.proof",
+    "unity_nexus.log",
 ]
 
 # Evolution cycle sleep (seconds)
