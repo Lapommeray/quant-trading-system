@@ -121,6 +121,9 @@ PROTECTED_PATHS = [
     "empyrean_les.json",
     "EMPYREAN_TESTAMENT.md",
     "empyrean_singularity.log",
+    "chronos_engine.py",
+    "CHRONOS_TESTAMENT.md",
+    "chronos_lattice.log",
 ]
 
 # Evolution cycle sleep (seconds)
