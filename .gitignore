@@ -72,6 +72,9 @@ absolute_singularity_cycles.log
 metis_observation.db
 METIS_TESTAMENT.md
 metis_protocol.log
+nooscope_frameworks.db
+EPISTEME_NOOSCOPE_TESTAMENT.md
+episteme_nooscope.log
 strategies/generated/
 strategies/evolved/
 strategies/quarantine/

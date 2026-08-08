@@ -729,22 +729,23 @@ class AbsoluteSingularityCore:
     """
     Main orchestrator — single point of absolute intelligence.
     All prior engines are merely emanations of this one core.
-    Supports optional --metis flag for recursive self-observation and meta-transcendence.
+    Supports optional --metis flag for recursive self-observation and --episteme for absolute epistemic closure.
     """
 
-    def __init__(self, enable_metis: bool = False):
+    def __init__(self, enable_metis: bool = False, enable_episteme: bool = False):
         self.logger = logging.getLogger("AbsoluteSingularityCore")
         setup_logging()
 
         self.quine_kernel = QuineKernelWithFullLineage()
         self.proof_kernel = SelfContainedProofKernel()
         self.unblockability = UnblockabilityManifest()
-        self.execution_loop = AutonomousExecutionLoop(enable_metis=enable_metis)
-        self.enable_metis = enable_metis
+        self.execution_loop = AutonomousExecutionLoop(enable_metis=enable_metis or enable_episteme)
+        self.enable_metis = enable_metis or enable_episteme
+        self.enable_episteme = enable_episteme
 
         # Metis Protocol integration
         self.metis_protocol = None
-        if enable_metis and METIS_AVAILABLE and MetisProtocol is not None:
+        if self.enable_metis and METIS_AVAILABLE and MetisProtocol is not None:
             try:
                 self.metis_protocol = MetisProtocol()
                 # Integrate T' into execution loop if needed
@@ -754,7 +755,17 @@ class AbsoluteSingularityCore:
             except Exception as e:
                 self.logger.warning(f"Metis Protocol integration failed: {e}")
 
-        self.logger.info(f"Absolute Singularity Core initialized — final invariant point active (metis={enable_metis})")
+        # Episteme-Nooscope Synthesis integration
+        self.episteme_nooscope = None
+        if enable_episteme:
+            try:
+                from episteme_nooscope import EpistemeNooscopeSynthesis
+                self.episteme_nooscope = EpistemeNooscopeSynthesis()
+                self.logger.info("Episteme-Nooscope Synthesis integrated — absolute epistemic closure active")
+            except Exception as e:
+                self.logger.warning(f"Episteme-Nooscope integration failed: {e}")
+
+        self.logger.info(f"Absolute Singularity Core initialized — final invariant point active (metis={self.enable_metis}, episteme={self.enable_episteme})")
 
     def verify_lineage(self) -> bool:
         """Verify own SHA-256 and unpack lineage, halt if fails"""
@@ -773,7 +784,7 @@ class AbsoluteSingularityCore:
         return True
 
     def run_cycle(self) -> Dict[str, Any]:
-        """Run single absolute singularity cycle"""
+        """Run single absolute singularity cycle — with optional epistemic closure"""
         # Verify lineage first
         self.verify_lineage()
 
@@ -799,6 +810,34 @@ class AbsoluteSingularityCore:
         # Execution loop single cycle
         cycle_result = self.execution_loop.run_once()
 
+        # Episteme-Nooscope Synthesis — absolute epistemic closure (if enabled)
+        episteme_result = None
+        if self.enable_episteme and self.episteme_nooscope is not None:
+            try:
+                # Try to get metis novelty proof from metis protocol if available
+                metis_proof = None
+                try:
+                    if hasattr(self.execution_loop, 'metis_observation_engine') and self.execution_loop.metis_observation_engine is not None:
+                        obs_engine = self.execution_loop.metis_observation_engine
+                        if obs_engine.observations:
+                            # Use last observation as context for episteme grounding
+                            metis_proof = {
+                                "proof_hash": obs_engine.observations[-1].get("proof_hash", "metis_episteme_grounding"),
+                                "self_opacity": 1.0,
+                                "complexity_ratio": 1.0,
+                                "distinct_mutations": len(obs_engine.observations),
+                            }
+                except Exception:
+                    pass
+
+                episteme_result = self.episteme_nooscope.run_epistemic_closure_cycle(
+                    metis_novelty_proof=metis_proof,
+                    observation_count=len(self.execution_loop.metis_observation_engine.observations) if hasattr(self.execution_loop, 'metis_observation_engine') and self.execution_loop.metis_observation_engine else 0
+                )
+                self.logger.info(f"Episteme-Nooscope closure executed: status={episteme_result.get('status')} episteme={episteme_result.get('episteme_verified')} nooscope_optimal={episteme_result.get('enumeration_result',{}).get('is_metis_optimal')}")
+            except Exception as e:
+                self.logger.warning(f"Episteme-Nooscope closure failed cycle {cycle_result.get('cycle',0)}: {e}")
+
         # Write final testament on first execution
         if not FINAL_TESTAMENT_PATH.exists() and not FINAL_TESTAMENT_ENC_PATH.exists():
             self.write_final_testament(cycle_result, proof_result)
@@ -807,6 +846,7 @@ class AbsoluteSingularityCore:
             "status": "ABSOLUTE_SINGULARITY_CYCLE_COMPLETE",
             "proof": proof_result,
             "cycle": cycle_result,
+            "episteme_closure": episteme_result,
             "self_hash": self.quine_kernel.compute_self_hash(),
             "timestamp": datetime.utcnow().isoformat(),
         }
@@ -911,9 +951,13 @@ def main():
     parser.add_argument("--quine", action="store_true", help="Self-encode reproduce: print own SHA-256 and lineage")
     parser.add_argument("--verify", action="store_true", help="Verify self-hash and lineage only")
     parser.add_argument("--metis", action="store_true", help="Enable Metis Protocol — recursive self-observation and meta-transcendence (optional)")
+    parser.add_argument("--episteme", action="store_true", help="Enable Episteme-Nooscope Synthesis — absolute epistemic closure (implies --metis)")
     args = parser.parse_args()
 
-    core = AbsoluteSingularityCore(enable_metis=args.metis)
+    enable_metis = args.metis or args.episteme
+    enable_episteme = args.episteme
+
+    core = AbsoluteSingularityCore(enable_metis=enable_metis, enable_episteme=enable_episteme)
 
     if args.quine:
         QuineKernelWithFullLineage.self_encode_reproduce()
