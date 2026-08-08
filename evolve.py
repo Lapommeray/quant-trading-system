@@ -117,6 +117,10 @@ PROTECTED_PATHS = [
     "absolute_zero_engine.py",
     "absolute_zero_certificate.proof",
     "absolute_zero.log",
+    "empyrean_engine.py",
+    "empyrean_les.json",
+    "EMPYREAN_TESTAMENT.md",
+    "empyrean_singularity.log",
 ]
 
 # Evolution cycle sleep (seconds)

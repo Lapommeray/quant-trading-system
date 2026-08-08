@@ -23,6 +23,7 @@ recursion_ledger.json
 noosphere_db.json
 internal_order_book.json
 paradox_register.json
+empyrean_les.json
 seed_next_universe.enc
 absolute_zero_certificate.proof
 APEIRON_TESTAMENT.md
@@ -32,6 +33,7 @@ FINAL_TESTAMENT.md
 ESCHATON_TESTAMENT.md
 SINGULARITY_TESTAMENT.md
 PARADOX_TESTAMENT.md
+EMPYREAN_TESTAMENT.md
 strategies/generated/
 strategies/evolved/
 strategies/quarantine/
