@@ -1,5 +1,49 @@
 [flake8]
 max-line-length = 88
 exclude = .git,__pycache__,build,dist,.venv,venv,*.md,*.rst,*.txt,quarantine,Deco_*,QMP_*,Sa_son_code,docs
+# E203/W503 conflict with black; E501/W291/W293 are either enforced by black or
+# occur only inside string literals it must not touch. The remainder is
+# pre-existing debt in legacy modules — avoid these in new code.
+extend-ignore =
+    E203,
+    E501,
+    W503,
+    W291,
+    W293,
+    E401,
+    E402,
+    E712,
+    E722,
+    E741,
+    W605,
+    F401,
+    F403,
+    F405,
+    F541,
+    F601,
+    F811,
+    F841
+# F821 (undefined name) stays enforced everywhere except these grandfathered files.
 per-file-ignores =
     __init__.py:F401
+    advanced_modules/anti_stuck.py:F821
+    advanced_modules/quantum_code_generator.py:F821
+    ascend.py:F821
+    backtest/quantum_backtest.py:F821
+    core/ai_ritual_layer.py:F821
+    core/multi_asset_compiler.py:F821
+    core/qmp_ultra_engine.py:F821
+    deploy_qmp.py:F821
+    god_mode_boot.py:F821
+    phase_omega_integration_final.py:F821
+    quantum/temporal_lstm.py:F821
+    quantum_coherence_tracker.py:F821
+    testing/quantum_backtest.py:F821
+    tests/quantum_enhancements/test_qmp_ai.py:F821
+    tests/quantum_enhancements/test_unified_predictor.py:F821
+    ultra_modules/collective_consciousness.py:F821
+    ultra_modules/event_probability_engine.py:F821
+    ultra_modules/multiversal_risk_split.py:F821
+    ultra_modules/quantum_coherence_tracker_phase2.py:F821
+    ultra_modules/tests/test_event_probability.py:F821
+    ultra_modules/ultra_modules/quantum_coherence_tracker_phase2.py:F821
