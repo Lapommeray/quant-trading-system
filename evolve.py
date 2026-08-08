@@ -145,6 +145,9 @@ PROTECTED_PATHS = [
     "aeternum_engine.py",
     "AETERNUM_TESTAMENT.md",
     "aeternum.log",
+    "noesis_engine.py",
+    "NOESIS_TESTAMENT.md",
+    "noesis.log",
 ]
 
 # Evolution cycle sleep (seconds)
