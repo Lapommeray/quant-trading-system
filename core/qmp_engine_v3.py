@@ -20,6 +20,7 @@ import numpy as np
 
 log = logging.getLogger(__name__)
 
+
 # ---- Pure Python TradeBar (no QC) ----
 class TradeBar:
     def __init__(self):
@@ -31,49 +32,104 @@ class TradeBar:
         self._end_time = None
 
     @property
-    def Open(self): return self._open
+    def Open(self):
+        return self._open
+
     @Open.setter
-    def Open(self, v): self._open = float(v)
+    def Open(self, v):
+        self._open = float(v)
+
     @property
-    def High(self): return self._high
+    def High(self):
+        return self._high
+
     @High.setter
-    def High(self, v): self._high = float(v)
+    def High(self, v):
+        self._high = float(v)
+
     @property
-    def Low(self): return self._low
+    def Low(self):
+        return self._low
+
     @Low.setter
-    def Low(self, v): self._low = float(v)
+    def Low(self, v):
+        self._low = float(v)
+
     @property
-    def Close(self): return self._close
+    def Close(self):
+        return self._close
+
     @Close.setter
-    def Close(self, v): self._close = float(v)
+    def Close(self, v):
+        self._close = float(v)
+
     @property
-    def Volume(self): return self._volume
+    def Volume(self):
+        return self._volume
+
     @Volume.setter
-    def Volume(self, v): self._volume = float(v)
+    def Volume(self, v):
+        self._volume = float(v)
+
     @property
-    def EndTime(self): return self._end_time
+    def EndTime(self):
+        return self._end_time
+
     @EndTime.setter
-    def EndTime(self, v): self._end_time = v
+    def EndTime(self, v):
+        self._end_time = v
 
 
 def _stub(name):
     class Stub:
-        def __init__(self, *a, **k): pass
-        def decode(self, *a, **k): return {"confidence": 0.5, "direction": "NEUTRAL"}
-        def detect(self, *a, **k): return {"confidence": 0.5, "direction": "NEUTRAL"}
-        def predict(self, *a, **k): return {"confidence": 0.5, "direction": "NEUTRAL"}
-        def check_transfers(self, *a, **k): return {"confidence": 0.5, "direction": "NEUTRAL"}
-        def check_movements(self, *a, **k): return {"confidence": 0.5, "direction": "NEUTRAL"}
-        def analyze(self, *a, **k): return {"confidence": 0.5, "direction": "NEUTRAL"}
-        def calculate_risk(self, *a, **k): return {"confidence": 0.5, "direction": "NEUTRAL"}
-        def select_hierarchy(self, *a, **k): return {"confidence": 0.5, "direction": "NEUTRAL"}
-        def fuse_signals(self, *a, **k): return {"confidence": 0.5, "direction": "NEUTRAL"}
-        def predict_price_direction(self, *a, **k): return {"confidence": 0.5, "direction": "NEUTRAL"}
-        def route_trading_signal(self, *a, **k): return {"confidence": 0.5, "direction": "NEUTRAL"}
-        def is_isolated(self, **kw): return False
-        def get_isolation_info(self, **kw): return None
-        def protect(self, *a, **k): return True
-        def pre_trade_check(self, *a, **k): return {"compliant": True}
+        def __init__(self, *a, **k):
+            pass
+
+        def decode(self, *a, **k):
+            return {"confidence": 0.5, "direction": "NEUTRAL"}
+
+        def detect(self, *a, **k):
+            return {"confidence": 0.5, "direction": "NEUTRAL"}
+
+        def predict(self, *a, **k):
+            return {"confidence": 0.5, "direction": "NEUTRAL"}
+
+        def check_transfers(self, *a, **k):
+            return {"confidence": 0.5, "direction": "NEUTRAL"}
+
+        def check_movements(self, *a, **k):
+            return {"confidence": 0.5, "direction": "NEUTRAL"}
+
+        def analyze(self, *a, **k):
+            return {"confidence": 0.5, "direction": "NEUTRAL"}
+
+        def calculate_risk(self, *a, **k):
+            return {"confidence": 0.5, "direction": "NEUTRAL"}
+
+        def select_hierarchy(self, *a, **k):
+            return {"confidence": 0.5, "direction": "NEUTRAL"}
+
+        def fuse_signals(self, *a, **k):
+            return {"confidence": 0.5, "direction": "NEUTRAL"}
+
+        def predict_price_direction(self, *a, **k):
+            return {"confidence": 0.5, "direction": "NEUTRAL"}
+
+        def route_trading_signal(self, *a, **k):
+            return {"confidence": 0.5, "direction": "NEUTRAL"}
+
+        def is_isolated(self, **kw):
+            return False
+
+        def get_isolation_info(self, **kw):
+            return None
+
+        def protect(self, *a, **k):
+            return True
+
+        def pre_trade_check(self, *a, **k):
+            return {"compliant": True}
+
     Stub.__name__ = name
     return Stub
 
@@ -87,9 +143,14 @@ except Exception:
 try:
     from advanced_modules.invisible_data_miner import InvisibleDataMiner
 except Exception:
+
     class InvisibleDataMiner:
-        def __init__(self, *a, **k): pass
-        def _extract_patterns(self, *a, **k): return {"confidence": 0.5, "direction": "NEUTRAL"}
+        def __init__(self, *a, **k):
+            pass
+
+        def _extract_patterns(self, *a, **k):
+            return {"confidence": 0.5, "direction": "NEUTRAL"}
+
 
 try:
     from advanced_modules.meta_adaptive_ai import MetaAdaptiveAI
@@ -187,6 +248,7 @@ RealityDisplacementMatrix = _stub("RealityDisplacementMatrix")
 
 try:
     from core.event_bus import get_event_bus
+
     _EVENT_BUS = get_event_bus()
 except Exception:
     _EVENT_BUS = None
@@ -249,41 +311,85 @@ class QMPUltraEngine:
         self.self_destruct = _make(SelfDestructProtocol)
 
         self.module_weights = {
-            "emotion_dna": 0.06, "fractal_resonance": 0.06, "quantum_tremor": 0.06, "intention": 0.08,
-            "sacred_event": 0.03, "astro_geo": 0.03, "future_shadow": 0.08, "black_swan": 0.06,
-            "market_thought": 0.06, "reality_matrix": 0.06, "human_lag": 0.06, "invisible_data": 0.06,
-            "meta_adaptive": 0.06, "quantum_sentiment": 0.06, "btc_offchain": 0.04, "fed_jet": 0.04,
-            "spoofing": 0.04, "stress": 0.04, "port_activity": 0.04, "dna_breath": 0.05,
-            "dna_overlord": 0.05, "spectral_fusion": 0.05, "time_fractal_fft": 0.04,
-            "void_renderer": 0.05, "meta_routing": 0.05,
+            "emotion_dna": 0.06,
+            "fractal_resonance": 0.06,
+            "quantum_tremor": 0.06,
+            "intention": 0.08,
+            "sacred_event": 0.03,
+            "astro_geo": 0.03,
+            "future_shadow": 0.08,
+            "black_swan": 0.06,
+            "market_thought": 0.06,
+            "reality_matrix": 0.06,
+            "human_lag": 0.06,
+            "invisible_data": 0.06,
+            "meta_adaptive": 0.06,
+            "quantum_sentiment": 0.06,
+            "btc_offchain": 0.04,
+            "fed_jet": 0.04,
+            "spoofing": 0.04,
+            "stress": 0.04,
+            "port_activity": 0.04,
+            "dna_breath": 0.05,
+            "dna_overlord": 0.05,
+            "spectral_fusion": 0.05,
+            "time_fractal_fft": 0.04,
+            "void_renderer": 0.05,
+            "meta_routing": 0.05,
         }
 
         self.confidence_threshold = 0.7
         self.min_gate_score = 0.6
-        self.confidence_field_map = {"future_shadow": "confidence", "black_swan": "black_swan_risk", "market_thought": "confidence", "reality_matrix": "confidence"}
-        self.direction_field_map = {"future_shadow": "future_direction", "market_thought": "collective_intent", "reality_matrix": "primary_direction"}
+        self.confidence_field_map = {
+            "future_shadow": "confidence",
+            "black_swan": "black_swan_risk",
+            "market_thought": "confidence",
+            "reality_matrix": "confidence",
+        }
+        self.direction_field_map = {
+            "future_shadow": "future_direction",
+            "market_thought": "collective_intent",
+            "reality_matrix": "primary_direction",
+        }
         self.activated_modules = {"atlantean_shield": AtlanteanShield()}
 
     def _publish_signal(self, payload: Dict[str, Any]):
         if self._local_event_bus:
             try:
-                self._local_event_bus.publish("SIGNAL_GENERATED", payload, source="QMPUltraEngine")
+                self._local_event_bus.publish(
+                    "SIGNAL_GENERATED", payload, source="QMPUltraEngine"
+                )
             except Exception:
                 pass
 
     def generate_signal(self, symbol, history_data):
         if not self._validate_history_data(history_data):
-            res = {"final_signal": None, "confidence": 0.0, "gate_scores": {}, "symbol": symbol}
+            res = {
+                "final_signal": None,
+                "confidence": 0.0,
+                "gate_scores": {},
+                "symbol": symbol,
+            }
             self._publish_signal(res)
             return res
 
         if self.self_destruct.is_isolated(symbol=symbol):
-            res = {"final_signal": None, "confidence": 0.0, "gate_scores": {}, "symbol": symbol}
+            res = {
+                "final_signal": None,
+                "confidence": 0.0,
+                "gate_scores": {},
+                "symbol": symbol,
+            }
             self._publish_signal(res)
             return res
 
         if not self.activated_modules["atlantean_shield"].protect(symbol):
-            res = {"final_signal": None, "confidence": 0.0, "gate_scores": {}, "symbol": symbol}
+            res = {
+                "final_signal": None,
+                "confidence": 0.0,
+                "gate_scores": {},
+                "symbol": symbol,
+            }
             self._publish_signal(res)
             return res
 
@@ -299,7 +405,9 @@ class QMPUltraEngine:
                 if module_name == "human_lag":
                     result = module.detect(symbol, history_data)
                 elif module_name == "invisible_data":
-                    result = module._extract_patterns(history_data["1m"], "1m", str(symbol))
+                    result = module._extract_patterns(
+                        history_data["1m"], "1m", str(symbol)
+                    )
                 elif module_name == "meta_adaptive":
                     result = module.predict(history_data["1m"].values)
                 elif module_name == "quantum_sentiment":
@@ -319,15 +427,32 @@ class QMPUltraEngine:
                 elif module_name == "dna_overlord":
                     result = module.select_hierarchy()
                 elif module_name == "spectral_fusion":
+
                     class MockComponents:
-                        emotion = 0.5; volatility = 0.3; volume = 0.2; entropy = 0.4
+                        emotion = 0.5
+                        volatility = 0.3
+                        volume = 0.2
+                        entropy = 0.4
+
                     result = module.fuse_signals("crypto", MockComponents())
                 elif module_name == "void_renderer":
-                    result = {"void_signals": [], "confidence": 0.5, "direction": "NEUTRAL"}
+                    result = {
+                        "void_signals": [],
+                        "confidence": 0.5,
+                        "direction": "NEUTRAL",
+                    }
                 elif module_name == "meta_routing":
-                    result = module.route_trading_signal({"direction": "BUY", "confidence": 0.7}, {"entropy": 0.5, "liquidity": 0.8}, {})
+                    result = module.route_trading_signal(
+                        {"direction": "BUY", "confidence": 0.7},
+                        {"entropy": 0.5, "liquidity": 0.8},
+                        {},
+                    )
                 elif module_name == "time_fractal_fft":
-                    closes = history_data["1m"]["close"].values if "close" in history_data["1m"].columns else np.random.randn(100)
+                    closes = (
+                        history_data["1m"]["close"].values
+                        if "close" in history_data["1m"].columns
+                        else np.random.randn(100)
+                    )
                     result = module.predict_price_direction(closes)
                 else:
                     result = module.decode(symbol, history_bars)
@@ -343,24 +468,40 @@ class QMPUltraEngine:
         if "black_swan" in gate_scores:
             gate_scores["black_swan"] = 1.0 - gate_scores["black_swan"]
 
-        confidence = sum(gate_scores.get(k, 0) * self.module_weights.get(k, 0) for k in gate_scores)
+        confidence = sum(
+            gate_scores.get(k, 0) * self.module_weights.get(k, 0) for k in gate_scores
+        )
         self.gate_scores = gate_scores
         self.last_confidence = confidence
 
         gates_pass = all(score >= self.min_gate_score for score in gate_scores.values())
 
         black_swan_active = False
-        if "black_swan" in module_results and isinstance(module_results["black_swan"], dict):
-            black_swan_active = module_results["black_swan"].get("protection_active", False)
+        if "black_swan" in module_results and isinstance(
+            module_results["black_swan"], dict
+        ):
+            black_swan_active = module_results["black_swan"].get(
+                "protection_active", False
+            )
 
         if black_swan_active:
-            res = {"final_signal": None, "confidence": confidence, "gate_scores": gate_scores, "symbol": symbol}
+            res = {
+                "final_signal": None,
+                "confidence": confidence,
+                "gate_scores": gate_scores,
+                "symbol": symbol,
+            }
             self._publish_signal(res)
             return res
 
         compliance_result = self.compliance.pre_trade_check(symbol)
         if not compliance_result.get("compliant", False):
-            res = {"final_signal": None, "confidence": confidence, "gate_scores": gate_scores, "symbol": symbol}
+            res = {
+                "final_signal": None,
+                "confidence": confidence,
+                "gate_scores": gate_scores,
+                "symbol": symbol,
+            }
             self._publish_signal(res)
             return res
 
@@ -369,25 +510,50 @@ class QMPUltraEngine:
             for module, direction in directions.items():
                 if direction in direction_votes:
                     direction_votes[direction] += self.module_weights.get(module, 0.1)
-            final_direction = max(direction_votes.keys(), key=lambda k: direction_votes[k])
+            final_direction = max(
+                direction_votes.keys(), key=lambda k: direction_votes[k]
+            )
             if final_direction == "NEUTRAL" or direction_votes[final_direction] < 0.5:
-                res = {"final_signal": None, "confidence": confidence, "gate_scores": gate_scores, "symbol": symbol}
+                res = {
+                    "final_signal": None,
+                    "confidence": confidence,
+                    "gate_scores": gate_scores,
+                    "symbol": symbol,
+                }
                 self._publish_signal(res)
                 return res
 
-            if "meta_adaptive" in module_results and isinstance(module_results["meta_adaptive"], dict):
+            if "meta_adaptive" in module_results and isinstance(
+                module_results["meta_adaptive"], dict
+            ):
                 meta_confidence = module_results["meta_adaptive"].get("confidence", 0.0)
                 meta_direction = module_results["meta_adaptive"].get("direction", None)
-                if meta_direction and meta_direction != final_direction and meta_confidence > 0.8:
+                if (
+                    meta_direction
+                    and meta_direction != final_direction
+                    and meta_confidence > 0.8
+                ):
                     final_direction = meta_direction
 
             self.last_signal = final_direction
             self.last_signal_time = _dt.now()
-            res = {"final_signal": final_direction, "confidence": confidence, "gate_scores": gate_scores, "symbol": symbol, "votes": direction_votes, "weighted_confidence": confidence}
+            res = {
+                "final_signal": final_direction,
+                "confidence": confidence,
+                "gate_scores": gate_scores,
+                "symbol": symbol,
+                "votes": direction_votes,
+                "weighted_confidence": confidence,
+            }
             self._publish_signal(res)
             return res
         else:
-            res = {"final_signal": None, "confidence": confidence, "gate_scores": gate_scores, "symbol": symbol}
+            res = {
+                "final_signal": None,
+                "confidence": confidence,
+                "gate_scores": gate_scores,
+                "symbol": symbol,
+            }
             self._publish_signal(res)
             return res
 
@@ -396,11 +562,15 @@ class QMPUltraEngine:
             return 1.0 if result and result != "WAIT" else 0.0
         confidence_field = self.confidence_field_map.get(module_name, "confidence")
         if confidence_field in result:
-            try: return float(result[confidence_field])
-            except: return 0.5
+            try:
+                return float(result[confidence_field])
+            except:
+                return 0.5
         elif "confidence" in result:
-            try: return float(result["confidence"])
-            except: return 0.5
+            try:
+                return float(result["confidence"])
+            except:
+                return 0.5
         else:
             return 0.5
 
@@ -434,6 +604,11 @@ class QMPUltraEngine:
             return []
         for idx, row in df.iterrows():
             bar = TradeBar()
-            bar.Open = row["Open"]; bar.High = row["High"]; bar.Low = row["Low"]; bar.Close = row["Close"]; bar.Volume = row["Volume"] if "Volume" in row else 0; bar.EndTime = idx
+            bar.Open = row["Open"]
+            bar.High = row["High"]
+            bar.Low = row["Low"]
+            bar.Close = row["Close"]
+            bar.Volume = row["Volume"] if "Volume" in row else 0
+            bar.EndTime = idx
             trade_bars.append(bar)
         return trade_bars

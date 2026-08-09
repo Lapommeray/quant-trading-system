@@ -5,6 +5,7 @@ import numpy as np
 from qiskit import QuantumCircuit, Aer, execute
 from .defense import QuantumFirewall
 
+
 class QuantumProbabilityEngine:
     def __init__(self, threshold=0.91):
         """
@@ -14,8 +15,8 @@ class QuantumProbabilityEngine:
         self.entangled_map = {}  # Stores signal coherence matrices
         self.confidence_threshold = threshold
         self.quantum_firewall = QuantumFirewall()
-        self.backend = Aer.get_backend('qasm_simulator')
-        
+        self.backend = Aer.get_backend("qasm_simulator")
+
     def _apply_quantum_gate(self, coherence_score: float) -> float:
         """Executes quantum circuit to amplify high-probability signals"""
         qc = QuantumCircuit(1, 1)
@@ -23,7 +24,7 @@ class QuantumProbabilityEngine:
         qc.measure(0, 0)
         result = execute(qc, self.backend, shots=1000).result()
         counts = result.get_counts(qc)
-        return counts.get('1', 0) / 1000
+        return counts.get("1", 0) / 1000
 
     def update_state(self, signal_id: str, coherence_score: float) -> None:
         """
@@ -49,7 +50,7 @@ class QuantumProbabilityEngine:
         """
         Processes multiple signals through quantum routing.
         Input:  { "BTC_1m": 0.95, "ETH_5m": 0.87 }
-        Output: { "BTC_1m": 0.998, "ETH_5m": 0.0 } 
+        Output: { "BTC_1m": 0.998, "ETH_5m": 0.0 }
         """
         return {sid: self.evaluate(sid) for sid in signals.keys()}
 
@@ -60,8 +61,7 @@ class QuantumProbabilityEngine:
         """
         return {
             f"{a1}-{a2}": np.corrcoef(
-                self.entangled_map.get(a1, []),
-                self.entangled_map.get(a2, [])
-            )[0,1] 
+                self.entangled_map.get(a1, []), self.entangled_map.get(a2, [])
+            )[0, 1]
             for a1, a2 in asset_pairs
         }

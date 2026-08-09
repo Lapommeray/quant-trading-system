@@ -9,11 +9,13 @@ Reads pre-broker DataRing aggregated by price bins.
 
 Asset: BTCUSD, ETHUSD, SPY
 """
+
 from core.base_module import BaseTradingModule, register_module, ModuleResult
 from core.event_bus import get_event_bus, EventPriority
 from core.data_ring import get_data_ring
 import time
 import numpy as np
+
 
 @register_module
 class VolumeProfileDetector(BaseTradingModule):
@@ -24,15 +26,18 @@ class VolumeProfileDetector(BaseTradingModule):
 
     def __init__(self, config=None, event_bus=None):
         super().__init__(config, event_bus)
-        self.config.setdefault("adaptive", {
-            "confidence_floor": 0.60,
-            "weight_multiplier": 1.0,
-            "lookback": 1440,  # 1d of 1m bars ~1440, but for ticks 5000
-            "cooldown_seconds": 2.0,
-            "value_area_pct": 0.70,
-            "lvn_threshold_pct": 0.15,
-            "bins": 100
-        })
+        self.config.setdefault(
+            "adaptive",
+            {
+                "confidence_floor": 0.60,
+                "weight_multiplier": 1.0,
+                "lookback": 1440,  # 1d of 1m bars ~1440, but for ticks 5000
+                "cooldown_seconds": 2.0,
+                "value_area_pct": 0.70,
+                "lvn_threshold_pct": 0.15,
+                "bins": 100,
+            },
+        )
         self.last_poc = None
         self.last_vah = None
         self.last_val = None
@@ -53,7 +58,9 @@ class VolumeProfileDetector(BaseTradingModule):
         ticks = ring.latest(self.config["adaptive"]["lookback"])
 
         if len(ticks) < 100:
-            return ModuleResult(self.module_name, "NEUTRAL", 0.0, {"reason": "insufficient"})
+            return ModuleResult(
+                self.module_name, "NEUTRAL", 0.0, {"reason": "insufficient"}
+            )
 
         prices = ticks["price"].astype(np.float64)
         qtys = ticks["qty"].astype(np.float64)
@@ -64,7 +71,9 @@ class VolumeProfileDetector(BaseTradingModule):
         qtys = qtys[mask]
 
         if len(prices) < 50:
-            return ModuleResult(self.module_name, "NEUTRAL", 0.0, {"reason": "no_valid"})
+            return ModuleResult(
+                self.module_name, "NEUTRAL", 0.0, {"reason": "no_valid"}
+            )
 
         # Histogram by price
         bins = self.config["adaptive"]["bins"]
@@ -84,9 +93,9 @@ class VolumeProfileDetector(BaseTradingModule):
         cum_vol = vol_at_poc
         l = poc_idx
         r = poc_idx
-        while cum_vol < target_vol and (l > 0 or r < len(hist)-1):
-            left_vol = hist[l-1] if l>0 else 0
-            right_vol = hist[r+1] if r < len(hist)-1 else 0
+        while cum_vol < target_vol and (l > 0 or r < len(hist) - 1):
+            left_vol = hist[l - 1] if l > 0 else 0
+            right_vol = hist[r + 1] if r < len(hist) - 1 else 0
             if left_vol > right_vol:
                 l -= 1
                 cum_vol += left_vol
@@ -94,7 +103,7 @@ class VolumeProfileDetector(BaseTradingModule):
                 r += 1
                 cum_vol += right_vol
         vah = float(bin_centers[r]) if r < len(bin_centers) else float(bin_centers[-1])
-        val = float(bin_centers[l]) if l >=0 else float(bin_centers[0])
+        val = float(bin_centers[l]) if l >= 0 else float(bin_centers[0])
         self.last_vah = vah
         self.last_val = val
 
@@ -111,7 +120,11 @@ class VolumeProfileDetector(BaseTradingModule):
         conf = 0.0
 
         # Distance from POC in ATR-like units
-        atr_proxy = float(np.std(prices[-100:])) if len(prices)>=100 else float(np.std(prices))
+        atr_proxy = (
+            float(np.std(prices[-100:]))
+            if len(prices) >= 100
+            else float(np.std(prices))
+        )
         if atr_proxy == 0:
             atr_proxy = current_price * 0.005
 
@@ -127,11 +140,17 @@ class VolumeProfileDetector(BaseTradingModule):
 
         # If in LVN after sweep, momentum continuation
         # Check if current price inside LVN region
-        in_lvn = any(abs(current_price - lvn_p)/current_price < 0.001 for lvn_p in lvn_prices)
+        in_lvn = any(
+            abs(current_price - lvn_p) / current_price < 0.001 for lvn_p in lvn_prices
+        )
         if in_lvn:
             # If coming from above and entering LVN downwards, expect fast move down
             # Use recent price trend
-            recent_trend = np.mean(prices[-10:]) - np.mean(prices[-20:-10]) if len(prices)>=20 else 0
+            recent_trend = (
+                np.mean(prices[-10:]) - np.mean(prices[-20:-10])
+                if len(prices) >= 20
+                else 0
+            )
             if recent_trend < 0 and current_price < poc:
                 # continuation down through LVN
                 signal = "SELL"
@@ -140,7 +159,10 @@ class VolumeProfileDetector(BaseTradingModule):
                 signal = "BUY"
                 conf = max(conf, 0.65)
 
-        if time.time() - self.last_signal_ts < self.config["adaptive"]["cooldown_seconds"]:
+        if (
+            time.time() - self.last_signal_ts
+            < self.config["adaptive"]["cooldown_seconds"]
+        ):
             signal = "NEUTRAL"
             conf = 0.0
         else:
@@ -151,7 +173,7 @@ class VolumeProfileDetector(BaseTradingModule):
             signal = "NEUTRAL"
             conf = 0.0
 
-        latency = (time.time() - start)*1000
+        latency = (time.time() - start) * 1000
         self.record_success(latency)
 
         features = {
@@ -162,7 +184,7 @@ class VolumeProfileDetector(BaseTradingModule):
             "dist_to_poc_atr": float(dist_to_poc),
             "lvn_count": len(lvn_prices),
             "lvn_prices": lvn_prices[:5],  # top few
-            "atr_proxy": atr_proxy
+            "atr_proxy": atr_proxy,
         }
 
         result = ModuleResult(
@@ -170,12 +192,22 @@ class VolumeProfileDetector(BaseTradingModule):
             signal=signal,
             confidence=conf * self.config["adaptive"]["weight_multiplier"],
             features=features,
-            latency_ms=latency
+            latency_ms=latency,
         )
 
         try:
-            get_event_bus().publish("ALPHA_SIGNAL", result.to_dict(), source=self.module_name, priority=EventPriority.OPERATIONAL)
-            get_event_bus().publish("VOLUME_PROFILE", features, source=self.module_name, priority=EventPriority.OPERATIONAL)
+            get_event_bus().publish(
+                "ALPHA_SIGNAL",
+                result.to_dict(),
+                source=self.module_name,
+                priority=EventPriority.OPERATIONAL,
+            )
+            get_event_bus().publish(
+                "VOLUME_PROFILE",
+                features,
+                source=self.module_name,
+                priority=EventPriority.OPERATIONAL,
+            )
         except:
             pass
 
@@ -183,27 +215,38 @@ class VolumeProfileDetector(BaseTradingModule):
         return result
 
     def on_event(self, event_type, payload=None):
-        if hasattr(event_type, 'event_type'):
+        if hasattr(event_type, "event_type"):
             ev = event_type
             event_type = ev.event_type
             payload = ev.payload
         if event_type == "REGIME_CHANGE":
-            self.last_regime = payload.get("label", "unknown") if isinstance(payload, dict) else "unknown"
+            self.last_regime = (
+                payload.get("label", "unknown")
+                if isinstance(payload, dict)
+                else "unknown"
+            )
 
     def learn_from_outcome(self, outcome):
         if outcome.get("module_name") != self.module_name:
             return {"learned": False}
         pnl = outcome.get("pnl", 0)
         if pnl < 0:
-            self.config["adaptive"]["confidence_floor"] = min(0.85, self.config["adaptive"]["confidence_floor"] + 0.02)
+            self.config["adaptive"]["confidence_floor"] = min(
+                0.85, self.config["adaptive"]["confidence_floor"] + 0.02
+            )
             return {"learned": True}
         else:
-            self.config["adaptive"]["confidence_floor"] = max(0.55, self.config["adaptive"]["confidence_floor"] - 0.005)
+            self.config["adaptive"]["confidence_floor"] = max(
+                0.55, self.config["adaptive"]["confidence_floor"] - 0.005
+            )
             return {"learned": True}
         return {"learned": False}
 
     def diagnose(self, context=None):
         stats = (context or {}).get("stats", {})
         if stats.get("win_rate", 0.5) < 0.48:
-            return {"issue": "low_win_rate", "params": {"confidence_floor": 0.70, "value_area_pct": 0.75}}
+            return {
+                "issue": "low_win_rate",
+                "params": {"confidence_floor": 0.70, "value_area_pct": 0.75},
+            }
         return {"issue": "none"}

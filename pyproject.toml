@@ -53,5 +53,23 @@ include = [
   "advanced_modules*",
 ]
 
+[tool.black]
+target-version = ["py310"]
+# Mirrors the exclude list in .flake8 so both linters cover the same tree.
+extend-exclude = '''
+/(
+    \.git
+  | \.venv
+  | venv
+  | build
+  | dist
+  | docs
+  | quarantine
+  | Deco_[^/]*
+  | QMP_[^/]*
+  | Sa_son_code
+)/
+'''
+
 [tool.pytest.ini_options]
 addopts = "--import-mode=importlib"

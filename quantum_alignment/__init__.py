@@ -11,4 +11,4 @@ from quantum_alignment.mm_dna_scanner import MMProfiler
 from quantum_alignment.dark_echo import DarkEcho
 from quantum_alignment.alignment_engine import AlignmentEngine
 
-__all__ = ['TemporalFractal', 'MMProfiler', 'DarkEcho', 'AlignmentEngine']
+__all__ = ["TemporalFractal", "MMProfiler", "DarkEcho", "AlignmentEngine"]

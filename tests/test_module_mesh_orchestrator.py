@@ -1,6 +1,10 @@
 from datetime import datetime, timedelta, timezone
 
-from core.module_mesh_orchestrator import ModuleMeshConfig, ModuleMeshOrchestrator, UnifiedAction
+from core.module_mesh_orchestrator import (
+    ModuleMeshConfig,
+    ModuleMeshOrchestrator,
+    UnifiedAction,
+)
 
 
 class TrendModule:
@@ -26,7 +30,9 @@ class RiskModule:
 def test_modules_communicate_and_return_one_unified_result():
     mesh = ModuleMeshOrchestrator(
         {"trend": TrendModule(), "liquidity": LiquidityModule(), "risk": RiskModule()},
-        config=ModuleMeshConfig(confidence_threshold=0.6, disagreement_hold_threshold=0.0),
+        config=ModuleMeshConfig(
+            confidence_threshold=0.6, disagreement_hold_threshold=0.0
+        ),
     )
 
     result = mesh.run({"symbol": "SPY", "price": 500.0})
@@ -82,7 +88,9 @@ def test_disagreement_returns_one_hold_result():
             "trend": lambda context: {"action": "BUY", "confidence": 0.9},
             "flow": lambda context: {"action": "SELL", "confidence": 0.8},
         },
-        config=ModuleMeshConfig(confidence_threshold=0.1, disagreement_hold_threshold=0.1),
+        config=ModuleMeshConfig(
+            confidence_threshold=0.1, disagreement_hold_threshold=0.1
+        ),
     )
 
     result = mesh.run({"symbol": "SPY", "price": 500.0})

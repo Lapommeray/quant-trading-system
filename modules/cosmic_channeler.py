@@ -1,6 +1,6 @@
-
 import datetime
 import math
+
 
 def get_moon_phase(date):
     """
@@ -11,9 +11,11 @@ def get_moon_phase(date):
     lunations = 0.20439731 + (days * 0.03386319269)
     return lunations % 1
 
+
 def is_planetary_gate_open(date):
     # Planetary gate opens on these spiritually aligned days
     return date.day in [2, 3, 5, 7, 11, 13, 17, 19, 23, 29, 31]
+
 
 def get_cosmic_alignment_score(current_time):
     moon_phase = get_moon_phase(current_time)

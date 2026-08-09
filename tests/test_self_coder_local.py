@@ -3,7 +3,9 @@ from core.self_coder import StrategyGenerator
 
 def test_self_coder_generates_institutional_strategy_code():
     generator = StrategyGenerator(algorithm=None)
-    code = generator._synthesize_strategy_code({"volatility": "high", "trend": "strong_bull"})
+    code = generator._synthesize_strategy_code(
+        {"volatility": "high", "trend": "strong_bull"}
+    )
     assert "class GeneratedInstitutionalStrategy" in code
     assert "stop = avg * (1 - 0.015)" in code
     assert "take = avg * (1 + 0.03)" in code

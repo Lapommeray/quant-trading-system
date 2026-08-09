@@ -11,4 +11,4 @@ Modules:
 
 from .phoenix_micro_node import PhoenixProtocol
 
-__all__ = ['PhoenixProtocol']
+__all__ = ["PhoenixProtocol"]

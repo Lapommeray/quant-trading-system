@@ -111,7 +111,9 @@ class SPXLiveFeed:
         self._ring_factory = ring_factory or (
             (lambda sym: get_data_ring(sym)) if CORE_AVAILABLE and get_data_ring else {}
         )
-        self._api_key = api_key if api_key is not None else os.getenv("TWELVEDATA_API_KEY", "")
+        self._api_key = (
+            api_key if api_key is not None else os.getenv("TWELVEDATA_API_KEY", "")
+        )
         self._poll_seconds = (
             poll_seconds
             if poll_seconds is not None
@@ -122,7 +124,9 @@ class SPXLiveFeed:
         if fetch_func is not None:
             self._fetch_func = fetch_func
         elif self._api_key:
-            self._fetch_func = lambda: _fetch_twelvedata(self._api_key, int(self._poll_seconds))
+            self._fetch_func = lambda: _fetch_twelvedata(
+                self._api_key, int(self._poll_seconds)
+            )
         else:
             self._fetch_func = _fetch_yfinance
 
@@ -137,7 +141,9 @@ class SPXLiveFeed:
         if self._running:
             return True
         self._running = True
-        self._thread = threading.Thread(target=self._loop, name="SPXLiveFeed", daemon=True)
+        self._thread = threading.Thread(
+            target=self._loop, name="SPXLiveFeed", daemon=True
+        )
         self._thread.start()
         return True
 

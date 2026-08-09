@@ -19,11 +19,13 @@ def test_ofi_aligned_rolling_no_nan_holes():
     rng = np.random.default_rng(42)
     n = 500
     prices = 100.0 + np.cumsum(rng.normal(0, 0.1, n))
-    trades = pd.DataFrame({
-        "price": prices,
-        "quantity": rng.uniform(0.01, 0.5, n),
-        "side": rng.choice([-1, 1], size=n),
-    })
+    trades = pd.DataFrame(
+        {
+            "price": prices,
+            "quantity": rng.uniform(0.01, 0.5, n),
+            "side": rng.choice([-1, 1], size=n),
+        }
+    )
     ofi = OrderFlowImbalance(window=50).calculate(trades)
     # Aligned rolling must not produce holes: any NaN only from warm-up.
     tail = ofi.iloc[60:]
@@ -34,11 +36,13 @@ def test_ofi_aligned_rolling_no_nan_holes():
 def test_ofi_directional_sanity():
     # 90% buys -> strongly positive imbalance
     n = 400
-    trades = pd.DataFrame({
-        "price": np.linspace(100.0, 101.0, n),
-        "quantity": np.ones(n),
-        "side": np.where(np.arange(n) % 10 == 0, -1, 1),
-    })
+    trades = pd.DataFrame(
+        {
+            "price": np.linspace(100.0, 101.0, n),
+            "quantity": np.ones(n),
+            "side": np.where(np.arange(n) % 10 == 0, -1, 1),
+        }
+    )
     ofi = OrderFlowImbalance(window=50).calculate(trades)
     assert ofi.iloc[-1] > 0.5
 
@@ -47,14 +51,16 @@ def test_ofi_lee_ready_fallback():
     # No 'side' column -> Lee-Ready from mid vs price
     n = 300
     prices = np.full(n, 100.0)
-    prices[::2] = 100.1   # above mid -> buys
-    prices[1::2] = 99.9   # below mid -> sells
-    trades = pd.DataFrame({
-        "price": prices,
-        "quantity": np.ones(n),
-        "bid": np.full(n, 99.9),
-        "ask": np.full(n, 100.1),
-    })
+    prices[::2] = 100.1  # above mid -> buys
+    prices[1::2] = 99.9  # below mid -> sells
+    trades = pd.DataFrame(
+        {
+            "price": prices,
+            "quantity": np.ones(n),
+            "bid": np.full(n, 99.9),
+            "ask": np.full(n, 100.1),
+        }
+    )
     ofi = OrderFlowImbalance(window=50).calculate(trades)
     # Balanced buy/sell counts -> imbalance ~0 (tiny residual from dollar-
     # volume weighting of the two different price levels, not a bug).

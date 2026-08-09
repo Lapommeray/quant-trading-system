@@ -11,5 +11,9 @@ from .activate_metastrategies import activate_metastrategies
 from .init_self_rewrite import init_self_rewrite
 from .ascend import ascend
 
-__all__ = ['install_reflex_journal', 'activate_metastrategies', 
-           'init_self_rewrite', 'ascend']
+__all__ = [
+    "install_reflex_journal",
+    "activate_metastrategies",
+    "init_self_rewrite",
+    "ascend",
+]

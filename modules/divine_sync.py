@@ -1,9 +1,10 @@
-
 import datetime
+
 
 def is_master_369_number(n):
     # Number is considered sacred if divisible by 3, 6, or 9
     return any(n % x == 0 for x in [3, 6, 9])
+
 
 def sacred_369_alignment(price_data):
     """
@@ -11,14 +12,15 @@ def sacred_369_alignment(price_data):
     """
     try:
         values = [
-            int(str(int(price_data['open']))[-1]),
-            int(str(int(price_data['high']))[-1]),
-            int(str(int(price_data['low']))[-1]),
-            int(str(int(price_data['close']))[-1])
+            int(str(int(price_data["open"]))[-1]),
+            int(str(int(price_data["high"]))[-1]),
+            int(str(int(price_data["low"]))[-1]),
+            int(str(int(price_data["close"]))[-1]),
         ]
         return all(is_master_369_number(v) for v in values)
     except Exception:
         return False
+
 
 def check_divine_timing(current_time):
     """

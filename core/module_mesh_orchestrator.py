@@ -140,7 +140,9 @@ class ModuleMeshOrchestrator:
 
         return self._aggregate(results, context)
 
-    def _run_one(self, name: str, module: Any, context: MutableMapping[str, Any]) -> ModuleResult:
+    def _run_one(
+        self, name: str, module: Any, context: MutableMapping[str, Any]
+    ) -> ModuleResult:
         try:
             callable_obj = self._resolve_callable(module)
             raw = callable_obj(context)
@@ -167,7 +169,9 @@ class ModuleMeshOrchestrator:
                 error=f"{type(exc).__name__}: {exc}",
             )
 
-    def _resolve_callable(self, module: Any) -> Callable[[MutableMapping[str, Any]], Any]:
+    def _resolve_callable(
+        self, module: Any
+    ) -> Callable[[MutableMapping[str, Any]], Any]:
         if callable(module):
             return module
         for method in self._METHODS:
@@ -184,14 +188,24 @@ class ModuleMeshOrchestrator:
         if is_dataclass(raw):
             return asdict(raw)
         if isinstance(raw, bool):
-            return {"action": "BUY" if raw else "HOLD", "confidence": 1.0 if raw else 0.0}
+            return {
+                "action": "BUY" if raw else "HOLD",
+                "confidence": 1.0 if raw else 0.0,
+            }
         if isinstance(raw, (int, float)):
             value = _clamp(float(raw), -1.0, 1.0)
             return {"score": value, "confidence": abs(value)}
-        return {"value": raw, "action": "HOLD", "confidence": 0.0, "reason": "unrecognized_output"}
+        return {
+            "value": raw,
+            "action": "HOLD",
+            "confidence": 0.0,
+            "reason": "unrecognized_output",
+        }
 
     def _extract_signal(self, output: Mapping[str, Any]) -> tuple[str, float, float]:
-        action_raw = output.get("action", output.get("side", output.get("direction", "HOLD")))
+        action_raw = output.get(
+            "action", output.get("side", output.get("direction", "HOLD"))
+        )
         action = str(action_raw).upper()
         if action in {"LONG", "BULL", "BULLISH", "1"}:
             action = "BUY"
@@ -200,7 +214,11 @@ class ModuleMeshOrchestrator:
         elif action not in {"BUY", "SELL", "HOLD"}:
             action = "HOLD"
 
-        confidence = _clamp(_as_float(output.get("confidence", output.get("probability", 0.0))), 0.0, 1.0)
+        confidence = _clamp(
+            _as_float(output.get("confidence", output.get("probability", 0.0))),
+            0.0,
+            1.0,
+        )
 
         if "score" in output:
             score = _clamp(_as_float(output["score"]), -1.0, 1.0)
@@ -222,7 +240,9 @@ class ModuleMeshOrchestrator:
             confidence = abs(score)
         return action, confidence, score
 
-    def _aggregate(self, results: Mapping[str, ModuleResult], context: Dict[str, Any]) -> UnifiedTradeResult:
+    def _aggregate(
+        self, results: Mapping[str, ModuleResult], context: Dict[str, Any]
+    ) -> UnifiedTradeResult:
         if len(results) < self.config.min_required_modules:
             return self._hold("not_enough_modules", context=context, results=results)
 
@@ -243,7 +263,9 @@ class ModuleMeshOrchestrator:
             or str(r.output.get("status", "")).lower() == "error"
         ]
         if vetoes:
-            return self._hold("module_veto: " + ", ".join(vetoes), context=context, results=results)
+            return self._hold(
+                "module_veto: " + ", ".join(vetoes), context=context, results=results
+            )
 
         weighted_score = 0.0
         weight_sum = 0.0
@@ -261,7 +283,9 @@ class ModuleMeshOrchestrator:
                 sell_weight += weight
 
         if weight_sum <= 0:
-            return self._hold("no_positive_module_weight", context=context, results=results)
+            return self._hold(
+                "no_positive_module_weight", context=context, results=results
+            )
 
         score = _clamp(weighted_score / weight_sum, -1.0, 1.0)
         confidence = abs(score)
@@ -328,8 +352,14 @@ class ModuleMeshOrchestrator:
                 stamp = datetime.fromtimestamp(float(ts), tz=timezone.utc)
         except Exception:
             return False
-        age = (datetime.now(timezone.utc) - stamp.astimezone(timezone.utc)).total_seconds()
-        return -self.config.max_context_age_seconds <= age <= self.config.max_context_age_seconds
+        age = (
+            datetime.now(timezone.utc) - stamp.astimezone(timezone.utc)
+        ).total_seconds()
+        return (
+            -self.config.max_context_age_seconds
+            <= age
+            <= self.config.max_context_age_seconds
+        )
 
     def _audit_context(self, context: Mapping[str, Any]) -> Dict[str, Any]:
         # Preserve communication trail, but avoid duplicating bulky raw frames.

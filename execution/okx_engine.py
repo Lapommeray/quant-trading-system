@@ -37,6 +37,7 @@ log = logging.getLogger(__name__)
 
 try:
     import ccxt  # type: ignore
+
     CCXT_AVAILABLE = True
 except ImportError:
     CCXT_AVAILABLE = False
@@ -44,6 +45,7 @@ except ImportError:
 
 try:
     from safety_governance import SafetyGovernanceSystem, AuthorizationLevel  # type: ignore
+
     SAFETY_AVAILABLE = True
 except ImportError:
     SAFETY_AVAILABLE = False
@@ -53,6 +55,7 @@ except ImportError:
 
 try:
     from core.event_bus import EventBus, get_event_bus  # type: ignore
+
     EVENTBUS_AVAILABLE = True
 except ImportError:
     EVENTBUS_AVAILABLE = False
@@ -89,7 +92,9 @@ class OKXOrderRequest:
     order_type: OrderType = OrderType.MARKET
     limit_price: Optional[float] = None
     leverage: float = 1.0
-    client_order_id: str = field(default_factory=lambda: f"okx_{int(time.time()*1000)}_{random.randint(1000,9999)}")
+    client_order_id: str = field(
+        default_factory=lambda: f"okx_{int(time.time()*1000)}_{random.randint(1000,9999)}"
+    )
     reduce_only: bool = False
     tag: str = "qmp_system"
 
@@ -122,7 +127,9 @@ class OKXOrderResult:
             "side": self.side.value if isinstance(self.side, Enum) else str(self.side),
             "filled_quantity": self.filled_quantity,
             "avg_fill_price": self.avg_fill_price,
-            "status": self.status.value if isinstance(self.status, Enum) else str(self.status),
+            "status": (
+                self.status.value if isinstance(self.status, Enum) else str(self.status)
+            ),
             "message": self.message,
             "timestamp": self.timestamp,
             "fees": self.fees,
@@ -141,7 +148,12 @@ class OKXBalance:
 class LocalCircuitBreaker:
     """Fallback circuit breaker if safety_governance unavailable."""
 
-    def __init__(self, max_daily_loss_pct: float = 0.03, max_pos_pct: float = 0.1, max_leverage: float = 3.0):
+    def __init__(
+        self,
+        max_daily_loss_pct: float = 0.03,
+        max_pos_pct: float = 0.1,
+        max_leverage: float = 3.0,
+    ):
         self.max_daily_loss_pct = max_daily_loss_pct
         self.max_pos_pct = max_pos_pct
         self.max_leverage = max_leverage
@@ -182,7 +194,11 @@ class OKXEngine:
         max_orders_per_minute: int = 20,
     ):
         # Determine paper mode from env if not explicit
-        env_live = os.getenv("OKX_LIVE_TRADING", "false").lower() in ("true", "1", "yes")
+        env_live = os.getenv("OKX_LIVE_TRADING", "false").lower() in (
+            "true",
+            "1",
+            "yes",
+        )
         if paper_mode is None:
             # Default paper unless explicitly live + safety confirmation
             self.paper_mode = not env_live
@@ -282,12 +298,19 @@ class OKXEngine:
                     usdt_total = total.get("USDT", 0) or total.get("USD", 0)
                     if usdt_total:
                         self._balance.total_equity = float(usdt_total)
-                        self._balance.available = float(bal.get("free", {}).get("USDT", usdt_total))
+                        self._balance.available = float(
+                            bal.get("free", {}).get("USDT", usdt_total)
+                        )
             except Exception as exc:
-                log.warning("OKX fetch_balance during connect failed (will retry later): %s", exc)
+                log.warning(
+                    "OKX fetch_balance during connect failed (will retry later): %s",
+                    exc,
+                )
 
             if self.event_bus:
-                self.event_bus.publish("OKX_CONNECTED", {"paper": self.paper_mode}, source="OKXEngine")
+                self.event_bus.publish(
+                    "OKX_CONNECTED", {"paper": self.paper_mode}, source="OKXEngine"
+                )
             return True
         except Exception as exc:
             log.exception("OKX connect failed: %s", exc)
@@ -307,7 +330,9 @@ class OKXEngine:
                 bal = self.ccxt_client.fetch_balance()
                 total = bal.get("total", {}).get("USDT", self._balance.total_equity)
                 free = bal.get("free", {}).get("USDT", self._balance.available)
-                self._balance = OKXBalance(total_equity=float(total), available=float(free))
+                self._balance = OKXBalance(
+                    total_equity=float(total), available=float(free)
+                )
             except Exception as exc:
                 log.warning("OKX get_balance failed: %s", exc)
         return self._balance
@@ -345,12 +370,19 @@ class OKXEngine:
     def _check_rate_limit(self) -> Tuple[bool, str]:
         now = datetime.now()
         # count orders last minute
-        recent = sum(1 for t in self._order_timestamps if now - t < timedelta(minutes=1))
+        recent = sum(
+            1 for t in self._order_timestamps if now - t < timedelta(minutes=1)
+        )
         if recent >= self.max_orders_per_minute:
-            return False, f"Order rate limit {recent}/{self.max_orders_per_minute} per min"
+            return (
+                False,
+                f"Order rate limit {recent}/{self.max_orders_per_minute} per min",
+            )
         return True, "OK"
 
-    def _check_safety(self, order: OKXOrderRequest) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
+    def _check_safety(
+        self, order: OKXOrderRequest
+    ) -> Tuple[bool, str, Optional[Dict[str, Any]]]:
         """Returns (allowed, message, auth_object)."""
         # Local checks
         ok, msg = self.local_breaker.check(order, self._balance.total_equity)
@@ -365,12 +397,23 @@ class OKXEngine:
         # Notional check
         price = self.get_ticker(order.symbol)
         notional = order.quantity * price
-        if self._balance.total_equity > 0 and notional / self._balance.total_equity > self.max_position_pct:
-            return False, f"Position notional {notional:.2f} exceeds {self.max_position_pct:.0%} equity", None
+        if (
+            self._balance.total_equity > 0
+            and notional / self._balance.total_equity > self.max_position_pct
+        ):
+            return (
+                False,
+                f"Position notional {notional:.2f} exceeds {self.max_position_pct:.0%} equity",
+                None,
+            )
 
         if SAFETY_AVAILABLE and self.safety:
             # Translate to safety governance
-            risk = notional / self._balance.total_equity if self._balance.total_equity else 0.01
+            risk = (
+                notional / self._balance.total_equity
+                if self._balance.total_equity
+                else 0.01
+            )
             authorized, message, auth = self.safety.authorize_trade(
                 symbol=order.symbol,
                 side=order.side.value,
@@ -378,7 +421,11 @@ class OKXEngine:
                 order_type=order.order_type.value,
                 trade_risk=risk,
             )
-            return authorized, message, auth.to_dict() if hasattr(auth, "to_dict") and auth else None
+            return (
+                authorized,
+                message,
+                auth.to_dict() if hasattr(auth, "to_dict") and auth else None,
+            )
         else:
             return True, "OK - local check", None
 
@@ -405,9 +452,17 @@ class OKXEngine:
 
             allowed, msg, auth = self._check_safety(order)
             if not allowed:
-                log.warning("OKX order blocked by safety: %s order=%s", msg, order.client_order_id)
+                log.warning(
+                    "OKX order blocked by safety: %s order=%s",
+                    msg,
+                    order.client_order_id,
+                )
                 if self.event_bus:
-                    self.event_bus.publish("RISK_ALERT", {"reason": msg, "order": order.client_order_id}, source="OKXEngine")
+                    self.event_bus.publish(
+                        "RISK_ALERT",
+                        {"reason": msg, "order": order.client_order_id},
+                        source="OKXEngine",
+                    )
                 return OKXOrderResult(
                     success=False,
                     order_id="",
@@ -437,8 +492,12 @@ class OKXEngine:
                 fees = order.quantity * fill_price * fee_rate
 
                 # Update local balance/positions
-                qty_signed = order.quantity if order.side == OrderSide.BUY else -order.quantity
-                self._positions[order.symbol] = self._positions.get(order.symbol, 0) + qty_signed
+                qty_signed = (
+                    order.quantity if order.side == OrderSide.BUY else -order.quantity
+                )
+                self._positions[order.symbol] = (
+                    self._positions.get(order.symbol, 0) + qty_signed
+                )
                 # Simplified PnL impact
                 # Deduct fee
                 self._balance.total_equity -= fees
@@ -462,9 +521,17 @@ class OKXEngine:
                 )
 
                 if self.event_bus:
-                    self.event_bus.publish("ORDER_FILLED", result.to_dict(), source="OKXEngine")
+                    self.event_bus.publish(
+                        "ORDER_FILLED", result.to_dict(), source="OKXEngine"
+                    )
 
-                log.info("OKX SIM fill %s %s %s @ %.2f", order.side.value, order.quantity, order.symbol, fill_price)
+                log.info(
+                    "OKX SIM fill %s %s %s @ %.2f",
+                    order.side.value,
+                    order.quantity,
+                    order.symbol,
+                    fill_price,
+                )
                 return result
 
             # Live CCXT execution
@@ -477,12 +544,22 @@ class OKXEngine:
 
                 # Place
                 if ccxt_type == "market":
-                    ccxt_order = self.ccxt_client.create_market_order(ccxt_symbol, ccxt_side, amount)
+                    ccxt_order = self.ccxt_client.create_market_order(
+                        ccxt_symbol, ccxt_side, amount
+                    )
                 else:
-                    ccxt_order = self.ccxt_client.create_order(ccxt_symbol, ccxt_type, ccxt_side, amount, price)
+                    ccxt_order = self.ccxt_client.create_order(
+                        ccxt_symbol, ccxt_type, ccxt_side, amount, price
+                    )
 
-                filled = float(ccxt_order.get("filled", 0) or ccxt_order.get("amount", amount))
-                avg_price = float(ccxt_order.get("average", 0) or ccxt_order.get("price", 0) or self.get_ticker(order.symbol))
+                filled = float(
+                    ccxt_order.get("filled", 0) or ccxt_order.get("amount", amount)
+                )
+                avg_price = float(
+                    ccxt_order.get("average", 0)
+                    or ccxt_order.get("price", 0)
+                    or self.get_ticker(order.symbol)
+                )
                 order_id = str(ccxt_order.get("id", ""))
 
                 result = OKXOrderResult(
@@ -493,18 +570,28 @@ class OKXEngine:
                     side=order.side,
                     filled_quantity=filled,
                     avg_fill_price=avg_price,
-                    status=OrderStatus.FILLED if ccxt_order.get("status") == "closed" else OrderStatus.OPEN,
+                    status=(
+                        OrderStatus.FILLED
+                        if ccxt_order.get("status") == "closed"
+                        else OrderStatus.OPEN
+                    ),
                     message="LIVE filled",
                 )
 
                 if self.event_bus:
-                    self.event_bus.publish("ORDER_FILLED", result.to_dict(), source="OKXEngine")
+                    self.event_bus.publish(
+                        "ORDER_FILLED", result.to_dict(), source="OKXEngine"
+                    )
 
                 return result
             except Exception as exc:
                 log.exception("OKX live order failed: %s", exc)
                 if self.event_bus:
-                    self.event_bus.publish("RISK_ALERT", {"error": str(exc), "order": order.client_order_id}, source="OKXEngine")
+                    self.event_bus.publish(
+                        "RISK_ALERT",
+                        {"error": str(exc), "order": order.client_order_id},
+                        source="OKXEngine",
+                    )
                 return OKXOrderResult(
                     success=False,
                     order_id="",
@@ -517,7 +604,9 @@ class OKXEngine:
                     message=f"Exception: {exc}",
                 )
 
-    def place_order_from_signal(self, signal: Dict[str, Any], max_quantity: Optional[float] = None) -> Optional[OKXOrderResult]:
+    def place_order_from_signal(
+        self, signal: Dict[str, Any], max_quantity: Optional[float] = None
+    ) -> Optional[OKXOrderResult]:
         """Translate QMP signal dict to OKX order.
 
         Expected signal format:
@@ -536,7 +625,9 @@ class OKXEngine:
 
         confidence = float(signal.get("confidence", 0.5))
         if confidence < 0.55:
-            log.info("Signal confidence %.2f below threshold for %s", confidence, symbol)
+            log.info(
+                "Signal confidence %.2f below threshold for %s", confidence, symbol
+            )
             return None
 
         # Position sizing: confidence-weighted + risk cap
@@ -601,7 +692,11 @@ class OKXEngine:
         if self.safety:
             self.safety.activate_kill_switch(reason, user="OKXEngine")
         if self.event_bus:
-            self.event_bus.publish("KILL_SWITCH", {"reason": reason, "source": "OKXEngine"}, source="OKXEngine")
+            self.event_bus.publish(
+                "KILL_SWITCH",
+                {"reason": reason, "source": "OKXEngine"},
+                source="OKXEngine",
+            )
         log.critical("OKXEngine kill switch activated: %s", reason)
 
     def get_status(self) -> Dict[str, Any]:

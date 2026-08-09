@@ -86,7 +86,9 @@ def normalize_ohlcv_frame(
 
     missing = [col for col in required_columns if col not in out.columns]
     if missing:
-        raise DataQualityError(f"{symbol}: missing required column(s): {', '.join(missing)}")
+        raise DataQualityError(
+            f"{symbol}: missing required column(s): {', '.join(missing)}"
+        )
 
     if not out.index.is_monotonic_increasing:
         raise DataQualityError(f"{symbol}: timestamps must be strictly ascending")
@@ -124,12 +126,15 @@ def normalize_ohlcv_frame(
     return out
 
 
-def validate_market_tick(row: Mapping[str, Any], *, symbol: str = "UNKNOWN") -> dict[str, float]:
+def validate_market_tick(
+    row: Mapping[str, Any], *, symbol: str = "UNKNOWN"
+) -> dict[str, float]:
     """Validate a single live quote/bar row and return numeric fields.
 
     Raises ``DataQualityError`` instead of letting an impossible tick reach a
     DataRing, event bus, broker adapter, or risk engine.
     """
+
     def as_float(key: str, default: float | None = None) -> float:
         raw = row.get(key, default)
         if raw is None:
@@ -167,7 +172,14 @@ def validate_market_tick(row: Mapping[str, Any], *, symbol: str = "UNKNOWN") -> 
     if ts > now_ts + 300.0:
         raise DataQualityError(f"{symbol}: tick timestamp is in the future")
 
-    return {"ts": ts, "price": price, "open": open_, "high": high, "low": low, "volume": volume}
+    return {
+        "ts": ts,
+        "price": price,
+        "open": open_,
+        "high": high,
+        "low": low,
+        "volume": volume,
+    }
 
 
 __all__ = ["DataQualityError", "normalize_ohlcv_frame", "validate_market_tick"]

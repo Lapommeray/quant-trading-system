@@ -11,4 +11,9 @@ from .infinite_intelligence import InfiniteIntelligence
 from .reality_manipulator import RealityManipulator
 from .omniscient_integration import OmniscientIntegration
 
-__all__ = ['MarketTruthRevealer', 'InfiniteIntelligence', 'RealityManipulator', 'OmniscientIntegration']
+__all__ = [
+    "MarketTruthRevealer",
+    "InfiniteIntelligence",
+    "RealityManipulator",
+    "OmniscientIntegration",
+]

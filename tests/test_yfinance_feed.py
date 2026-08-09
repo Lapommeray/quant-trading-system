@@ -24,7 +24,9 @@ def test_get_price_history_uses_cache(tmp_path, monkeypatch):
     path.parent.mkdir(parents=True, exist_ok=True)
     cached.to_csv(path)
 
-    result = yfinance_feed.get_price_history("AAPL", "2023-01-01", "2023-01-04", max_age_days=999)
+    result = yfinance_feed.get_price_history(
+        "AAPL", "2023-01-01", "2023-01-04", max_age_days=999
+    )
 
     pd.testing.assert_frame_equal(result, cached, check_freq=False)
 
@@ -39,7 +41,9 @@ def test_get_price_history_downloads_and_caches(tmp_path, monkeypatch):
 
     monkeypatch.setattr(yfinance_feed, "_download", _fake_download)
 
-    result = yfinance_feed.get_price_history("MSFT", "2023-01-01", "2023-01-04", force_download=True)
+    result = yfinance_feed.get_price_history(
+        "MSFT", "2023-01-01", "2023-01-04", force_download=True
+    )
 
     assert len(result) == 3
     assert yfinance_feed._cache_path("MSFT", "2023-01-01", "2023-01-04").exists()

@@ -57,7 +57,14 @@ def test_normalize_ohlcv_rejects_nan_or_infinite_values():
 
 def test_validate_market_tick_accepts_valid_tick():
     tick = validate_market_tick(
-        {"ts": 1_700_000_000, "price": 4500, "open": 4490, "high": 4510, "low": 4480, "volume": 10},
+        {
+            "ts": 1_700_000_000,
+            "price": 4500,
+            "open": 4490,
+            "high": 4510,
+            "low": 4480,
+            "volume": 10,
+        },
         symbol="SPX",
     )
 
@@ -70,4 +77,6 @@ def test_validate_market_tick_rejects_negative_or_bad_tick():
         validate_market_tick({"price": -1}, symbol="SPX")
 
     with pytest.raises(DataQualityError, match="low is above"):
-        validate_market_tick({"price": 100, "open": 100, "high": 101, "low": 100.5}, symbol="SPX")
+        validate_market_tick(
+            {"price": 100, "open": 100, "high": 101, "low": 100.5}, symbol="SPX"
+        )

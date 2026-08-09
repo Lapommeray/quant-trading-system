@@ -17,7 +17,4 @@ Approved data sources:
 
 from .real_data_connector import RealDataConnector, ComplianceCheck
 
-__all__ = [
-    'RealDataConnector',
-    'ComplianceCheck'
-]
+__all__ = ["RealDataConnector", "ComplianceCheck"]

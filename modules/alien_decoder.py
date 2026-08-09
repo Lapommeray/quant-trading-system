@@ -1,5 +1,5 @@
-
 import numpy as np
+
 
 def decode_alien_numerical_patterns(price_data):
     """
@@ -8,12 +8,14 @@ def decode_alien_numerical_patterns(price_data):
     """
 
     try:
-        values = np.array([
-            price_data['open'],
-            price_data['high'],
-            price_data['low'],
-            price_data['close']
-        ])
+        values = np.array(
+            [
+                price_data["open"],
+                price_data["high"],
+                price_data["low"],
+                price_data["close"],
+            ]
+        )
 
         # Calculate harmonic fingerprint
         ratios = np.diff(values) / values[:-1]
