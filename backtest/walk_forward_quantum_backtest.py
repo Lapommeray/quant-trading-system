@@ -3,8 +3,7 @@ import pandas as pd
 from datetime import datetime, timedelta
 import os
 import json
-from advanced_modules import QuantumTremorScanner, SpectralSignalFusion, DNABreath, DNAOverlord, VoidTraderChartRenderer
-from core.meta_conscious_routing_layer import MetaConsciousRoutingLayer
+from advanced_modules import QuantumTremorScanner, SpectralSignalFusion, DNABreath, DNAOverlord
 
 class WalkForwardQuantumBacktester:
     """
@@ -140,9 +139,9 @@ class WalkForwardQuantumBacktester:
         """Test quantum models on out-of-sample data"""
         results = []
         
-        if isinstance(test_data, dict) and any(test_data.values()):
+        if isinstance(test_data, dict):
             for key, df in test_data.items():
-                if not df.empty and 'Close' in df.columns:
+                if hasattr(df, 'empty') and not df.empty and 'Close' in df.columns:
                     test_df = df
                     break
             else:
@@ -163,15 +162,21 @@ class WalkForwardQuantumBacktester:
             breath_signal = self._get_dna_breath_prediction(day_data)
             
             combined_signal = self._combine_signals(tremor_signal, fusion_signal, breath_signal)
+            if combined_signal == 0:
+                # A flat/no-trade signal is not a trade and must not be counted
+                # as a losing trade in readiness or performance reports.
+                continue
             
             next_day = test_df.iloc[i+1] if i+1 < len(test_df) else None
             if next_day is not None:
                 price_change = (next_day['Close'] - day_data['Close'].iloc[0]) / day_data['Close'].iloc[0]
+                signed_return = combined_signal * price_change
                 result = {
                     'date': day_data.index[0],
                     'signal': combined_signal,
                     'price_change': price_change,
-                    'success': (combined_signal > 0 and price_change > 0) or (combined_signal < 0 and price_change < 0)
+                    'signed_return': signed_return,
+                    'success': signed_return > 0
                 }
                 results.append(result)
                 
@@ -222,14 +227,19 @@ class WalkForwardQuantumBacktester:
                 'avg_loss': 0
             }
             
-        winning_trades = [r for r in results if r['success']]
-        losing_trades = [r for r in results if not r['success']]
+        for result in results:
+            if 'signed_return' not in result:
+                result['signed_return'] = result.get('signal', 0) * result.get('price_change', 0)
+                result['success'] = result['signed_return'] > 0
+
+        winning_trades = [r for r in results if r['signed_return'] > 0]
+        losing_trades = [r for r in results if r['signed_return'] < 0]
         
         total_trades = len(results)
         win_rate = len(winning_trades) / total_trades if total_trades > 0 else 0
         
-        avg_profit = np.mean([r['price_change'] for r in winning_trades]) if winning_trades else 0
-        avg_loss = np.mean([r['price_change'] for r in losing_trades]) if losing_trades else 0
+        avg_profit = np.mean([r['signed_return'] for r in winning_trades]) if winning_trades else 0
+        avg_loss = np.mean([r['signed_return'] for r in losing_trades]) if losing_trades else 0
         
         return {
             'win_rate': win_rate,

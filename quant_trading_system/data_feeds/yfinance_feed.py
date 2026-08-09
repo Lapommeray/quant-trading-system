@@ -11,6 +11,7 @@ import pandas as pd
 import yfinance as yf
 
 from quant_trading_system.config import settings, ensure_cache_dir
+from quant_trading_system.data_quality import normalize_ohlcv_frame
 
 log = logging.getLogger(__name__)
 CACHE_ROOT = settings.data_cache_dir
@@ -32,9 +33,7 @@ def _download(symbol: str, start: str, end: str) -> pd.DataFrame:
     for attempt in range(1, 4):
         try:
             df = yf.download(symbol, start=start, end=end, progress=False)
-            if df.empty:
-                raise ValueError(f"yfinance returned no data for {symbol}")
-            return df
+            return normalize_ohlcv_frame(df, symbol=symbol)
         except Exception as exc:  # noqa: BLE001
             if attempt == 3:
                 raise RuntimeError(f"Failed to download {symbol} after 3 attempts") from exc
@@ -61,13 +60,10 @@ def get_price_history(
     cache_file = _cache_path(symbol, start, end)
 
     if not force_download and _is_fresh(cache_file, max_age):
-        return pd.read_csv(cache_file, index_col=0, parse_dates=True)
+        cached = pd.read_csv(cache_file, index_col=0, parse_dates=True)
+        return normalize_ohlcv_frame(cached, symbol=symbol)
 
     data = _download(symbol, start, end)
-    if getattr(data.index, "tz", None) is None:
-        data.index = data.index.tz_localize("UTC")
-    else:
-        data.index = data.index.tz_convert("UTC")
     ensure_cache_dir()
     data.to_csv(cache_file)
     return data
