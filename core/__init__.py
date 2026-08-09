@@ -39,6 +39,11 @@ __all__ = [
     "RegimeDetector",
     "InstitutionalSignalOrchestrator",
     "TradeDecision",
+    "ModuleMeshConfig",
+    "ModuleMeshOrchestrator",
+    "ModuleResult",
+    "UnifiedAction",
+    "UnifiedTradeResult",
     # Institutional self-coding
     "OFIDetector",
     "WhaleFlowDetector",
@@ -80,6 +85,28 @@ def __getattr__(name):
         return {
             "InstitutionalSignalOrchestrator": InstitutionalSignalOrchestrator,
             "TradeDecision": TradeDecision,
+        }[name]
+    if name in {
+        "ModuleMeshConfig",
+        "ModuleMeshOrchestrator",
+        "ModuleResult",
+        "UnifiedAction",
+        "UnifiedTradeResult",
+    }:
+        from .module_mesh_orchestrator import (
+            ModuleMeshConfig,
+            ModuleMeshOrchestrator,
+            ModuleResult,
+            UnifiedAction,
+            UnifiedTradeResult,
+        )
+
+        return {
+            "ModuleMeshConfig": ModuleMeshConfig,
+            "ModuleMeshOrchestrator": ModuleMeshOrchestrator,
+            "ModuleResult": ModuleResult,
+            "UnifiedAction": UnifiedAction,
+            "UnifiedTradeResult": UnifiedTradeResult,
         }[name]
     # Direct access for institutional
     if name == "OFIDetector":

@@ -23,6 +23,8 @@ import threading
 import time
 from typing import Any, Callable, Dict, Optional
 
+from quant_trading_system.data_quality import validate_market_tick
+
 log = logging.getLogger(__name__)
 
 try:
@@ -177,22 +179,21 @@ class SPXLiveFeed:
             time.sleep(self._poll_seconds)
 
     def _ingest(self, row: Dict[str, Any]) -> None:
-        price = float(row.get("price") or 0.0)
-        if price <= 0:
-            raise ValueError("SPX feed returned non-positive price")
+        tick = validate_market_tick(row, symbol=RING_SYMBOL)
+        price = tick["price"]
         self._last_price = price
         self._last_ok_ts = time.time()
         self._consecutive_failures = 0
         ring = self._ring_factory(RING_SYMBOL) if self._ring_factory else None
         if ring is not None and hasattr(ring, "push"):
             ring.push(
-                float(row.get("ts", time.time())),
+                tick["ts"],
                 float(row.get("bid", price)),
                 float(row.get("ask", price)),
                 0.0,
                 0.0,
                 price,
-                float(row.get("volume", 0.0)),
+                tick["volume"],
                 0,
             )
         if self.event_bus is not None:
@@ -202,10 +203,10 @@ class SPXLiveFeed:
                     "symbol": RING_SYMBOL,
                     "inst_id": "^GSPC",
                     "price": price,
-                    "open": row.get("open"),
-                    "high": row.get("high"),
-                    "low": row.get("low"),
-                    "volume": row.get("volume"),
+                    "open": tick["open"],
+                    "high": tick["high"],
+                    "low": tick["low"],
+                    "volume": tick["volume"],
                     "asset_class": "equity_index",
                     "source": "twelvedata" if self._api_key else "yfinance",
                     "pre_broker": True,
@@ -214,7 +215,7 @@ class SPXLiveFeed:
             )
             self.event_bus.publish(
                 "SPX_UPDATE",
-                {"symbol": RING_SYMBOL, "price": price, "ts": row.get("ts")},
+                {"symbol": RING_SYMBOL, "price": price, "ts": tick["ts"]},
                 source="SPXLiveFeed",
             )
 
