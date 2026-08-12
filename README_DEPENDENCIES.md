@@ -46,4 +46,6 @@ pip install .
 ## Notes
 
 - Extra requirement files are intentionally layered with `-r requirements.txt` to reduce drift.
+- Dependencies absent from `requirements.txt` may intentionally appear in more
+  than one profile file when those profiles are used independently (for example, `cvxpy`).
 - Historical subfolders (for archived variants) may contain their own requirements files; treat them as isolated snapshots.
