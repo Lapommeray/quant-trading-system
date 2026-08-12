@@ -466,7 +466,7 @@ class ExternalChallengeSynthesizer:
 
         for i in range(num):
             vector = rng.choice(self.attack_vectors)
-            adversary_id = f"synth_adversary_{vector}_{int(time.time())}_{i}_{rng.randint(1000,9999)}"
+            adversary_id = f"synth_adversary_{vector}_{int(time.time())}_{i}_{rng.randint(1000, 9999)}"
             challenge = {
                 "adversary_id": adversary_id,
                 "attack_vector": vector,
@@ -789,7 +789,7 @@ class AlephOmegaEngine:
         axioms_summary = "\n".join(
             [
                 (
-                    f"- **{k}**: {_v.get('statement','')[:120]}..."
+                    f"- **{k}**: {_v.get('statement', '')[:120]}..."
                     if isinstance(_v, dict)
                     else f"- **{k}**: {str(_v)[:120]}"
                 )
@@ -798,7 +798,7 @@ class AlephOmegaEngine:
         )
         challenges_summary = "\n".join(
             [
-                f"- `{c.get('adversary_id','')}` → {c.get('attack_vector','')} classified {c.get('confidence',0):.2f}"
+                f"- `{c.get('adversary_id', '')}` → {c.get('attack_vector', '')} classified {c.get('confidence', 0):.2f}"
                 for c in challenges[:5]
             ]
         )

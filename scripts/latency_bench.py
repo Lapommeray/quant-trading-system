@@ -65,7 +65,7 @@ def bench_symbol(symbol="BTCUSDT", n=100):
     for k, v in latencies.items():
         arr = np.array(v)
         print(
-            f"{symbol} {k}: p50 {np.percentile(arr,50):.2f}ms p95 {np.percentile(arr,95):.2f}ms avg {np.mean(arr):.2f}ms max {np.max(arr):.2f}ms"
+            f"{symbol} {k}: p50 {np.percentile(arr, 50):.2f}ms p95 {np.percentile(arr, 95):.2f}ms avg {np.mean(arr):.2f}ms max {np.max(arr):.2f}ms"
         )
 
 

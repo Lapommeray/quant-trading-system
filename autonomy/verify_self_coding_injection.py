@@ -174,7 +174,7 @@ def main():
         ind = RealEnhancedIndicator()
         sig = ind.get_signal("BTCUSDT")
         print(
-            f"[OK] RealEnhancedIndicator signal {sig.get('signal')} conf {sig.get('confidence')} latency {sig.get('latency_ms')}ms reason {sig.get('reason','')[:80]}"
+            f"[OK] RealEnhancedIndicator signal {sig.get('signal')} conf {sig.get('confidence')} latency {sig.get('latency_ms')}ms reason {sig.get('reason', '')[:80]}"
         )
     except Exception as e:
         print(f"[FAIL] RealEnhancedIndicator {e}")
@@ -238,7 +238,7 @@ def main():
         import numpy as np
 
         print(
-            f"[OK] OFI latency p50 {np.percentile(times,50):.1f}ms p95 {np.percentile(times,95):.1f}ms avg {np.mean(times):.1f}ms"
+            f"[OK] OFI latency p50 {np.percentile(times, 50):.1f}ms p95 {np.percentile(times, 95):.1f}ms avg {np.mean(times):.1f}ms"
         )
         if np.percentile(times, 95) > 50:
             print("[WARN] p95 >50ms target")

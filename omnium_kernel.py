@@ -143,12 +143,12 @@ SEED_HEX_SHA256[:16]: {hashlib.sha256(DETERMINISTIC_BACKTEST_GROUNDING['seed_byt
 METRICS_CONTRACT: {','.join(DETERMINISTIC_BACKTEST_GROUNDING['metric_keys'])}
 INVARIANT_GROUNDING: deterministic projection pure function of code, not stochastic sample
 LIVE_DATA_INJECTION: GROUNDED
-LIVE_FETCHER: {live_info.get('fetch_fn','fetch_live_ohlcv')}
-LIVE_SYMBOL: {live_info.get('default_symbol','BTC-USD')} {live_info.get('default_period','1y')} {live_info.get('default_interval','1d')}
-LIVE_STRATEGY: {live_info.get('strategy','SMA(20) crossover')}
-LIVE_TRADE_GEN: {live_info.get('trade_gen','_generate_trades_from_ohlcv')}
-LIVE_BASELINE_FILE: {live_info.get('baseline_file','live_baseline.json')}
-LIVE_EXTERNAL_GROUNDING: {live_info.get('external_grounding','real OHLCV via yfinance + deterministic fallback')}
+LIVE_FETCHER: {live_info.get('fetch_fn', 'fetch_live_ohlcv')}
+LIVE_SYMBOL: {live_info.get('default_symbol', 'BTC-USD')} {live_info.get('default_period', '1y')} {live_info.get('default_interval', '1d')}
+LIVE_STRATEGY: {live_info.get('strategy', 'SMA(20) crossover')}
+LIVE_TRADE_GEN: {live_info.get('trade_gen', '_generate_trades_from_ohlcv')}
+LIVE_BASELINE_FILE: {live_info.get('baseline_file', 'live_baseline.json')}
+LIVE_EXTERNAL_GROUNDING: {live_info.get('external_grounding', 'real OHLCV via yfinance + deterministic fallback')}
 TIMESTAMP: {datetime.utcnow().isoformat()}
 -----END OMNIUM FINAL FORMAL PROOF CERTIFICATE-----
 """
