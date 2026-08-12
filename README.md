@@ -53,6 +53,9 @@ cd quant-trading-system
 pip install -r requirements.txt
 ```
 
+For dependency profiles (core vs QC vs institutional), see
+[`README_DEPENDENCIES.md`](README_DEPENDENCIES.md).
+
 ## Usage
 
 ```python

@@ -1,40 +1,49 @@
-# Dependency Management Quick Start
+# Python Dependency Management
 
-To set up the environment for the quant-trading-system project, follow the steps below to manage dependencies efficiently.
+This repository is Python-first and uses `pip` + requirements files for environment setup.
 
-## Prerequisites
-- Ensure you have [Node.js](https://nodejs.org/) installed.
-- Make sure you have [npm](https://www.npmjs.com/) available.
+## Dependency Files
 
-## Installation Steps
+- `requirements.txt`  
+  Core runtime + test dependencies for the main repository.
 
-1. **Clone the repository**:
-   ```bash
-   git clone https://github.com/Lapommeray/quant-trading-system.git
-   cd quant-trading-system
-   ```
+- `requirements_qc.txt`  
+  QuantConnect/dashboard extras layered on top of `requirements.txt`.
 
-2. **Install dependencies**:
-   Use the following command to install the required dependencies:
-   ```bash
-   npm install
-   ```
+- `requirements_institutional.txt`  
+  Institutional/research extras layered on top of `requirements.txt`.
 
-3. **Verify installation**:
-   After installation, you can check if the dependencies were installed correctly by running:
-   ```bash
-   npm list
-   ```
+- `pyproject.toml`  
+  Packaging metadata and base install dependencies for `quant-trading-system`.
 
-## Additional Commands
-- To update your dependencies to the latest minor version, you can run:
-  ```bash
-  npm update
-  ```
+## Installation Options
 
-- To remove a dependency:
-  ```bash
-  npm uninstall <package-name>
-  ```
+### 1) Core setup (recommended default)
 
-For any issues or questions, please refer to the documentation or contact the maintainer.
+```bash
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+### 2) Core + QuantConnect extras
+
+```bash
+pip install -r requirements_qc.txt
+```
+
+### 3) Core + institutional extras
+
+```bash
+pip install -r requirements_institutional.txt
+```
+
+### 4) Package install from `pyproject.toml`
+
+```bash
+pip install .
+```
+
+## Notes
+
+- Extra requirement files are intentionally layered with `-r requirements.txt` to reduce drift.
+- Historical subfolders (for archived variants) may contain their own requirements files; treat them as isolated snapshots.
