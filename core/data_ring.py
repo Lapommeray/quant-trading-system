@@ -101,7 +101,6 @@ _global_lock = threading.Lock()
 
 
 def get_data_ring(symbol: str, size: int = 200000) -> DataRing:
-    global _global_rings
     with _global_lock:
         if symbol not in _global_rings:
             _global_rings[symbol] = DataRing(symbol, size=size)

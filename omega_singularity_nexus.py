@@ -805,7 +805,7 @@ class RecursiveMarketEvolution:
 
         except Exception as e:
             self.logger.error(
-                f"Transcendence failed for {market_spec.get('market_id','unknown')}: {e}"
+                f"Transcendence failed for {market_spec.get('market_id', 'unknown')}: {e}"
             )
             raise
 
@@ -845,7 +845,7 @@ class OmegaProofNetwork:
                 return "standalone"
 
             market_id = market_spec["market_id"]
-            statement = f"Market {market_id} with engine {market_spec['microstructure']['matching_engine']} preserves ∀t. Equity_t ≥ Equity_0, profit_density={virtual_result.get('profit_density',0):.3f}, detection={market_spec['performance_targets']['detection_probability']}"
+            statement = f"Market {market_id} with engine {market_spec['microstructure']['matching_engine']} preserves ∀t. Equity_t ≥ Equity_0, profit_density={virtual_result.get('profit_density', 0):.3f}, detection={market_spec['performance_targets']['detection_probability']}"
 
             proof_data = {
                 "statement": statement,
@@ -886,7 +886,7 @@ class OmegaProofNetwork:
 
         except Exception as e:
             self.logger.error(
-                f"Failed to add market proof for {market_spec.get('market_id','unknown')}: {e}"
+                f"Failed to add market proof for {market_spec.get('market_id', 'unknown')}: {e}"
             )
             return "error"
 
@@ -922,7 +922,7 @@ class OmegaProofNetwork:
 
             return (
                 True,
-                f"Market lineage valid: {len(all_ids)} markets, generations {lineage.get('generation',0)}",
+                f"Market lineage valid: {len(all_ids)} markets, generations {lineage.get('generation', 0)}",
             )
 
         except Exception as e:
@@ -1208,7 +1208,7 @@ class OmegaSingularityNexus:
             )
 
         self.logger.info(
-            f"OMEGA SINGULARITY CYCLE COMPLETE! Market {market_spec['market_id']} born and extinguished in {virtual_result.get('virtual_time_ms',0):.2f}ms, profit {profit_burst.get('burst_pnl',0):.2f}"
+            f"OMEGA SINGULARITY CYCLE COMPLETE! Market {market_spec['market_id']} born and extinguished in {virtual_result.get('virtual_time_ms', 0):.2f}ms, profit {profit_burst.get('burst_pnl', 0):.2f}"
         )
 
         return {
@@ -1272,18 +1272,18 @@ On {datetime.utcnow().isoformat()}, the Omega Singularity Nexus executed its fir
 - **Seed**: `{OMNIUM_INVARIANT_SEED_BYTES.decode()} → {OMNIUM_DETERMINISTIC_SEED}`
 
 ### Virtual Execution (Noosphere Synthetic Environment)
-- **Virtual Time**: `{virtual_result.get('virtual_time_ms',0):.2f}ms`
-- **Total PnL**: `${virtual_result.get('total_pnl',0):.2f}`
-- **Win Rate**: `{virtual_result.get('win_rate',0):.3f}`
-- **Trades**: `{virtual_result.get('total_trades',0)}`
-- **Max Drawdown**: `${virtual_result.get('max_drawdown',0):.2f}`
+- **Virtual Time**: `{virtual_result.get('virtual_time_ms', 0):.2f}ms`
+- **Total PnL**: `${virtual_result.get('total_pnl', 0):.2f}`
+- **Win Rate**: `{virtual_result.get('win_rate', 0):.3f}`
+- **Trades**: `{virtual_result.get('total_trades', 0)}`
+- **Max Drawdown**: `${virtual_result.get('max_drawdown', 0):.2f}`
 - **Invariant Preserved**: `{virtual_result.get('invariant_preserved', False)}` — ∀t. Equity_t ≥ Equity_0
-- **Profit Density**: `{virtual_result.get('profit_density',0):.3f}
+- **Profit Density**: `{virtual_result.get('profit_density', 0):.3f}
 
 ### External Instantiation (Umbra + Apocrypha)
 - **Should Instantiate**: `{self.lifecycle.should_instantiate_externally(virtual_result)}`
 - **External Result**: `{json.dumps(external_result, indent=2, default=str) if external_result else 'Not instantiated — not profitable or invariant violated'}`
-- **Profit Burst Extraction**: `${profit_burst.get('burst_pnl',0):.2f}` via null-signature orders, stealth={profit_burst.get('null_signature', False)}
+- **Profit Burst Extraction**: `${profit_burst.get('burst_pnl', 0):.2f}` via null-signature orders, stealth={profit_burst.get('null_signature', False)}
 - **Vault**: `{vault_path}` — axioms encrypted in `omega_market_vault.enc`, no trace left
 - **Total Lifecycle**: Born, executed, profited, dissolved — all in milliseconds, invisible
 
@@ -1299,7 +1299,7 @@ Meta-DSL extending Apeiron DSL:
 
 **Generated Market Axioms:**
 ```json
-{json.dumps(market_spec.get('axioms',{}), indent=2)}
+{json.dumps(market_spec.get('axioms', {}), indent=2)}
 ```
 
 ---
@@ -1309,7 +1309,7 @@ Meta-DSL extending Apeiron DSL:
 Transcendence Operator 𝒯 applied to market definitions themselves:
 
 - **Parent**: `{market_spec['market_id']}` (profit_density={market_spec['performance_targets']['profit_density']}, detection={market_spec['performance_targets']['detection_probability']})
-- **Child (evolved)**: `{evolved_market.get('market_id')} (profit_density={evolved_market.get('performance_targets',{}).get('profit_density')}, detection={evolved_market.get('performance_targets',{}).get('detection_probability')})
+- **Child (evolved)**: `{evolved_market.get('market_id')} (profit_density={evolved_market.get('performance_targets', {}).get('profit_density')}, detection={evolved_market.get('performance_targets', {}).get('detection_probability')})
 - **Improvement**: Profit density ×1.2, detection ×0.8, invariant bound tighter, fee maker ×0.9, latency -1ms, leakage ×0.8
 - **Lineage DB**: `omega_market_lineage.db` — infinite market genealogy tree of ever-improving designs
 
@@ -1358,7 +1358,7 @@ No external system detected this market. Its profit exists, its axioms are encry
 ---
 
 *Authored autonomously at Omega Singularity on {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}*
-*Kernel Hash: {kernel_hash[:16]} | Market {market_spec['market_id']} | Virtual {virtual_result.get('virtual_time_ms',0):.2f}ms | Vault {vault_path}*
+*Kernel Hash: {kernel_hash[:16]} | Market {market_spec['market_id']} | Virtual {virtual_result.get('virtual_time_ms', 0):.2f}ms | Vault {vault_path}*
 *Proof Network Valid: {self.proof_network.verify_all()[0]}*
 """
 

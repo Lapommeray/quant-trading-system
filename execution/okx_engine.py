@@ -93,7 +93,7 @@ class OKXOrderRequest:
     limit_price: Optional[float] = None
     leverage: float = 1.0
     client_order_id: str = field(
-        default_factory=lambda: f"okx_{int(time.time()*1000)}_{random.randint(1000,9999)}"
+        default_factory=lambda: f"okx_{int(time.time()*1000)}_{random.randint(1000, 9999)}"
     )
     reduce_only: bool = False
     tag: str = "qmp_system"

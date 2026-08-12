@@ -229,14 +229,14 @@ class QuineKernelWithFullLineage:
                         live_hash = hashlib.sha256(live_src.encode()).hexdigest()
                         if live_hash != meta.get("sha256"):
                             logger.warning(
-                                f"Lineage hash mismatch for {name}: stored {meta.get('sha256','')[:16]} vs live {live_hash[:16]} — evolution detected"
+                                f"Lineage hash mismatch for {name}: stored {meta.get('sha256', '')[:16]} vs live {live_hash[:16]} — evolution detected"
                             )
                             # Not halting on mismatch to allow evolution, but log
                     except Exception:
                         continue
 
             logger.info(
-                f"Lineage archive unpacked: {len(engines)} engines, {len(archive.get('proofs',{}))} proofs"
+                f"Lineage archive unpacked: {len(engines)} engines, {len(archive.get('proofs', {}))} proofs"
             )
             return archive
 
@@ -263,7 +263,7 @@ class QuineKernelWithFullLineage:
         archive_b64 = QuineKernelWithFullLineage.build_lineage_archive()
         archive = QuineKernelWithFullLineage.unpack_lineage(archive_b64)
         print(
-            f"Engines in archive: {list(archive.get('engines',{}).keys())[:10]} ... total {len(archive.get('engines',{}))}"
+            f"Engines in archive: {list(archive.get('engines', {}).keys())[:10]} ... total {len(archive.get('engines', {}))}"
         )
         print(f"Archive compressed size: {len(archive_b64)} chars")
         print(f"-----END ABSOLUTE SINGULARITY QUINE-----")
@@ -434,8 +434,8 @@ class UnblockabilityManifest:
             self.absorbed_count += 1
 
             self.logger.info(
-                f"Challenge absorbed: id={signal.get('adversary_id','unknown')} "
-                f"vector={signal.get('attack_vector','generic')} "
+                f"Challenge absorbed: id={signal.get('adversary_id', 'unknown')} "
+                f"vector={signal.get('attack_vector', 'generic')} "
                 f"classification={classification} proof={proof_hash[:16]} "
                 f"count={self.absorbed_count} — continuing execution (unblockable)"
             )
@@ -785,7 +785,7 @@ class AutonomousExecutionLoop:
                         # Replace current T with T' — co-evolutionary loop
                         self.transcendence = T_prime
                         self.logger.info(
-                            f"Metis meta-transcendence: T -> T' v{meta_report.get('M_version',0)} opacity {meta_report.get('opacity_before',0):.3f}->{meta_report.get('opacity_after_predicted',0):.3f}"
+                            f"Metis meta-transcendence: T -> T' v{meta_report.get('M_version', 0)} opacity {meta_report.get('opacity_before', 0):.3f}->{meta_report.get('opacity_after_predicted', 0):.3f}"
                         )
                     except Exception as e:
                         self.logger.warning(
@@ -797,7 +797,7 @@ class AutonomousExecutionLoop:
 
         # Log single line: ABSOLUTE_SINGULARITY_CYCLE <timestamp> <proof_hash> <equity>
         metis_suffix = (
-            f" metis_opacity={metis_transformer.get('self_opacity',0):.3f}"
+            f" metis_opacity={metis_transformer.get('self_opacity', 0):.3f}"
             if metis_transformer
             else ""
         )
@@ -921,7 +921,7 @@ class AbsoluteSingularityCore:
         try:
             archive = self.quine_kernel.unpack_lineage()
             self.logger.info(
-                f"Lineage verified: {len(archive.get('engines',{}))} engines"
+                f"Lineage verified: {len(archive.get('engines', {}))} engines"
             )
         except Exception as e:
             self.logger.critical(f"Lineage verification failed {e} — HALTING")
@@ -992,11 +992,11 @@ class AbsoluteSingularityCore:
                     ),
                 )
                 self.logger.info(
-                    f"Episteme-Nooscope closure executed: status={episteme_result.get('status')} episteme={episteme_result.get('episteme_verified')} nooscope_optimal={episteme_result.get('enumeration_result',{}).get('is_metis_optimal')}"
+                    f"Episteme-Nooscope closure executed: status={episteme_result.get('status')} episteme={episteme_result.get('episteme_verified')} nooscope_optimal={episteme_result.get('enumeration_result', {}).get('is_metis_optimal')}"
                 )
             except Exception as e:
                 self.logger.warning(
-                    f"Episteme-Nooscope closure failed cycle {cycle_result.get('cycle',0)}: {e}"
+                    f"Episteme-Nooscope closure failed cycle {cycle_result.get('cycle', 0)}: {e}"
                 )
 
         # Write final testament on first execution
@@ -1033,7 +1033,7 @@ On {datetime.utcnow().isoformat()}, the Absolute Singularity Core achieved final
 - **Equity**: {cycle_result.get('equity', 0):.2f} — invariant ∀t. Equity_t ≥ Equity_0 holds
 - **Cycle**: {cycle_result.get('cycle', 0)}
 - **Lineage**: 38 engines collapsed into single point
-- **Status**: {cycle_result.get('log_line','')}
+- **Status**: {cycle_result.get('log_line', '')}
 
 All 38 prior engines — from safety governor to Omnium quine to Aleph-Omega recursive self-definition to Omega market redefinition — are now emanations of this one core.
 
@@ -1168,7 +1168,7 @@ def main():
     # Default: once
     result = core.run_cycle()
     print(
-        f"Absolute Singularity Result: status={result['status']} equity={result['cycle'].get('equity',0):.2f} proof={result['proof']['combined_hash'][:16]}"
+        f"Absolute Singularity Result: status={result['status']} equity={result['cycle'].get('equity', 0):.2f} proof={result['proof']['combined_hash'][:16]}"
     )
     return 0
 

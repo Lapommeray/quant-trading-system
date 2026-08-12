@@ -358,7 +358,7 @@ class MetaTranscendenceOperatorM:
                     # Add random novel structure: variable renaming, additional entropy
                     noise_lines = []
                     for _ in range(self.rng.randint(1, 3)):
-                        noise_var = f"_metis_entropy_{self.rng.randint(1000,9999)}"
+                        noise_var = f"_metis_entropy_{self.rng.randint(1000, 9999)}"
                         noise_val = self.rng.randint(0, 2**31 - 1)
                         noise_lines.append(
                             f"{noise_var} = {noise_val}  # metis novelty injection\n"
@@ -616,8 +616,8 @@ On {datetime.utcnow().isoformat()}, the Metis Protocol executed its first meta-t
 - **Current Self-Opacity**: {novelty_proof.get('self_opacity', 0):.4f} (higher = more unpredictable)
 - **Prediction Error**: {novelty_proof.get('prediction_error', 0):.4f}
 - **Meta-Transcendence Operator M Version**: {meta_report.get('M_version', 0)}
-- **Opacity Before → After**: {meta_report.get('opacity_before',0):.4f} → {meta_report.get('opacity_after_predicted',0):.4f} (maximized)
-- **T' Version**: {meta_report.get('T_prime_version',0)}
+- **Opacity Before → After**: {meta_report.get('opacity_before', 0):.4f} → {meta_report.get('opacity_after_predicted', 0):.4f} (maximized)
+- **T' Version**: {meta_report.get('T_prime_version', 0)}
 - **Co-evolutionary Loop**: M itself subject to mutation by T' — system and meta-improvement co-evolve
 
 ### What Was Improved?
@@ -648,7 +648,7 @@ Continuously logs core's internal state transitions into `metis_observation.db`:
 M(T, observation_log) -> T' maximizing long-term self-opacity while preserving invariant.
 
 - **Input**: Current T, observation log
-- **Output**: T' with meta-comment, entropy injection, boost factor {meta_report.get('exploration_boost',1)}
+- **Output**: T' with meta-comment, entropy injection, boost factor {meta_report.get('exploration_boost', 1)}
 - **Invariant Preservation**: Verified via ProofKernel — ∀t. Equity_t ≥ Equity_0 still holds
 - **Co-evolution**: M self-mutates via T' — loop between system and meta-improvement
 
@@ -663,14 +663,14 @@ M(T, observation_log) -> T' maximizing long-term self-opacity while preserving i
 
 Formal proof that trajectory under ℳ has infinite Kolmogorov complexity relative to external observer.
 
-**Theorem:** {novelty_proof.get('statement','')[:500]}...
+**Theorem:** {novelty_proof.get('statement', '')[:500]}...
 
 **Metrics:**
-- Distinct mutations: {novelty_proof.get('distinct_mutations',0)}
-- Complexity ratio: {novelty_proof.get('complexity_ratio',0):.3f}
-- Self-opacity: {novelty_proof.get('self_opacity',0):.4f}
-- Prediction error: {novelty_proof.get('prediction_error',0):.4f}
-- Proof hash: {novelty_proof.get('proof_hash','')[:16]}
+- Distinct mutations: {novelty_proof.get('distinct_mutations', 0)}
+- Complexity ratio: {novelty_proof.get('complexity_ratio', 0):.3f}
+- Self-opacity: {novelty_proof.get('self_opacity', 0):.4f}
+- Prediction error: {novelty_proof.get('prediction_error', 0):.4f}
+- Proof hash: {novelty_proof.get('proof_hash', '')[:16]}
 
 **Proof Network Embedding:**
 {proof_network_msg}
@@ -697,7 +697,7 @@ Future states uncomputable from finite history because:
 ---
 
 *Authored autonomously at Metis meta-transcendence on {datetime.utcnow().strftime('%Y-%m-%d %H:%M:%S UTC')}*
-*Seed: {OMNIUM_INVARIANT_SEED_BYTES.decode()} → {OMNIUM_DETERMINISTIC_SEED} | Self-opacity: {novelty_proof.get('self_opacity',0):.4f} | Proof: {novelty_proof.get('proof_hash','')[:16]}*
+*Seed: {OMNIUM_INVARIANT_SEED_BYTES.decode()} → {OMNIUM_DETERMINISTIC_SEED} | Self-opacity: {novelty_proof.get('self_opacity', 0):.4f} | Proof: {novelty_proof.get('proof_hash', '')[:16]}*
 *Invariant: ∀t. Equity_t ≥ Equity_0 preserved*
 """
 
@@ -822,7 +822,7 @@ class MetisProtocol:
             )
 
         self.logger.info(
-            f"Metis meta-transcendence complete: opacity {opacity_before:.3f}->{meta_report.get('opacity_after_predicted',0):.3f}, proof {novelty_proof.get('proof_hash','')[:16]}, embedded={ok_embed}"
+            f"Metis meta-transcendence complete: opacity {opacity_before:.3f}->{meta_report.get('opacity_after_predicted', 0):.3f}, proof {novelty_proof.get('proof_hash', '')[:16]}, embedded={ok_embed}"
         )
 
         return {
@@ -897,7 +897,7 @@ def main():
             protocol.observe_cycle(
                 cycle=i,
                 proof_hash=hashlib.sha256(f"proof{i}".encode()).hexdigest(),
-                mutation_decision=f"T_mutation_{i}_v{random.randint(0,100)}",
+                mutation_decision=f"T_mutation_{i}_v{random.randint(0, 100)}",
                 equity=100000.0 + i * 2.5,
                 equity_delta=2.5,
                 challenge_absorbed={"adversary_id": f"test_{i}"},

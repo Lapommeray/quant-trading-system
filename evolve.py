@@ -388,7 +388,7 @@ def proof_network_valid() -> bool:
             log.warning(f"Proof network invalid: {msg}")
             return False
         log.info(
-            f"Proof network valid: {pne.network.get('root')} with {len(pne.network.get('nodes',{}))} nodes"
+            f"Proof network valid: {pne.network.get('root')} with {len(pne.network.get('nodes', {}))} nodes"
         )
         return True
     except Exception as e:
@@ -411,7 +411,7 @@ def self_encoding_integrity_check() -> bool:
         AlephOmegaKernel.assert_deterministic_grounding()
         self_hash, archive = AlephOmegaKernel.assert_self_encoding()
         log.info(
-            f"Self-encoding integrity OK: kernel hash {self_hash[:16]}, archive {len(archive.get('engine_sources',{}))} engines"
+            f"Self-encoding integrity OK: kernel hash {self_hash[:16]}, archive {len(archive.get('engine_sources', {}))} engines"
         )
         # Also verify Omnium kernel grounding if available
         try:
